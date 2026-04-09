@@ -4,8 +4,6 @@ OLD_berlin_uav_dataset/
 
 # CSV files
 *.csv
-#env files
-.env/
 # Python
 __pycache__/
 *.pyc
@@ -13,3 +11,4 @@ __pycache__/
 
 # OS
 .DS_Store
+.env
