@@ -1,0 +1,15 @@
+# Dataset folders
+berlin_uav_dataset/
+OLD_berlin_uav_dataset/
+
+# CSV files
+*.csv
+#env files
+.env 
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
