@@ -1,6 +1,6 @@
 # Dataset folders
 berlin_grid_dataset/
-OLD_berlin_uav_dataset/
+UAV_VisLoc_example/
 
 # CSV files
 *.csv
@@ -8,6 +8,7 @@ OLD_berlin_uav_dataset/
 __pycache__/
 *.pyc
 .venv/
+sift_eval.py
 
 # OS
 .DS_Store
