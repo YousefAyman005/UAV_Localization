@@ -4,6 +4,8 @@ UAV_VisLoc_example/
 
 # CSV files
 *.csv
+# Visualizations
+*.jpg
 # Python
 __pycache__/
 *.pyc

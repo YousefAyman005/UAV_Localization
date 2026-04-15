@@ -1,12 +1,13 @@
 import argparse
-import math
 import os
-
 import cv2
 import numpy as np
 import pandas as pd
-from PIL import Image
 from tqdm import tqdm
+from visloc_utils import (
+    MIN_INL, CROP_W, CROP_H, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, JPEG_QUALITY,
+    load_satellite, gps_to_px, crop_sat, pred_offset_m, print_summary, altitude_scales,
+)
 
 FLIGHT    = "03"
 BASE      = f"UAV_Visloc_example/{FLIGHT}"
@@ -17,55 +18,9 @@ SAT_CSV   = "UAV_Visloc_example/satellite_ coordinates_range.csv"
 OUT_CSV   = "visloc_sift_results.csv"
 VIZ_DIR   = "visloc_visualizations"
 
-LOWE           = 0.75   # Lowe's ratio test threshold
-MIN_INL        = 10     # minimum inliers required to attempt GPS prediction
-CROP           = 2048   # base crop size on the satellite tile (pixels)
-SZ             = 1024   # working resolution for both satellite crops and drone images
-SCALES         = [0.5, 0.75, 1.0, 1.25, 1.5]
-RANSAC_THRESH  = 5.0    # RANSAC reprojection error threshold (pixels)
-FLANN_TREES    = 5      # number of KD-trees for FLANN index
-FLANN_CHECKS   = 50     # number of leaf checks during FLANN search
-TOP_MATCHES    = 50     # max matches drawn in visualizations
-JPEG_QUALITY   = 85     # output quality for saved visualization images
-
-
-def haversine_m(lat1, lon1, lat2, lon2):
-    R = 6_371_000
-    dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-    # Clamp to [0, 1] to guard against floating-point values slightly outside the valid asin domain
-    return R * 2 * math.asin(math.sqrt(max(0.0, min(a, 1.0))))
-
-
-def load_satellite():
-    print(f"Loading {SAT_TIF} ... ", end="", flush=True)
-    Image.MAX_IMAGE_PIXELS = None  # satellite TIFs exceed PIL's default decompression-bomb limit
-    img = cv2.cvtColor(np.array(Image.open(SAT_TIF).convert("RGB")), cv2.COLOR_RGB2BGR)
-    h, w = img.shape[:2]
-    print(f"{w}x{h} px")
-    m = pd.read_csv(SAT_CSV).iloc[0]
-    geo = dict(lt_lat=m["LT_lat_map"], lt_lon=m["LT_lon_map"],
-               rb_lat=m["RB_lat_map"], rb_lon=m["RB_lon_map"], w=w, h=h)
-    geo["pplat"] = h / (geo["lt_lat"] - geo["rb_lat"])
-    geo["pplon"] = w / (geo["rb_lon"] - geo["lt_lon"])
-    return img, geo
-
-
-def gps_to_px(lat, lon, g):
-    return int((lon - g["lt_lon"]) * g["pplon"]), int((g["lt_lat"] - lat) * g["pplat"])
-
-
-def crop_sat(sat, cx, cy, g, sz):
-    if not (0 <= cx < g["w"] and 0 <= cy < g["h"]):
-        return None
-    half = sz // 2
-    x0, y0 = cx - half, cy - half
-    xc, yc = max(0, x0), max(0, y0)
-    patch = sat[yc:min(g["h"], y0+sz), xc:min(g["w"], x0+sz)]
-    if patch.shape[0] != sz or patch.shape[1] != sz:
-        patch = cv2.copyMakeBorder(patch, yc-y0, sz-patch.shape[0]-(yc-y0),
-                                   xc-x0, sz-patch.shape[1]-(xc-x0), cv2.BORDER_REFLECT)
-    return cv2.resize(patch, (SZ, SZ))
+LOWE         = 0.75   # Lowe's ratio test threshold
+FLANN_TREES  = 5      # number of KD-trees for FLANN index
+FLANN_CHECKS = 50     # number of leaf checks during FLANN search
 
 
 def run_match(sg, dg, detector, method, clahe=None, rootsift=False):
@@ -95,21 +50,6 @@ def run_match(sg, dg, detector, method, clahe=None, rootsift=False):
     return r
 
 
-def pred_offset_m(H, cx, cy, crop_sz, geo, lat, lon):
-    """Return (offset_m, pred_lat, pred_lon) from the homography-predicted position,
-    or None if H is None."""
-    if H is None:
-        return None
-    px_crop, py_crop = cv2.perspectiveTransform(
-        np.float32([[SZ/2, SZ/2]]).reshape(-1, 1, 2), H).reshape(2)
-    scale = crop_sz / SZ
-    px_sat = (cx - crop_sz/2) + px_crop * scale
-    py_sat = (cy - crop_sz/2) + py_crop * scale
-    pred_lat = geo["lt_lat"] - py_sat / geo["pplat"]
-    pred_lon = geo["lt_lon"] + px_sat / geo["pplon"]
-    return haversine_m(lat, lon, pred_lat, pred_lon), pred_lat, pred_lon
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit",    type=int,   default=400)
@@ -117,7 +57,7 @@ def main():
     ap.add_argument("--method",   choices=["sift", "orb", "brisk"], default="sift")
     ap.add_argument("--clahe",    action="store_true", help="CLAHE contrast enhancement")
     ap.add_argument("--rootsift", action="store_true", help="RootSIFT normalisation (SIFT only)")
-    ap.add_argument("--visualize",action="store_true")
+    ap.add_argument("--visualize", action="store_true")
     args = ap.parse_args()
 
     if args.rootsift and args.method != "sift":
@@ -131,7 +71,7 @@ def main():
     detector = detectors[args.method]()
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if args.clahe else None
 
-    sat, geo = load_satellite()
+    sat, geo = load_satellite(SAT_TIF, SAT_CSV)
     df = pd.read_csv(DRONE_CSV).head(args.limit)
     flags = " | ".join(f for f, on in [("CLAHE", args.clahe),
                                         ("RootSIFT", args.rootsift and args.method == "sift")] if on) or "none"
@@ -147,31 +87,34 @@ def main():
         if drone is None:
             rows.append(dict(filename=f, skipped=True))
             continue
-        dg = cv2.cvtColor(cv2.resize(drone, (SZ, SZ)), cv2.COLOR_BGR2GRAY)
+        drone = cv2.resize(drone, (SZ_W, SZ_H))
+        dg = cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY)
         cx, cy = gps_to_px(lat, lon, geo)
 
-        best, best_sz, patch = None, None, None
-        for s in SCALES:
-            crop_sz = max(256, int(CROP * s))
-            p = crop_sat(sat, cx, cy, geo, crop_sz)
+        best, best_crop, patch = None, None, None
+        for s in altitude_scales(float(row["height"]), geo):
+            crop_w = max(SZ_W, int(CROP_W * s))
+            crop_h = max(SZ_H, int(CROP_H * s))
+            p = crop_sat(sat, cx, cy, geo, crop_w, crop_h)
             if p is None:
                 continue
             r = run_match(cv2.cvtColor(p, cv2.COLOR_BGR2GRAY), dg, detector,
                           args.method, clahe=clahe, rootsift=args.rootsift)
             if best is None or r["inliers"] > best["inliers"]:
-                best, best_sz, patch = r, crop_sz, p
+                best, best_crop, patch = r, (crop_w, crop_h), p
 
         if best is None:
             rows.append(dict(filename=f, skipped=True))
             continue
 
         r = best
-        off = pred_offset_m(r["H"], cx, cy, best_sz, geo, lat, lon) if r["inliers"] >= MIN_INL else None
+        off = pred_offset_m(r["H"], cx, cy, *best_crop, geo, lat, lon) if r["inliers"] >= MIN_INL else None
         off_m, plat, plon = off if off else (None, None, None)
         success = off_m is not None and off_m <= args.dist
 
         rows.append(dict(filename=f, lat=lat, lon=lon, height=float(row["height"]),
-                         skipped=False, sat_kp=r["sat_kp"], drone_kp=r["drone_kp"],
+                         skipped=False, crop_w=best_crop[0], crop_h=best_crop[1],
+                         sat_kp=r["sat_kp"], drone_kp=r["drone_kp"],
                          raw=r["raw"], good=r["good"], inliers=r["inliers"],
                          inlier_ratio=round(r["inliers"]/r["good"], 4) if r["good"] else 0,
                          pred_lat=round(plat, 7) if plat else None,
@@ -181,7 +124,7 @@ def main():
 
         if args.visualize and r["_matches"]:
             top = sorted(r["_matches"], key=lambda m: m.distance)[:TOP_MATCHES]
-            viz = cv2.drawMatches(cv2.cvtColor(cv2.resize(drone, (SZ, SZ)), cv2.COLOR_BGR2GRAY), r["_kpd"],
+            viz = cv2.drawMatches(dg, r["_kpd"],
                                   cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY), r["_kps"],
                                   top, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
             stem = os.path.splitext(f)[0]
@@ -194,23 +137,7 @@ def main():
     if out.empty or "skipped" not in out.columns:
         print("\n  No images processed."); return
     v = out[~out["skipped"].fillna(False)]
-    if v.empty:
-        print("\n  All images skipped."); return
-
-    n = len(v)
-    with_H      = v[v["inliers"] >= MIN_INL]
-    succeeded   = v[v["success"].fillna(False)]
-    s, h        = len(succeeded), len(with_H)
-    fp          = with_H[~with_H["success"].fillna(False)]
-
-    print(f"\n  Success (≤{args.dist}m):    {s}/{n} ({100*s/n:.1f}%)")
-    print(f"  Homography found:       {h}/{n} ({100*h/n:.1f}%)")
-    if h:
-        print(f"  Incorrect matches:      {len(fp)}/{h} ({100*len(fp)/h:.1f}%) — offset > {args.dist}m")
-    if s:
-        print(f"  Offset (successes):     mean {succeeded['offset_m'].mean():.1f}m  "
-              f"median {succeeded['offset_m'].median():.1f}m  max {succeeded['offset_m'].max():.1f}m")
-    print(f"  Median inliers: {v['inliers'].median():.0f} | ratio: {v['inlier_ratio'].median():.3f}")
+    print_summary(v, args.dist, OUT_CSV)
 
 
 if __name__ == "__main__":
