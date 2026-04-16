@@ -112,6 +112,7 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
 
 
 def main():
+    print("\nTESTTTTTTTBLAHHBLHA")
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit",         type=int,   default=400)
     ap.add_argument("--dist",          type=float, default=25.0,  help="Success radius (m)")
