@@ -25,7 +25,7 @@ FLANN_CHECKS = 50     # number of leaf checks during FLANN search
 
 def run_match(sg, dg, detector, method, clahe=None, rootsift=False):
     if clahe is not None:
-        sg, dg = clahe.apply(sg), clahe.apply(dg)
+        sg = clahe.apply(sg)
     kps, ds = detector.detectAndCompute(sg, None)
     kpd, dd = detector.detectAndCompute(dg, None)
     if rootsift and ds is not None and dd is not None:
@@ -89,6 +89,8 @@ def main():
             continue
         drone = cv2.resize(drone, (SZ_W, SZ_H))
         dg = cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY)
+        if clahe is not None:
+            dg = clahe.apply(dg)
         cx, cy = gps_to_px(lat, lon, geo)
 
         best, best_crop, patch = None, None, None
@@ -117,9 +119,9 @@ def main():
                          sat_kp=r["sat_kp"], drone_kp=r["drone_kp"],
                          raw=r["raw"], good=r["good"], inliers=r["inliers"],
                          inlier_ratio=round(r["inliers"]/r["good"], 4) if r["good"] else 0,
-                         pred_lat=round(plat, 7) if plat else None,
-                         pred_lon=round(plon, 7) if plon else None,
-                         offset_m=round(off_m, 2) if off_m else None,
+                         pred_lat=round(plat, 7) if plat is not None else None,
+                         pred_lon=round(plon, 7) if plon is not None else None,
+                         offset_m=round(off_m, 2) if off_m is not None else None,
                          success=success))
 
         if args.visualize and r["_matches"]:
@@ -133,11 +135,9 @@ def main():
 
     out = pd.DataFrame(rows)
     out.to_csv(OUT_CSV, index=False)
-
     if out.empty or "skipped" not in out.columns:
         print("\n  No images processed."); return
-    v = out[~out["skipped"].fillna(False)]
-    print_summary(v, args.dist, OUT_CSV)
+    print_summary(out[~out["skipped"].fillna(False)], args.dist, OUT_CSV)
 
 
 if __name__ == "__main__":

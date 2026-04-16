@@ -22,33 +22,28 @@ VIZ_DIR   = "visloc_loftr_visualizations"
 
 
 def img_to_tensor(bgr, device):
-    """Convert BGR image to grayscale tensor [1, 1, H, W] in [0, 1]."""
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    t = torch.from_numpy(gray).float().div(255.).unsqueeze(0).unsqueeze(0)
-    return t.to(device)
+    return torch.from_numpy(gray).float().div(255.).unsqueeze(0).unsqueeze(0).to(device)
 
 
 def match_loftr(drone_t, sat_t, matcher, conf_thresh):
-    """Run LoFTR on a drone/satellite tensor pair and estimate homography."""
     with torch.inference_mode():
         out = matcher({"image0": drone_t, "image1": sat_t})
 
-    kp0 = out["keypoints0"].cpu().numpy()  # (N, 2) drone keypoints
-    kp1 = out["keypoints1"].cpu().numpy()  # (N, 2) satellite keypoints
-    conf = out["confidence"].cpu().numpy()  # (N,)
+    kp0  = out["keypoints0"].cpu().numpy()
+    kp1  = out["keypoints1"].cpu().numpy()
+    conf = out["confidence"].cpu().numpy()
 
-    r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0), good=0,
-             inliers=0, H=None, _kp0=kp0, _kp1=kp1, _conf=conf, _mask=None)
-
+    r    = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0), good=0,
+                inliers=0, H=None, _kp0=kp0, _kp1=kp1, _conf=conf, _mask=None)
     mask = conf >= conf_thresh
     r["good"] = int(mask.sum())
-
     if r["good"] < 4:
         return r
 
-    src = kp0[mask].reshape(-1, 1, 2).astype(np.float32)
-    dst = kp1[mask].reshape(-1, 1, 2).astype(np.float32)
-    H, mask_h = cv2.findHomography(src, dst, cv2.RANSAC, RANSAC_THRESH)
+    H, mask_h = cv2.findHomography(kp0[mask].reshape(-1, 1, 2).astype(np.float32),
+                                   kp1[mask].reshape(-1, 1, 2).astype(np.float32),
+                                   cv2.RANSAC, RANSAC_THRESH)
     if H is not None and mask_h is not None:
         r["inliers"], r["H"] = int(mask_h.sum()), H
     r["_mask"] = mask
@@ -58,15 +53,14 @@ def match_loftr(drone_t, sat_t, matcher, conf_thresh):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit",      type=int,   default=400)
-    ap.add_argument("--dist",       type=float, default=25.0,  help="Success radius in metres")
-    ap.add_argument("--conf",       type=float, default=0.0,   help="LoFTR confidence threshold")
+    ap.add_argument("--dist",       type=float, default=25.0)
+    ap.add_argument("--conf",       type=float, default=0.0)
     ap.add_argument("--pretrained", choices=["outdoor", "indoor"], default="outdoor")
     ap.add_argument("--visualize",  action="store_true")
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"  Device: {device}")
-
     print(f"  Loading LoFTR ({args.pretrained}) ... ", end="", flush=True)
     matcher = LoFTR(pretrained=args.pretrained).eval().to(device)
     print("done")
@@ -83,11 +77,9 @@ def main():
         f, lat, lon = row["filename"], float(row["lat"]), float(row["lon"])
         drone = cv2.imread(os.path.join(DRONE_DIR, f))
         if drone is None:
-            rows.append(dict(filename=f, skipped=True))
-            continue
-        drone = cv2.resize(drone, (SZ_W, SZ_H))
-        cx, cy = gps_to_px(lat, lon, geo)
-
+            rows.append(dict(filename=f, skipped=True)); continue
+        drone   = cv2.resize(drone, (SZ_W, SZ_H))
+        cx, cy  = gps_to_px(lat, lon, geo)
         drone_t = img_to_tensor(drone, device)
 
         best, best_crop, patch = None, None, None
@@ -97,14 +89,12 @@ def main():
             p = crop_sat(sat, cx, cy, geo, crop_w, crop_h)
             if p is None:
                 continue
-            sat_t = img_to_tensor(p, device)
-            r = match_loftr(drone_t, sat_t, matcher, args.conf)
+            r = match_loftr(drone_t, img_to_tensor(p, device), matcher, args.conf)
             if best is None or r["inliers"] > best["inliers"]:
                 best, best_crop, patch = r, (crop_w, crop_h), p
 
         if best is None:
-            rows.append(dict(filename=f, skipped=True))
-            continue
+            rows.append(dict(filename=f, skipped=True)); continue
 
         r = best
         off = pred_offset_m(r["H"], cx, cy, *best_crop, geo, lat, lon) if r["inliers"] >= MIN_INL else None
@@ -116,32 +106,27 @@ def main():
                          sat_kp=r["sat_kp"], drone_kp=r["drone_kp"],
                          raw=r["raw"], good=r["good"], inliers=r["inliers"],
                          inlier_ratio=round(r["inliers"]/r["good"], 4) if r["good"] else 0,
-                         pred_lat=round(plat, 7) if plat else None,
-                         pred_lon=round(plon, 7) if plon else None,
-                         offset_m=round(off_m, 2) if off_m else None,
+                         pred_lat=round(plat, 7) if plat is not None else None,
+                         pred_lon=round(plon, 7) if plon is not None else None,
+                         offset_m=round(off_m, 2) if off_m is not None else None,
                          success=success))
 
         if args.visualize and r["_mask"] is not None and r["good"] > 0:
-            kp0, kp1, conf = r["_kp0"], r["_kp1"], r["_conf"]
-            mask = r["_mask"]
+            kp0, kp1, conf, mask = r["_kp0"], r["_kp1"], r["_conf"], r["_mask"]
             kpd_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp0[mask]]
             kps_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp1[mask]]
-            matches_cv = [cv2.DMatch(i, i, 1.0 - c) for i, c in enumerate(conf[mask])]
-            top = sorted(matches_cv, key=lambda m: m.distance)[:TOP_MATCHES]
-            viz = cv2.drawMatches(drone, kpd_cv,
-                                  patch, kps_cv,
-                                  top, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-            stem = os.path.splitext(f)[0]
-            cv2.imwrite(os.path.join(VIZ_DIR, f"{stem}_matches.jpg"), viz,
-                        [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+            top = sorted([cv2.DMatch(i, i, 1.0 - c) for i, c in enumerate(conf[mask])],
+                         key=lambda m: m.distance)[:TOP_MATCHES]
+            viz = cv2.drawMatches(drone, kpd_cv, patch, kps_cv, top, None,
+                                  flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            cv2.imwrite(os.path.join(VIZ_DIR, f"{os.path.splitext(f)[0]}_matches.jpg"),
+                        viz, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
 
     out = pd.DataFrame(rows)
     out.to_csv(OUT_CSV, index=False)
-
     if out.empty or "skipped" not in out.columns:
         print("\n  No images processed."); return
-    v = out[~out["skipped"].fillna(False)]
-    print_summary(v, args.dist, OUT_CSV)
+    print_summary(out[~out["skipped"].fillna(False)], args.dist, OUT_CSV)
 
 
 if __name__ == "__main__":

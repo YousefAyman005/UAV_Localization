@@ -6,8 +6,7 @@ from PIL import Image
 
 MIN_INL       = 10      # minimum RANSAC inliers required to attempt GPS prediction
 CROP_W        = 2048    # base satellite crop width  (pixels, on the full satellite tile)
-CROP_H        = 1360    # base satellite crop height — must equal CROP_W * SZ_H/SZ_W so that
-                        # scale_x == scale_y in pred_offset_m (geometry preserved on resize)
+CROP_H        = 1360    # must equal CROP_W * SZ_H/SZ_W — keeps scale_x==scale_y in pred_offset_m
 SZ_W          = 1024    # working width  (pixels) — preserves native 3:2 UAV aspect ratio
 SZ_H          = 680     # working height (pixels)
 SCALES        = [0.5, 0.75, 1.0, 1.25, 1.5]
@@ -15,8 +14,7 @@ RANSAC_THRESH = 5.0     # RANSAC reprojection error threshold (pixels)
 TOP_MATCHES   = 50      # max matches drawn in visualizations
 JPEG_QUALITY  = 85      # output quality for saved visualization images
 
-# Approximate UAV horizontal FOV used for altitude-based crop prior
-_UAV_HFOV_DEG = 70.0
+_UAV_HFOV_DEG = 70.0  # approximate UAV horizontal FOV for altitude-based scale prior
 
 
 def haversine_m(lat1, lon1, lat2, lon2):
@@ -77,11 +75,7 @@ def pred_offset_m(H, cx, cy, crop_w, crop_h, geo, lat, lon):
 
 
 def altitude_scales(height_m, geo):
-    """Return SCALES sorted by proximity to the altitude-predicted satellite footprint.
-
-    Uses the UAV horizontal FOV and satellite metres-per-pixel to estimate which
-    crop scale best matches what the drone actually sees at the given altitude.
-    """
+    """Return SCALES sorted by proximity to the altitude-predicted satellite footprint."""
     lat_mid = (geo["lt_lat"] + geo["rb_lat"]) / 2
     m_per_px = math.cos(math.radians(lat_mid)) * 111_320 / geo["pplon"]
     footprint_px = 2 * height_m * math.tan(math.radians(_UAV_HFOV_DEG / 2)) / m_per_px

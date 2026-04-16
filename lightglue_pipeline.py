@@ -21,30 +21,16 @@ OUT_CSV   = "visloc_lightglue_results.csv"
 VIZ_DIR   = "visloc_lightglue_visualizations"
 
 
-# ---------------------------------------------------------------------------
-# Preprocessing
-# ---------------------------------------------------------------------------
-
-def apply_clahe(bgr):
-    """Apply CLAHE to the L channel of a BGR image."""
+def apply_clahe(bgr, clahe):
     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
-    cl = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    lab[:, :, 0] = cl.apply(lab[:, :, 0])
+    lab[:, :, 0] = clahe.apply(lab[:, :, 0])
     return cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
 
 def bgr_to_tensor(bgr, device):
-    """Convert BGR image to normalised float tensor [1,3,H,W]."""
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     return torch.from_numpy(rgb).float().div(255.).permute(2, 0, 1).unsqueeze(0).to(device)
 
-
-# ---------------------------------------------------------------------------
-# Feature extraction  (each returns kp, desc, extras)
-#   kp:    [N, 2]  tensor (x, y pixel coords)
-#   desc:  [N, D]  tensor
-#   extras: dict with optional 'scales' [N] and 'oris' [N] tensors
-# ---------------------------------------------------------------------------
 
 def extract_disk(bgr, extractor, device, **_kw):
     t = bgr_to_tensor(bgr, device)
@@ -56,37 +42,29 @@ def extract_disk(bgr, extractor, device, **_kw):
 def extract_dedode(bgr, extractor, device, **_kw):
     t = bgr_to_tensor(bgr, device)
     with torch.inference_mode():
-        kp, scores, desc = extractor(t, n=4096)
+        kp, _, desc = extractor(t, n=4096)
     return kp[0], desc[0], {}
 
 
-def _rootsift(descs: np.ndarray) -> np.ndarray:
-    """Convert raw OpenCV SIFT descriptors to RootSIFT (Arandjelovic et al.)."""
+def _rootsift(descs):
     descs = descs.astype(np.float32)
-    descs /= descs.sum(axis=1, keepdims=True) + 1e-8   # L1-normalise
-    return np.sqrt(descs)                               # element-wise sqrt
+    descs /= descs.sum(axis=1, keepdims=True) + 1e-8
+    return np.sqrt(descs)
 
 
 def extract_sift(bgr, _extractor, _device, *, sift_det=None, **_kw):
-    """OpenCV SIFT → RootSIFT tensors.  LightGlue('sift') expects RootSIFT."""
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     kps, descs = sift_det.detectAndCompute(gray, None)
     if descs is None or len(kps) < 4:
         return torch.zeros(0, 2), torch.zeros(0, 128), {}
-    kp_t   = torch.tensor([k.pt for k in kps],   dtype=torch.float32)
-    desc_t = torch.from_numpy(_rootsift(descs))
-    sc_t   = torch.tensor([k.size for k in kps],  dtype=torch.float32)
-    ori_t  = torch.deg2rad(torch.tensor([k.angle for k in kps], dtype=torch.float32))
-    return kp_t, desc_t, {"scales": sc_t, "oris": ori_t}
+    kp_t  = torch.tensor([k.pt    for k in kps], dtype=torch.float32)
+    sc_t  = torch.tensor([k.size  for k in kps], dtype=torch.float32)
+    ori_t = torch.deg2rad(torch.tensor([k.angle for k in kps], dtype=torch.float32))
+    return kp_t, torch.from_numpy(_rootsift(descs)), {"scales": sc_t, "oris": ori_t}
 
-
-# ---------------------------------------------------------------------------
-# Matching + geometry
-# ---------------------------------------------------------------------------
 
 def match_and_ransac(kpd, descd, extd, kps, descs, exts,
                      matcher, conf_thresh, ransac_thresh, device):
-    """Match keypoints via LightGlue and estimate homography."""
     kpd_np = kpd.cpu().numpy() if kpd.is_cuda else kpd.numpy()
     kps_np = kps.cpu().numpy() if kps.is_cuda else kps.numpy()
 
@@ -96,18 +74,13 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
     if len(kpd_np) < 4 or len(kps_np) < 4:
         return r
 
-    # image_size MUST be the actual image dimensions (W, H).
-    # LightGlue normalises keypoints to [-1, 1] using this value.
     img_size = torch.tensor([[SZ_W, SZ_H]], device=device)
-
     d0 = {"keypoints": kpd.unsqueeze(0).to(device),
-           "descriptors": descd.unsqueeze(0).to(device),
-           "image_size": img_size}
+          "descriptors": descd.unsqueeze(0).to(device),
+          "image_size": img_size}
     d1 = {"keypoints": kps.unsqueeze(0).to(device),
-           "descriptors": descs.unsqueeze(0).to(device),
-           "image_size": img_size}
-
-    # Pass optional scale/orientation for SIFT features
+          "descriptors": descs.unsqueeze(0).to(device),
+          "image_size": img_size}
     for extras, d in [(extd, d0), (exts, d1)]:
         for k in ("scales", "oris"):
             if k in extras:
@@ -116,8 +89,8 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
     with torch.inference_mode():
         out = matcher({"image0": d0, "image1": d1})
 
-    mi = out["matches0"][0].cpu().numpy()
-    sc = out["matching_scores0"][0].cpu().numpy()
+    mi   = out["matches0"][0].cpu().numpy()
+    sc   = out["matching_scores0"][0].cpu().numpy()
     mask = (mi >= 0) & (sc >= conf_thresh)
 
     d_idx = np.where(mask)[0]
@@ -131,8 +104,6 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
 
     src = kpd_np[d_idx].reshape(-1, 1, 2).astype(np.float32)
     dst = kps_np[s_idx].reshape(-1, 1, 2).astype(np.float32)
-
-    # MAGSAC++ is more robust than vanilla RANSAC with many outliers
     H, mask_h = cv2.findHomography(src, dst, cv2.USAC_MAGSAC, ransac_thresh,
                                    maxIters=5000, confidence=0.9999)
     if H is not None and mask_h is not None:
@@ -140,27 +111,21 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
     return r
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit",         type=int,   default=400)
     ap.add_argument("--dist",          type=float, default=25.0,  help="Success radius (m)")
-    ap.add_argument("--method",        choices=["disk", "dedodeb", "sift"],
-                                       default="disk")
+    ap.add_argument("--method",        choices=["disk", "dedodeb", "sift"], default="disk")
     ap.add_argument("--conf",          type=float, default=0.0,   help="LightGlue conf threshold")
-    ap.add_argument("--clahe",         action="store_true",        help="CLAHE enhancement")
-    ap.add_argument("--ransac-thresh", type=float, default=None,   help="RANSAC reproj threshold")
-    ap.add_argument("--min-inl",       type=int,   default=None,   help="Min inliers to accept")
+    ap.add_argument("--clahe",         action="store_true")
+    ap.add_argument("--ransac-thresh", type=float, default=None)
+    ap.add_argument("--min-inl",       type=int,   default=None)
     ap.add_argument("--visualize",     action="store_true")
     args = ap.parse_args()
 
     ransac_t = args.ransac_thresh if args.ransac_thresh is not None else RANSAC_THRESH
     min_inl  = args.min_inl       if args.min_inl       is not None else MIN_INL
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device   = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"  Device: {device}")
 
     print(f"  Loading models ({args.method}) ... ", end="", flush=True)
@@ -173,7 +138,7 @@ def main():
             detector_weights="L-upright", descriptor_weights="B-upright"
         ).eval().to(device)
         extract_fn, lg_feat = extract_dedode, "dedodeb"
-    else:  # sift
+    else:
         sift_det  = cv2.SIFT_create(nfeatures=8192)
         extractor = None
         extract_fn, lg_feat = extract_sift, "sift"
@@ -181,10 +146,10 @@ def main():
                         depth_confidence=-1, width_confidence=-1).eval().to(device)
     print("done")
 
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if args.clahe else None
     sat, geo = load_satellite(SAT_TIF, SAT_CSV)
     df = pd.read_csv(DRONE_CSV).head(args.limit)
-    flags = " | ".join(f for f, on in [("CLAHE", args.clahe)] if on) or "none"
-    print(f"  Method: {args.method.upper()} | Pre: {flags} | "
+    print(f"  Method: {args.method.upper()} | CLAHE: {args.clahe} | "
           f"Conf: {args.conf} | RANSAC: {ransac_t} | MinInl: {min_inl} | "
           f"Dist: {args.dist}m | {len(df)} images\n")
 
@@ -196,14 +161,11 @@ def main():
         f, lat, lon = row["filename"], float(row["lat"]), float(row["lon"])
         drone = cv2.imread(os.path.join(DRONE_DIR, f))
         if drone is None:
-            rows.append(dict(filename=f, skipped=True))
-            continue
+            rows.append(dict(filename=f, skipped=True)); continue
         drone = cv2.resize(drone, (SZ_W, SZ_H))
-        if args.clahe:
-            drone = apply_clahe(drone)
+        if clahe is not None:
+            drone = apply_clahe(drone, clahe)
         cx, cy = gps_to_px(lat, lon, geo)
-
-        # Extract drone features ONCE — reuse across all scales
         kpd, descd, extd = extract_fn(drone, extractor, device, sift_det=sift_det)
 
         best, best_crop, patch = None, None, None
@@ -213,8 +175,8 @@ def main():
             p = crop_sat(sat, cx, cy, geo, crop_w, crop_h)
             if p is None:
                 continue
-            if args.clahe:
-                p = apply_clahe(p)
+            if clahe is not None:
+                p = apply_clahe(p, clahe)
             kps, descs, exts = extract_fn(p, extractor, device, sift_det=sift_det)
             r = match_and_ransac(kpd, descd, extd, kps, descs, exts,
                                  matcher, args.conf, ransac_t, device)
@@ -222,8 +184,7 @@ def main():
                 best, best_crop, patch = r, (crop_w, crop_h), p
 
         if best is None:
-            rows.append(dict(filename=f, skipped=True))
-            continue
+            rows.append(dict(filename=f, skipped=True)); continue
 
         r = best
         off = pred_offset_m(r["H"], cx, cy, *best_crop, geo, lat, lon) if r["inliers"] >= min_inl else None
@@ -244,22 +205,18 @@ def main():
             d_idx, s_idx, conf = r["_valid"]
             kpd_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in r["_kpd_np"]]
             kps_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in r["_kps_np"]]
-            matches_cv = [cv2.DMatch(int(i), int(j), 1.0 - c) for i, j, c in zip(d_idx, s_idx, conf)]
-            top = sorted(matches_cv, key=lambda m: m.distance)[:TOP_MATCHES]
-            viz = cv2.drawMatches(drone, kpd_cv,
-                                  patch, kps_cv,
-                                  top, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-            stem = os.path.splitext(f)[0]
-            cv2.imwrite(os.path.join(VIZ_DIR, f"{stem}_matches.jpg"), viz,
-                        [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+            top = sorted([cv2.DMatch(int(i), int(j), 1.0 - c) for i, j, c in zip(d_idx, s_idx, conf)],
+                         key=lambda m: m.distance)[:TOP_MATCHES]
+            viz = cv2.drawMatches(drone, kpd_cv, patch, kps_cv, top, None,
+                                  flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            cv2.imwrite(os.path.join(VIZ_DIR, f"{os.path.splitext(f)[0]}_matches.jpg"),
+                        viz, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
 
     out = pd.DataFrame(rows)
     out.to_csv(OUT_CSV, index=False)
-
     if out.empty or "skipped" not in out.columns:
         print("\n  No images processed."); return
-    v = out[~out["skipped"].fillna(False)]
-    print_summary(v, args.dist, OUT_CSV, min_inl=min_inl)
+    print_summary(out[~out["skipped"].fillna(False)], args.dist, OUT_CSV, min_inl=min_inl)
 
 
 if __name__ == "__main__":
