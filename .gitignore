@@ -6,6 +6,8 @@ UAV_VisLoc_example/
 *.csv
 # Visualizations
 *.jpg
+#weights
+*.pth
 # Python
 __pycache__/
 *.pyc
