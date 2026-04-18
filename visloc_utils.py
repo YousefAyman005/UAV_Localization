@@ -18,11 +18,12 @@ JPEG_QUALITY  = 85
 
 # Default UAV_VisLoc dataset paths (flight 03).
 FLIGHT    = "03"
-BASE      = f"UAV_Visloc_example/{FLIGHT}"
-SAT_TIF   = f"{BASE}/satellite{FLIGHT}.tif"
-DRONE_DIR = f"{BASE}/drone"
-DRONE_CSV = f"{BASE}/{FLIGHT}.csv"
-SAT_CSV   = "UAV_Visloc_example/satellite_ coordinates_range.csv"
+_HERE     = os.path.dirname(os.path.abspath(__file__))
+BASE      = os.path.join(_HERE, f"UAV_Visloc_example/{FLIGHT}")
+SAT_TIF   = os.path.join(BASE, f"satellite{FLIGHT}.tif")
+DRONE_DIR = os.path.join(BASE, "drone")
+DRONE_CSV = os.path.join(BASE, f"{FLIGHT}.csv")
+SAT_CSV   = os.path.join(_HERE, "UAV_Visloc_example/satellite_ coordinates_range.csv")
 
 _UAV_HFOV_DEG = 70.0  # approximate UAV horizontal FOV for altitude-based scale prior
 
