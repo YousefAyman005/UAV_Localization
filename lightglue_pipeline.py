@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from visloc_utils import (
-    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, SAT_TIF, SAT_CSV, DRONE_CSV,
+    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
     load_satellite, run_pipeline, draw_and_save,
 )
 from kornia.feature import LightGlue, DISK, DeDoDe
@@ -149,7 +149,7 @@ def main():
         draw_and_save(drone, kpd_cv, patch, kps_cv, top, filename, viz_dir)
 
     run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
-                 min_inl=min_inl, clahe=clahe,
+                 min_inl=min_inl, clahe=clahe, drone_dir=DRONE_DIR,
                  viz_fn=viz_fn if args.visualize else None,
                  viz_dir=VIZ_DIR if args.visualize else None)
 

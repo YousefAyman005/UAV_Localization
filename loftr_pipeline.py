@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from visloc_utils import (
-    RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV,
+    RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
     load_satellite, run_pipeline, save_dense_viz,
 )
 from kornia.feature import LoFTR
@@ -62,6 +62,7 @@ def main():
         return lambda p: match_loftr(drone_t, img_to_tensor(p, device), matcher, args.conf)
 
     run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
+                 drone_dir=DRONE_DIR,
                  viz_fn=save_dense_viz if args.visualize else None,
                  viz_dir=VIZ_DIR if args.visualize else None)
 

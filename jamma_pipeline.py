@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 
 from visloc_utils import (
-    MIN_INL, RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV,
+    MIN_INL, RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
     load_satellite, run_pipeline, save_dense_viz,
 )
 
@@ -139,7 +139,7 @@ def main():
         )
 
     run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
-                 min_inl=min_inl, clahe=clahe,
+                 min_inl=min_inl, clahe=clahe, drone_dir=DRONE_DIR,
                  viz_fn=save_dense_viz if args.visualize else None,
                  viz_dir=VIZ_DIR if args.visualize else None)
 

@@ -15,7 +15,7 @@ if not torch.cuda.is_available():
     torch.nn.Module.cuda = lambda self, *a, **k: self                # module.cuda() -> self
 
 from visloc_utils import (
-    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV,
+    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
     load_satellite, run_pipeline, save_dense_viz,
 )
 from matcha.feature.matcha_feature import MatchaFeature
@@ -112,7 +112,7 @@ def main():
         return lambda p: match_matcha(drone, p, matcher, args.img_size, device, args.conf, ransac_t)
 
     run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
-                 min_inl=min_inl, clahe=clahe,
+                 min_inl=min_inl, clahe=clahe, drone_dir=DRONE_DIR,
                  viz_fn=save_dense_viz if args.visualize else None,
                  viz_dir=VIZ_DIR if args.visualize else None)
 

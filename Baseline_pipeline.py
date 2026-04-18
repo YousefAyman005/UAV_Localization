@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from visloc_utils import (
-    RANSAC_THRESH, TOP_MATCHES, SAT_TIF, SAT_CSV, DRONE_CSV,
+    RANSAC_THRESH, TOP_MATCHES, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
     load_satellite, run_pipeline, draw_and_save,
 )
 
@@ -81,6 +81,7 @@ def main():
         draw_and_save(dg, best["_kpd"], best["_sg"], best["_kps"], top, filename, viz_dir)
 
     run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
+                 drone_dir=DRONE_DIR,
                  viz_fn=viz_fn if args.visualize else None,
                  viz_dir=VIZ_DIR if args.visualize else None)
 

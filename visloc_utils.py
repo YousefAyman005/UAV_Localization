@@ -156,11 +156,13 @@ def save_dense_viz(drone, patch, best, filename, viz_dir):
 
 
 def run_pipeline(sat, geo, df, match_factory, out_csv, dist, min_inl=MIN_INL,
-                 clahe=None, viz_fn=None, viz_dir=None):
+                 clahe=None, viz_fn=None, viz_dir=None, drone_dir=None):
     """Per-image loop: build match_fn via match_factory(drone_bgr), scale_sweep, predict GPS,
     append row, optionally visualize; then save CSV and print the standard summary.
     If `clahe` is given, LAB-CLAHE is applied to both the drone and every sat patch.
     """
+    if drone_dir is None:
+        drone_dir = DRONE_DIR
     clahe_fn = (lambda p: apply_clahe_lab(p, clahe)) if clahe is not None else None
     if viz_fn is not None and viz_dir is not None:
         os.makedirs(viz_dir, exist_ok=True)
@@ -168,7 +170,7 @@ def run_pipeline(sat, geo, df, match_factory, out_csv, dist, min_inl=MIN_INL,
     for _, row in tqdm(df.iterrows(), total=len(df), unit="img"):
         f = row["filename"]
         lat, lon, height = float(row["lat"]), float(row["lon"]), float(row["height"])
-        drone = cv2.imread(os.path.join(DRONE_DIR, f))
+        drone = cv2.imread(os.path.join(drone_dir, f))
         if drone is None:
             rows.append(dict(filename=f, skipped=True)); continue
         drone = cv2.resize(drone, (SZ_W, SZ_H))
