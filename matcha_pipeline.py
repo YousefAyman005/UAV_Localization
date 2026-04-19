@@ -26,15 +26,15 @@ OUT_CSV = "visloc_matcha_results.csv"
 VIZ_DIR = "visloc_matcha_visualizations"
 
 
-def bgr_to_tensor(bgr, img_size, device):
+def bgr_to_tensor(bgr, img_w, img_h, device):
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    rs  = cv2.resize(rgb, (img_size, img_size), interpolation=cv2.INTER_CUBIC)
+    rs  = cv2.resize(rgb, (img_w, img_h), interpolation=cv2.INTER_CUBIC)
     return torch.from_numpy(rs / 255.).float().permute(2, 0, 1).unsqueeze(0).to(device)
 
 
-def match_matcha(drone_bgr, sat_bgr, matcher, img_size, device, conf_thresh, ransac_thresh):
-    t0 = bgr_to_tensor(drone_bgr, img_size, device)
-    t1 = bgr_to_tensor(sat_bgr,   img_size, device)
+def match_matcha(drone_bgr, sat_bgr, matcher, img_w, img_h, device, conf_thresh, ransac_thresh):
+    t0 = bgr_to_tensor(drone_bgr, img_w, img_h, device)
+    t1 = bgr_to_tensor(sat_bgr,   img_w, img_h, device)
     with torch.inference_mode():
         out = matcher(data0={"image": t0}, data1={"image": t1})
 
@@ -48,7 +48,7 @@ def match_matcha(drone_bgr, sat_bgr, matcher, img_size, device, conf_thresh, ran
     mid0, mid1 = np.where(valid)[0], m[valid]
     conf = scr[mid0] if scr is not None else np.ones(mid0.shape, dtype=np.float32)
 
-    scale = np.array([SZ_W / img_size, SZ_H / img_size], dtype=np.float32)
+    scale = np.array([SZ_W / img_w, SZ_H / img_h], dtype=np.float32)
     kp0_f = (kp0[mid0] * scale).astype(np.float32)
     kp1_f = (kp1[mid1] * scale).astype(np.float32)
 
@@ -73,7 +73,8 @@ def main():
     ap.add_argument("--dist",            type=float, default=25.0)
     ap.add_argument("--conf",            type=float, default=0.0)
     ap.add_argument("--weights",         type=str,   default="weights/matcha_pretrained.pth")
-    ap.add_argument("--img-size",        type=int,   default=512)
+    ap.add_argument("--img-w",           type=int,   default=1024, help="must be divisible by 32")
+    ap.add_argument("--img-h",           type=int,   default=672,  help="must be divisible by 32")
     ap.add_argument("--keypoint-method", choices=["disk"], default="disk")
     ap.add_argument("--ransac-thresh",   type=float, default=None)
     ap.add_argument("--min-inl",         type=int,   default=None)
@@ -84,6 +85,9 @@ def main():
     ransac_t = args.ransac_thresh if args.ransac_thresh is not None else RANSAC_THRESH
     min_inl  = args.min_inl       if args.min_inl       is not None else MIN_INL
 
+    if args.img_w % 32 or args.img_h % 32:
+        raise ValueError(f"--img-w/--img-h must be divisible by 32 (got {args.img_w}x{args.img_h})")
+
     if not os.path.exists(args.weights):
         raise FileNotFoundError(
             f"MATCHA weights not found at {args.weights}. "
@@ -93,10 +97,10 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"  Device: {device}")
-    print(f"  Loading MATCHA ({args.keypoint_method}, {args.img_size}x{args.img_size}) ... ",
+    print(f"  Loading MATCHA ({args.keypoint_method}, {args.img_w}x{args.img_h}) ... ",
           end="", flush=True)
     model = MatchaFeature(config={"keypoint_method": args.keypoint_method,
-                                   "image_size": (args.img_size, args.img_size)})
+                                   "image_size": (args.img_w, args.img_h)})
     model.load_state_dict(torch.load(args.weights, map_location="cpu"), strict=False)
     matcher = BaseMatcher(model, device)
     print("done")
@@ -104,12 +108,12 @@ def main():
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if args.clahe else None
     sat, geo = load_satellite(SAT_TIF, SAT_CSV)
     df = pd.read_csv(DRONE_CSV).head(args.limit)
-    print(f"  Method: MATCHA ({args.keypoint_method}) | Size: {args.img_size} | "
+    print(f"  Method: MATCHA ({args.keypoint_method}) | Size: {args.img_w}x{args.img_h} | "
           f"CLAHE: {args.clahe} | Conf: {args.conf} | RANSAC: {ransac_t}px | "
           f"MinInl: {min_inl} | Dist: {args.dist}m | {len(df)} images\n")
 
     def match_factory(drone):
-        return lambda p: match_matcha(drone, p, matcher, args.img_size, device, args.conf, ransac_t)
+        return lambda p: match_matcha(drone, p, matcher, args.img_w, args.img_h, device, args.conf, ransac_t)
 
     run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
                  min_inl=min_inl, clahe=clahe, drone_dir=DRONE_DIR,
