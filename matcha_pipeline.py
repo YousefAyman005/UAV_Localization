@@ -69,7 +69,7 @@ def extract_matcha_features(bgr, matcher, img_w, img_h, device, use_amp):
 def match_matcha_features(kpts0, desc0, kpts1, desc1, img_w, img_h, conf_thresh, ransac_thresh, device):
     try:
         with torch.inference_mode():
-            matches = matcher_matches(desc0, desc1)
+            matches, scores = matcher_matches(desc0, desc1)
     except torch.cuda.OutOfMemoryError as exc:
         cuda_cleanup(device)
         raise RuntimeError(oom_hint(img_w, img_h)) from exc
@@ -77,11 +77,11 @@ def match_matcha_features(kpts0, desc0, kpts1, desc1, img_w, img_h, conf_thresh,
     kp0 = np.asarray(to_numpy(kpts0[0])).reshape(-1, 2)
     kp1 = np.asarray(to_numpy(kpts1[0])).reshape(-1, 2)
     m   = np.asarray(to_numpy(matches[0])).reshape(-1).astype(np.int64)
-    scr = None
+    scr = np.asarray(to_numpy(scores[0])).reshape(-1).astype(np.float32)
 
     valid = m >= 0
     mid0, mid1 = np.where(valid)[0], m[valid]
-    conf = scr[mid0] if scr is not None else np.ones(mid0.shape, dtype=np.float32)
+    conf = scr[mid0]
 
     scale = np.array([SZ_W / img_w, SZ_H / img_h], dtype=np.float32)
     kp0_f = (kp0[mid0] * scale).astype(np.float32)
@@ -105,7 +105,25 @@ def match_matcha_features(kpts0, desc0, kpts1, desc1, img_w, img_h, conf_thresh,
 
 
 def matcher_matches(desc0, desc1):
-    return BaseMatcher.nearest_neighbor_matching(x0=desc0, x1=desc1)
+    if desc0.shape[-1] == 0 or desc1.shape[-1] == 0:
+        shape = desc0.shape[0], desc0.shape[-1]
+        return (
+            torch.full(shape, -1, dtype=torch.long, device=desc0.device),
+            torch.zeros(shape, dtype=desc0.dtype, device=desc0.device),
+        )
+
+    sim = torch.einsum("bdn,bdm->bnm", desc0, desc1)
+    scores, matches = sim.max(dim=-1)
+
+    reverse = sim.transpose(1, 2).argmax(dim=-1)
+    src_ids = torch.arange(matches.shape[-1], device=matches.device).expand_as(matches)
+    mutual = src_ids == torch.gather(reverse, -1, matches)
+    matches = torch.where(mutual, matches, matches.new_tensor(-1))
+
+    # Descriptors are L2-normalized, so cosine similarity maps cleanly to [0, 1].
+    scores = ((scores + 1.0) * 0.5).clamp(0.0, 1.0)
+    scores = torch.where(mutual, scores, scores.new_zeros(()))
+    return matches, scores
 
 
 def main():
