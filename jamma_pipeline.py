@@ -1,4 +1,5 @@
 import argparse
+import time
 import cv2
 import numpy as np
 import pandas as pd
@@ -87,14 +88,17 @@ def match_jamma(t0, m0, s0, t1, m1, s1, backbone, matcher, conf_thresh, ransac_t
     return r
 
 
+def _ts(label):
+    print(f"  [{time.strftime('%H:%M:%S')}] {label}", flush=True)
+
+
 def _load_jamma(device):
-    # Deferred import: JamMa repo must be on sys.path and mamba-ssm installed.
+    _ts("importing JamMa modules (triggers mamba-ssm CUDA build if first run)...")
     from src.jamma.jamma import JamMa as JamMaMatcher
     from src.jamma.backbone import CovNextV2_nano
+    _ts("imports done")
 
-    # Mirror the upstream utlis.JamMa wrapper so jamma.ckpt (which stores the
-    # full backbone+matcher state under 'backbone.*' and 'matcher.*' keys) is
-    # loaded into a module with matching structure, then split for inference.
+    _ts("building model skeleton...")
     class _Wrapper(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -102,12 +106,19 @@ def _load_jamma(device):
             self.matcher  = JamMaMatcher(JAMMA_CFG, profiler=None)
 
     wrapper = _Wrapper()
+    _ts("skeleton built")
+
+    _ts(f"downloading/loading weights from {JAMMA_URL} ...")
     state_dict = torch.hub.load_state_dict_from_url(
         JAMMA_URL, map_location="cpu", file_name="jamma.ckpt")["state_dict"]
+    _ts("weights loaded, applying state_dict...")
     missing, unexpected = wrapper.load_state_dict(state_dict, strict=True)
-    # strict=True means any mismatch raises here, so we never run with random weights.
+    _ts(f"state_dict applied — moving to {device}...")
 
-    return wrapper.backbone.eval().to(device), wrapper.matcher.eval().to(device)
+    backbone = wrapper.backbone.eval().to(device)
+    matcher  = wrapper.matcher.eval().to(device)
+    _ts("model on device, ready")
+    return backbone, matcher
 
 
 def main():
