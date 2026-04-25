@@ -7,8 +7,9 @@ import torch
 import torch.nn.functional as F
 
 from visloc_utils import (
-    MIN_INL, RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
-    load_satellite, run_pipeline, save_dense_viz,
+    MIN_INL, RANSAC_THRESH,
+    FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
+    print_summary, save_dense_viz, TeeLogger,
 )
 
 OUT_CSV = "visloc_jamma_results.csv"
@@ -67,8 +68,8 @@ def match_jamma(t0, m0, s0, t1, m1, s1, backbone, matcher, conf_thresh, ransac_t
         backbone(data)
         matcher(data)
 
-    kp0  = data["mkpts0_f"].cpu().numpy().astype(np.float32)
-    kp1  = data["mkpts1_f"].cpu().numpy().astype(np.float32)
+    kp0  = data["mkpts0_f"].cpu().numpy().astype(np.float32).reshape(-1, 2)
+    kp1  = data["mkpts1_f"].cpu().numpy().astype(np.float32).reshape(-1, 2)
     conf = data["mconf_f"].cpu().numpy()
     kp0[:, 0] *= s0[0]; kp0[:, 1] *= s0[1]
     kp1[:, 0] *= s1[0]; kp1[:, 1] *= s1[1]
@@ -121,17 +122,17 @@ def _load_jamma(device):
     return backbone, matcher
 
 
+JAMMA_CONF = 0.2
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit",         type=int,   default=400)
-    ap.add_argument("--dist",          type=float, default=25.0)
-    ap.add_argument("--conf",          type=float, default=0.2)
-    ap.add_argument("--resize",        type=int,   default=832)
-    ap.add_argument("--df",            type=int,   default=16)
-    ap.add_argument("--ransac-thresh", type=float, default=None)
-    ap.add_argument("--min-inl",       type=int,   default=None)
-    ap.add_argument("--clahe",         action="store_true")
-    ap.add_argument("--visualize",     action="store_true")
+    ap.add_argument("--dist",      type=float, default=25.0)
+    ap.add_argument("--resize",    type=int,   default=832)
+    ap.add_argument("--df",        type=int,   default=16)
+    ap.add_argument("--visualize", action="store_true")
+    ap.add_argument("--flights",   nargs="+", default=["all"],
+                    help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
     args = ap.parse_args()
 
     if args.df <= 0 or args.df % 8 != 0:
@@ -140,14 +141,10 @@ def main():
     if args.resize <= 0:
         raise ValueError(f"--resize must be positive (got {args.resize}).")
 
-    ransac_t = args.ransac_thresh if args.ransac_thresh is not None else RANSAC_THRESH
-    min_inl  = args.min_inl       if args.min_inl       is not None else MIN_INL
+    flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
 
     if not torch.cuda.is_available():
-        raise RuntimeError(
-            "JamMa requires CUDA (mamba-ssm has no CPU/MPS kernels). "
-            "Run this pipeline on Kaggle/Colab with a GPU enabled."
-        )
+        raise RuntimeError("JamMa requires CUDA (mamba-ssm has no CPU/MPS kernels).")
 
     device = torch.device("cuda")
     print(f"  Device: {device}")
@@ -155,25 +152,45 @@ def main():
     backbone, matcher = _load_jamma(device)
     print("done")
 
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if args.clahe else None
-    sat, geo = load_satellite(SAT_TIF, SAT_CSV)
-    df = pd.read_csv(DRONE_CSV).head(args.limit)
-    print(f"  Method: JamMa | Resize: {args.resize} | DF: {args.df} | "
-          f"CLAHE: {args.clahe} | Conf: {args.conf} | RANSAC: {ransac_t}px | "
-          f"MinInl: {min_inl} | Dist: {args.dist}m | {len(df)} images\n")
+    print(f"  Method: JamMa | Resize: {args.resize} | DF: {args.df} | Conf: {JAMMA_CONF} | "
+          f"RANSAC: {RANSAC_THRESH}px | MinInl: {MIN_INL} | "
+          f"Dist: {args.dist}m | Flights: {' '.join(flights)}")
 
     def match_factory(drone):
         t0, m0, s0 = jamma_preprocess(drone, args.resize, args.df, device)
         return lambda p: match_jamma(
             t0, m0, s0,
             *jamma_preprocess(p, args.resize, args.df, device),
-            backbone, matcher, args.conf, ransac_t,
+            backbone, matcher, JAMMA_CONF, RANSAC_THRESH,
         )
 
-    run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
-                 min_inl=min_inl, clahe=clahe, drone_dir=DRONE_DIR,
-                 viz_fn=save_dense_viz if args.visualize else None,
-                 viz_dir=VIZ_DIR if args.visualize else None)
+    log_path = OUT_CSV.replace(".csv", ".log")
+    with TeeLogger(log_path):
+        all_rows = []
+        for flight in flights:
+            tiles, drone_dir, drone_csv, _ = load_flight(flight)
+            df = pd.read_csv(drone_csv)
+            print(f"\n=== Flight {flight}: {len(df)} images ===")
+
+            rows = collect_pipeline_rows_multitile(tiles, df, match_factory, args.dist,
+                                                    min_inl=MIN_INL,
+                                                    drone_dir=drone_dir, flight=flight,
+                                                    viz_fn=save_dense_viz if args.visualize else None,
+                                                    viz_dir=VIZ_DIR if args.visualize else None)
+            all_rows.extend(rows)
+
+            flight_df = pd.DataFrame(rows)
+            valid = flight_df[~flight_df["skipped"].fillna(False)]
+            if not valid.empty:
+                print_summary(valid, args.dist, f"flight {flight}", min_inl=MIN_INL)
+
+        out = pd.DataFrame(all_rows)
+        out.to_csv(OUT_CSV, index=False)
+        if len(flights) > 1:
+            print(f"\n=== Overall ({len(flights)} flights) ===")
+            valid_all = out[~out["skipped"].fillna(False)]
+            if not valid_all.empty:
+                print_summary(valid_all, args.dist, OUT_CSV, min_inl=MIN_INL)
 
 
 if __name__ == "__main__":

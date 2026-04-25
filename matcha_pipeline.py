@@ -16,8 +16,9 @@ if not torch.cuda.is_available():
     torch.nn.Module.cuda = lambda self, *a, **k: self                # module.cuda() -> self
 
 from visloc_utils import (
-    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
-    load_satellite, run_pipeline, save_dense_viz,
+    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH,
+    FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
+    print_summary, save_dense_viz, TeeLogger,
 )
 from matcha.feature.matcha_feature import MatchaFeature
 from matcha.matcher.base_matcher import BaseMatcher
@@ -62,7 +63,6 @@ def extract_matcha_features(bgr, matcher, img_w, img_h, device, use_amp):
     finally:
         if t is not None:
             del t
-        cuda_cleanup(device)
     return kpts, desc
 
 
@@ -92,7 +92,6 @@ def match_matcha_features(kpts0, desc0, kpts1, desc1, img_w, img_h, conf_thresh,
     mask = conf >= conf_thresh
     r["good"], r["_mask"] = int(mask.sum()), mask
     if r["good"] < 4:
-        cuda_cleanup(device)
         return r
     H, mh = cv2.findHomography(kp0_f[mask].reshape(-1, 1, 2),
                                kp1_f[mask].reshape(-1, 1, 2),
@@ -100,7 +99,6 @@ def match_matcha_features(kpts0, desc0, kpts1, desc1, img_w, img_h, conf_thresh,
                                maxIters=5000, confidence=0.9999)
     if H is not None and mh is not None:
         r["inliers"], r["H"] = int(mh.sum()), H
-    cuda_cleanup(device)
     return r
 
 
@@ -128,23 +126,18 @@ def matcher_matches(desc0, desc1):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit",           type=int,   default=400)
-    ap.add_argument("--dist",            type=float, default=25.0)
-    ap.add_argument("--conf",            type=float, default=0.0)
-    ap.add_argument("--weights",         type=str,   default="weights/matcha_pretrained.pth")
-    ap.add_argument("--img-w",           type=int,   default=512, help="must be divisible by 32")
-    ap.add_argument("--img-h",           type=int,   default=352, help="must be divisible by 32")
-    ap.add_argument("--keypoint-method", choices=["disk"], default="disk")
-    ap.add_argument("--ransac-thresh",   type=float, default=None)
-    ap.add_argument("--min-inl",         type=int,   default=None)
-    ap.add_argument("--amp",             action="store_true",
+    ap.add_argument("--dist",      type=float, default=25.0)
+    ap.add_argument("--weights",   type=str,   default="weights/matcha_pretrained.pth")
+    ap.add_argument("--img-w",     type=int,   default=512, help="must be divisible by 32")
+    ap.add_argument("--img-h",     type=int,   default=352, help="must be divisible by 32")
+    ap.add_argument("--amp",       action="store_true",
                     help="use CUDA fp16 autocast during MATCHA feature extraction")
-    ap.add_argument("--clahe",           action="store_true")
-    ap.add_argument("--visualize",       action="store_true")
+    ap.add_argument("--visualize", action="store_true")
+    ap.add_argument("--flights",   nargs="+", default=["all"],
+                    help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
     args = ap.parse_args()
 
-    ransac_t = args.ransac_thresh if args.ransac_thresh is not None else RANSAC_THRESH
-    min_inl  = args.min_inl       if args.min_inl       is not None else MIN_INL
+    flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
 
     if args.img_w % 32 or args.img_h % 32:
         raise ValueError(f"--img-w/--img-h must be divisible by 32 (got {args.img_w}x{args.img_h})")
@@ -158,33 +151,57 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"  Device: {device}")
-    print(f"  Loading MATCHA ({args.keypoint_method}, {args.img_w}x{args.img_h}) ... ",
-          end="", flush=True)
-    model = MatchaFeature(config={"keypoint_method": args.keypoint_method,
+    print(f"  Loading MATCHA (disk, {args.img_w}x{args.img_h}) ... ", end="", flush=True)
+    model = MatchaFeature(config={"keypoint_method": "disk",
                                    "image_size": (args.img_w, args.img_h)})
-    model.load_state_dict(torch.load(args.weights, map_location="cpu"), strict=False)
+    incompatible = model.load_state_dict(
+        torch.load(args.weights, map_location="cpu"), strict=False)
+    if incompatible.missing_keys or incompatible.unexpected_keys:
+        print(f"  WARNING — MATCHA weights mismatch: "
+              f"missing={incompatible.missing_keys}, "
+              f"unexpected={incompatible.unexpected_keys}")
     matcher = BaseMatcher(model, device)
     print("done")
 
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if args.clahe else None
-    sat, geo = load_satellite(SAT_TIF, SAT_CSV)
-    df = pd.read_csv(DRONE_CSV).head(args.limit)
-    print(f"  Method: MATCHA ({args.keypoint_method}) | Size: {args.img_w}x{args.img_h} | "
-          f"AMP: {args.amp} | CLAHE: {args.clahe} | Conf: {args.conf} | RANSAC: {ransac_t}px | "
-          f"MinInl: {min_inl} | Dist: {args.dist}m | {len(df)} images\n")
+    print(f"  Method: MATCHA | Size: {args.img_w}x{args.img_h} | AMP: {args.amp} | "
+          f"RANSAC: {RANSAC_THRESH}px | MinInl: {MIN_INL} | "
+          f"Dist: {args.dist}m | Flights: {' '.join(flights)}")
 
     def match_factory(drone):
         kpd, descd = extract_matcha_features(drone, matcher, args.img_w, args.img_h, device, args.amp)
         def match_fn(p):
             kps, descs = extract_matcha_features(p, matcher, args.img_w, args.img_h, device, args.amp)
             return match_matcha_features(kpd, descd, kps, descs,
-                                         args.img_w, args.img_h, args.conf, ransac_t, device)
+                                         args.img_w, args.img_h, 0.0, RANSAC_THRESH, device)
         return match_fn
 
-    run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
-                 min_inl=min_inl, clahe=clahe, drone_dir=DRONE_DIR,
-                 viz_fn=save_dense_viz if args.visualize else None,
-                 viz_dir=VIZ_DIR if args.visualize else None)
+    log_path = OUT_CSV.replace(".csv", ".log")
+    with TeeLogger(log_path):
+        all_rows = []
+        for flight in flights:
+            tiles, drone_dir, drone_csv, _ = load_flight(flight)
+            df = pd.read_csv(drone_csv)
+            print(f"\n=== Flight {flight}: {len(df)} images ===")
+
+            rows = collect_pipeline_rows_multitile(tiles, df, match_factory, args.dist,
+                                                    min_inl=MIN_INL,
+                                                    drone_dir=drone_dir, flight=flight,
+                                                    viz_fn=save_dense_viz if args.visualize else None,
+                                                    viz_dir=VIZ_DIR if args.visualize else None)
+            all_rows.extend(rows)
+
+            flight_df = pd.DataFrame(rows)
+            valid = flight_df[~flight_df["skipped"].fillna(False)]
+            if not valid.empty:
+                print_summary(valid, args.dist, f"flight {flight}", min_inl=MIN_INL)
+
+        out = pd.DataFrame(all_rows)
+        out.to_csv(OUT_CSV, index=False)
+        if len(flights) > 1:
+            print(f"\n=== Overall ({len(flights)} flights) ===")
+            valid_all = out[~out["skipped"].fillna(False)]
+            if not valid_all.empty:
+                print_summary(valid_all, args.dist, OUT_CSV, min_inl=MIN_INL)
 
 
 if __name__ == "__main__":

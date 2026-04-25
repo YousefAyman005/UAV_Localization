@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 import torch
 from visloc_utils import (
-    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, SAT_TIF, SAT_CSV, DRONE_CSV, DRONE_DIR,
-    load_satellite, run_pipeline, draw_and_save,
+    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES,
+    FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
+    print_summary, draw_and_save, TeeLogger,
 )
 from kornia.feature import LightGlue, DISK, DeDoDe
 
@@ -71,12 +72,13 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
 
     mi   = out["matches0"][0].cpu().numpy()
     sc   = out["matching_scores0"][0].cpu().numpy()
+    r["raw"] = int((mi >= 0).sum())
     mask = (mi >= 0) & (sc >= conf_thresh)
     d_idx = np.where(mask)[0]
     s_idx = mi[d_idx].astype(np.intp)
     conf  = sc[d_idx]
 
-    r["raw"] = r["good"] = len(d_idx)
+    r["good"] = len(d_idx)
     r["_valid"] = (d_idx, s_idx, conf)
     if len(d_idx) < 4:
         return r
@@ -92,19 +94,15 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit",         type=int,   default=400)
-    ap.add_argument("--dist",          type=float, default=25.0)
-    ap.add_argument("--method",        choices=["disk", "dedodeb", "sift"], default="disk")
-    ap.add_argument("--conf",          type=float, default=0.0)
-    ap.add_argument("--clahe",         action="store_true")
-    ap.add_argument("--ransac-thresh", type=float, default=None)
-    ap.add_argument("--min-inl",       type=int,   default=None)
-    ap.add_argument("--visualize",     action="store_true")
+    ap.add_argument("--dist",      type=float, default=25.0)
+    ap.add_argument("--method",    choices=["disk", "dedodeb", "sift"], default="disk")
+    ap.add_argument("--visualize", action="store_true")
+    ap.add_argument("--flights",   nargs="+", default=["all"],
+                    help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
     args = ap.parse_args()
 
-    ransac_t = args.ransac_thresh if args.ransac_thresh is not None else RANSAC_THRESH
-    min_inl  = args.min_inl       if args.min_inl       is not None else MIN_INL
-    device   = "cuda" if torch.cuda.is_available() else "cpu"
+    flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
+    device  = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"  Device: {device}")
 
     print(f"  Loading models ({args.method}) ... ", end="", flush=True)
@@ -120,22 +118,19 @@ def main():
         sift_det  = cv2.SIFT_create(nfeatures=8192)
         extractor = None
         extract_fn, lg_feat = extract_sift, "sift"
-    matcher = LightGlue(lg_feat, filter_threshold=args.conf,
+    matcher = LightGlue(lg_feat, filter_threshold=0.0,
                         depth_confidence=-1, width_confidence=-1).eval().to(device)
     print("done")
 
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if args.clahe else None
-    sat, geo = load_satellite(SAT_TIF, SAT_CSV)
-    df = pd.read_csv(DRONE_CSV).head(args.limit)
-    print(f"  Method: {args.method.upper()} | CLAHE: {args.clahe} | Conf: {args.conf} | "
-          f"RANSAC: {ransac_t} | MinInl: {min_inl} | Dist: {args.dist}m | {len(df)} images\n")
+    print(f"  Method: {args.method.upper()} | RANSAC: {RANSAC_THRESH} | MinInl: {MIN_INL} | "
+          f"Dist: {args.dist}m | Flights: {' '.join(flights)}")
 
     def match_factory(drone):
         kpd, descd, extd = extract_fn(drone, extractor, device, sift_det=sift_det)
         def match_fn(p):
             kps, descs, exts = extract_fn(p, extractor, device, sift_det=sift_det)
             return match_and_ransac(kpd, descd, extd, kps, descs, exts,
-                                    matcher, args.conf, ransac_t, device)
+                                    matcher, 0.0, RANSAC_THRESH, device)
         return match_fn
 
     def viz_fn(drone, patch, best, filename, viz_dir):
@@ -148,10 +143,33 @@ def main():
                      key=lambda m: m.distance)[:TOP_MATCHES]
         draw_and_save(drone, kpd_cv, patch, kps_cv, top, filename, viz_dir)
 
-    run_pipeline(sat, geo, df, match_factory, OUT_CSV, args.dist,
-                 min_inl=min_inl, clahe=clahe, drone_dir=DRONE_DIR,
-                 viz_fn=viz_fn if args.visualize else None,
-                 viz_dir=VIZ_DIR if args.visualize else None)
+    log_path = OUT_CSV.replace(".csv", ".log")
+    with TeeLogger(log_path):
+        all_rows = []
+        for flight in flights:
+            tiles, drone_dir, drone_csv, _ = load_flight(flight)
+            df = pd.read_csv(drone_csv)
+            print(f"\n=== Flight {flight}: {len(df)} images ===")
+
+            rows = collect_pipeline_rows_multitile(tiles, df, match_factory, args.dist,
+                                                    min_inl=MIN_INL,
+                                                    drone_dir=drone_dir, flight=flight,
+                                                    viz_fn=viz_fn if args.visualize else None,
+                                                    viz_dir=VIZ_DIR if args.visualize else None)
+            all_rows.extend(rows)
+
+            flight_df = pd.DataFrame(rows)
+            valid = flight_df[~flight_df["skipped"].fillna(False)]
+            if not valid.empty:
+                print_summary(valid, args.dist, f"flight {flight}", min_inl=MIN_INL)
+
+        out = pd.DataFrame(all_rows)
+        out.to_csv(OUT_CSV, index=False)
+        if len(flights) > 1:
+            print(f"\n=== Overall ({len(flights)} flights) ===")
+            valid_all = out[~out["skipped"].fillna(False)]
+            if not valid_all.empty:
+                print_summary(valid_all, args.dist, OUT_CSV, min_inl=MIN_INL)
 
 
 if __name__ == "__main__":
