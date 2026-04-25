@@ -1,5 +1,6 @@
 import argparse
 import math
+import multiprocessing
 import os
 import time
 import cv2
@@ -172,8 +173,10 @@ def run_model(model_name, bundle, sat, geo, df, dist,
     encode, preprocess, _ = bundle
     lats_g, lons_g = centers[:, 0], centers[:, 1]
     rows, floors = [], []
+    running = {t: 0 for t in [5, 10, 15, 20]}; n_valid = 0
     t0 = time.time()
-    for _, row in tqdm(df.iterrows(), total=len(df), unit="img"):
+    pbar = tqdm(df.iterrows(), total=len(df), unit="img")
+    for _, row in pbar:
         f   = row["filename"]
         lat = float(row["lat"]); lon = float(row["lon"])
         height = float(row["height"])
@@ -210,13 +213,19 @@ def run_model(model_name, bundle, sat, geo, df, dist,
             top1_tile_id=int(tile_ids[top_idx[0]]),
             top1_sim=round(float(sims[top_idx[0]]), 4),
             gt_tile_rank=gt_rank,
-            success=off_m <= dist,
             skipped=False,
+            **{f"success_{thr}": off_m <= thr for thr in [5, 10, 15, 20]},
         )
         r[topk_col] = bool((top_dists <= dist).any())
         if flight is not None:
             r["flight"] = flight
         rows.append(r)
+
+        n_valid += 1
+        for thr in [5, 10, 15, 20]:
+            if r[f"success_{thr}"]: running[thr] += 1
+        pbar.set_postfix({f"A@{thr}": f"{100*running[thr]/n_valid:.0f}%"
+                          for thr in [5, 10, 15, 20]}, refresh=False)
     t_retrieval = time.time() - t0
     return rows, np.array(floors), t_gallery, t_retrieval, cached
 
@@ -255,8 +264,10 @@ def run_model_multitile(model_name, bundle, tile_paths, sat_csv, df, dist,
     encode, preprocess, _ = bundle
     lats_g, lons_g = centers[:, 0], centers[:, 1]
     rows, floors = [], []
+    running = {t: 0 for t in [5, 10, 15, 20]}; n_valid = 0
     t0 = time.time()
-    for _, row in tqdm(df.iterrows(), total=len(df), unit="img"):
+    pbar = tqdm(df.iterrows(), total=len(df), unit="img")
+    for _, row in pbar:
         f   = row["filename"]
         lat = float(row["lat"]); lon = float(row["lon"])
         height = float(row["height"])
@@ -294,13 +305,19 @@ def run_model_multitile(model_name, bundle, tile_paths, sat_csv, df, dist,
             top1_tile_id=int(tile_ids[top_idx[0]]),
             top1_sim=round(float(sims[top_idx[0]]), 4),
             gt_tile_rank=gt_rank,
-            success=off_m <= dist,
             skipped=False,
+            **{f"success_{thr}": off_m <= thr for thr in [5, 10, 15, 20]},
         )
         r[topk_col] = bool((top_dists <= dist).any())
         if flight is not None:
             r["flight"] = flight
         rows.append(r)
+
+        n_valid += 1
+        for thr in [5, 10, 15, 20]:
+            if r[f"success_{thr}"]: running[thr] += 1
+        pbar.set_postfix({f"A@{thr}": f"{100*running[thr]/n_valid:.0f}%"
+                          for thr in [5, 10, 15, 20]}, refresh=False)
     t_retrieval = time.time() - t0
     return rows, np.array(floors), t_gallery, t_retrieval, all_cached
 
@@ -313,14 +330,19 @@ def print_retrieval_summary(out, dist, label, t_gallery, t_retrieval,
     if v.empty:
         print("\n  All images skipped."); return
     topk_col = f"top{topk}_hit"
-    n  = len(v)
-    s  = int(v["success"].fillna(False).sum())
-    t5 = int(v[topk_col].fillna(False).sum()) if topk_col in v.columns else 0
-    succ = v[v["success"].fillna(False)]
-    fail = v[~v["success"].fillna(False)]
+    n   = len(v)
+    t5  = int(v[topk_col].fillna(False).sum()) if topk_col in v.columns else 0
+    succ20 = v[v["success_20"].fillna(False)] if "success_20" in v.columns else v.iloc[:0]
+    fail20 = v[~v["success_20"].fillna(False)] if "success_20" in v.columns else v
     print(f"\n  Results saved to {label}")
-    print(f"  Success (≤{dist}m):      {s}/{n} ({100*s/n:.1f}%)")
-    print(f"  Top-{topk} within {dist}m:     {t5}/{n} ({100*t5/n:.1f}%)")
+    for thr in [5, 10, 15, 20]:
+        col = f"success_{thr}"
+        s = int(v[col].fillna(False).sum()) if col in v.columns else 0
+        print(f"  A@{thr:2d}m:              {s}/{n} ({100*s/n:.1f}%)")
+    under20 = v[v["offset_m"].fillna(9999) <= 20]["offset_m"]
+    if len(under20):
+        print(f"  Mean error (≤20m):   {under20.mean():.1f}m")
+    print(f"  Top-{topk} within {dist}m:  {t5}/{n} ({100*t5/n:.1f}%)")
     if floors.size:
         print(f"  Error floor (grid):     median {np.median(floors):.1f}m  "
               f"P90 {np.percentile(floors, 90):.1f}m")
@@ -328,13 +350,46 @@ def print_retrieval_summary(out, dist, label, t_gallery, t_retrieval,
           f"median {v['offset_m'].median():.1f}m  "
           f"P90 {np.percentile(v['offset_m'].dropna(), 90):.1f}m  "
           f"max {v['offset_m'].max():.1f}m")
-    if len(succ) and len(fail):
-        print(f"  Top-1 sim:               success {succ['top1_sim'].mean():.3f}  "
-              f"failure {fail['top1_sim'].mean():.3f}")
+    if len(succ20) and len(fail20):
+        print(f"  Top-1 sim:               A@20 {succ20['top1_sim'].mean():.3f}  "
+              f"fail {fail20['top1_sim'].mean():.3f}")
     print(f"  Median GT tile rank:     {v['gt_tile_rank'].median():.0f}")
     tag = "cached" if cached else f"built {t_gallery:.1f}s"
     print(f"  Time: gallery {tag} | retrieval {t_retrieval:.1f}s "
           f"({1000*t_retrieval/n:.0f} ms/img)")
+
+
+# ---------- multi-GPU worker -----------------------------------------------
+
+def _clip_worker(args):
+    flight_group, gpu_id, mname, satclip_ckpt, tile_size, stride, cache_dir, \
+        dist, topk, batch_size, rebuild_cache = args
+    device = torch.device(f"cuda:{gpu_id}")
+
+    if   mname == "clip":    bundle = load_clip(device)
+    elif mname == "geoclip": bundle = load_geoclip(device)
+    else:                    bundle = load_satclip(device, satclip_ckpt)
+
+    results = []
+    for flight in flight_group:
+        if flight == "09":
+            tile_paths, drone_dir, drone_csv, sat_csv = get_flight09_tile_paths()
+            df = pd.read_csv(drone_csv)
+            rows, floors, t_gal, t_ret, cached = run_model_multitile(
+                mname, bundle, tile_paths, sat_csv, df, dist,
+                tile_size, stride, cache_dir, topk, batch_size, device,
+                rebuild_cache, drone_dir=drone_dir, flight=flight)
+        else:
+            sat_tif, drone_dir, drone_csv, sat_csv = get_flight_paths(flight)
+            sat, geo = load_satellite(sat_tif, sat_csv)
+            df = pd.read_csv(drone_csv)
+            rows, floors, t_gal, t_ret, cached = run_model(
+                mname, bundle, sat, geo, df, dist,
+                tile_size, stride, cache_dir, sat_tif,
+                topk, batch_size, device, rebuild_cache,
+                drone_dir=drone_dir, flight=flight)
+        results.append((flight, rows, floors, t_gal, t_ret, cached))
+    return results
 
 
 # ---------- main -----------------------------------------------------------
@@ -356,56 +411,83 @@ def main():
                     help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
     args = ap.parse_args()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
-    print(f"  Device: {device} | Tile: {args.tile_size}px | Stride: {args.stride}px | "
+    n_gpus  = max(1, torch.cuda.device_count())
+    print(f"  GPUs: {n_gpus} | Tile: {args.tile_size}px | Stride: {args.stride}px | "
           f"Dist: {args.dist}m | Flights: {' '.join(flights)}")
 
     models_to_run = MODELS if args.model == "all" else (args.model,)
+    os.makedirs(args.out_dir, exist_ok=True)
 
     for mname in models_to_run:
         print(f"\n=== {mname.upper()} ===")
-        print(f"  Loading {mname} ... ", end="", flush=True)
-        if   mname == "clip":    bundle = load_clip(device)
-        elif mname == "geoclip": bundle = load_geoclip(device)
-        else:                    bundle = load_satclip(device, args.satclip_ckpt)
-        print("done")
-
-        os.makedirs(args.out_dir, exist_ok=True)
-        out_csv = os.path.join(args.out_dir, OUT_CSV_TEMPLATE.format(model=mname))
+        out_csv  = os.path.join(args.out_dir, OUT_CSV_TEMPLATE.format(model=mname))
         log_path = out_csv.replace(".csv", ".log")
 
-        with TeeLogger(log_path):
-            all_rows = []
-            all_floors = []
-            for flight in flights:
-                if flight == "09":
-                    tile_paths, drone_dir, drone_csv, sat_csv = get_flight09_tile_paths()
-                    df = pd.read_csv(drone_csv)
-                    print(f"\n--- Flight {flight}: {len(df)} images ---")
-                    rows, floors, t_gal, t_ret, cached = run_model_multitile(
-                        mname, bundle, tile_paths, sat_csv, df, args.dist,
-                        args.tile_size, args.stride, args.cache_dir,
-                        args.topk, args.batch_size, device, args.rebuild_cache,
-                        drone_dir=drone_dir, flight=flight)
-                else:
-                    sat_tif, drone_dir, drone_csv, sat_csv = get_flight_paths(flight)
-                    sat, geo = load_satellite(sat_tif, sat_csv)
-                    df = pd.read_csv(drone_csv)
-                    print(f"\n--- Flight {flight}: {len(df)} images ---")
-                    rows, floors, t_gal, t_ret, cached = run_model(
-                        mname, bundle, sat, geo, df, args.dist,
-                        args.tile_size, args.stride, args.cache_dir, sat_tif,
-                        args.topk, args.batch_size, device, args.rebuild_cache,
-                        drone_dir=drone_dir, flight=flight)
-                all_rows.extend(rows)
-                all_floors.append(floors)
+        groups = [g for g in [flights[i::n_gpus] for i in range(n_gpus)] if g]
 
-                flight_df = pd.DataFrame(rows)
-                valid = flight_df[~flight_df["skipped"].fillna(False)]
-                if not valid.empty:
-                    print_retrieval_summary(valid, args.dist, f"flight {flight}",
-                                            t_gal, t_ret, floors, cached, args.topk)
+        with TeeLogger(log_path):
+            if len(groups) == 1:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                print(f"  Loading {mname} ... ", end="", flush=True)
+                if   mname == "clip":    bundle = load_clip(device)
+                elif mname == "geoclip": bundle = load_geoclip(device)
+                else:                    bundle = load_satclip(device, args.satclip_ckpt)
+                print("done")
+
+                all_rows, all_floors = [], []
+                for flight in flights:
+                    if flight == "09":
+                        tile_paths, drone_dir, drone_csv, sat_csv = get_flight09_tile_paths()
+                        df = pd.read_csv(drone_csv)
+                        print(f"\n--- Flight {flight}: {len(df)} images ---")
+                        rows, floors, t_gal, t_ret, cached = run_model_multitile(
+                            mname, bundle, tile_paths, sat_csv, df, args.dist,
+                            args.tile_size, args.stride, args.cache_dir,
+                            args.topk, args.batch_size, device, args.rebuild_cache,
+                            drone_dir=drone_dir, flight=flight)
+                    else:
+                        sat_tif, drone_dir, drone_csv, sat_csv = get_flight_paths(flight)
+                        sat, geo = load_satellite(sat_tif, sat_csv)
+                        df = pd.read_csv(drone_csv)
+                        print(f"\n--- Flight {flight}: {len(df)} images ---")
+                        rows, floors, t_gal, t_ret, cached = run_model(
+                            mname, bundle, sat, geo, df, args.dist,
+                            args.tile_size, args.stride, args.cache_dir, sat_tif,
+                            args.topk, args.batch_size, device, args.rebuild_cache,
+                            drone_dir=drone_dir, flight=flight)
+                    all_rows.extend(rows)
+                    all_floors.append(floors)
+                    flight_df = pd.DataFrame(rows)
+                    valid = flight_df[~flight_df["skipped"].fillna(False)]
+                    if not valid.empty:
+                        print_retrieval_summary(valid, args.dist, f"flight {flight}",
+                                                t_gal, t_ret, floors, cached, args.topk)
+                del bundle
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            else:
+                ctx = multiprocessing.get_context("spawn")
+                worker_args = [(g, i, mname, args.satclip_ckpt,
+                                args.tile_size, args.stride, args.cache_dir,
+                                args.dist, args.topk, args.batch_size, args.rebuild_cache)
+                               for i, g in enumerate(groups)]
+                with ctx.Pool(len(groups)) as pool:
+                    all_results = pool.map(_clip_worker, worker_args)
+                flat = [item for chunk in all_results for item in chunk]
+                all_rows   = [r for _, rows, _, _, _, _ in flat for r in rows]
+                all_floors = [floors for _, _, floors, _, _, _ in flat]
+                flight_data = {f: (rows, floors, t_gal, t_ret, cached)
+                               for f, rows, floors, t_gal, t_ret, cached in flat}
+                for flight in flights:
+                    if flight in flight_data:
+                        rows, floors, t_gal, t_ret, cached = flight_data[flight]
+                        fdf = pd.DataFrame(rows)
+                        valid = fdf[~fdf["skipped"].fillna(False)]
+                        if not valid.empty:
+                            print(f"\n--- Flight {flight}: {len(fdf)} images ---")
+                            print_retrieval_summary(valid, args.dist, f"flight {flight}",
+                                                    t_gal, t_ret, floors, cached, args.topk)
 
             out = pd.DataFrame(all_rows)
             out.to_csv(out_csv, index=False)
@@ -416,11 +498,6 @@ def main():
                     combined_floors = np.concatenate(all_floors) if all_floors else np.array([])
                     print_retrieval_summary(valid_all, args.dist, out_csv,
                                             0, 0, combined_floors, True, args.topk)
-
-        # Release model to free memory before loading the next one.
-        del bundle
-        if device == "cuda":
-            torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

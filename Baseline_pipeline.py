@@ -16,15 +16,12 @@ LOWE = 0.75
 FLANN_TREES, FLANN_CHECKS = 5, 50
 
 
-def run_match(sg, dg, detector, method):
+def run_match(sg, kpd, dd, detector, matcher):
     kps, ds = detector.detectAndCompute(sg, None)
-    kpd, dd = detector.detectAndCompute(dg, None)
     r = dict(sat_kp=len(kps), drone_kp=len(kpd), raw=0, good=0, inliers=0, H=None,
              _kps=kps, _kpd=kpd, _matches=[], _sg=sg)
     if ds is None or dd is None or len(kps) < 4 or len(kpd) < 4:
         return r
-    matcher = (cv2.FlannBasedMatcher({"algorithm": 1, "trees": FLANN_TREES}, {"checks": FLANN_CHECKS})
-               if method == "sift" else cv2.BFMatcher(cv2.NORM_HAMMING))
     matches = matcher.knnMatch(dd, ds, k=2)
     good = [m for pair in matches if len(pair) == 2
             for m, n in [pair] if m.distance < LOWE * n.distance]
@@ -44,19 +41,34 @@ def _make_detector(method):
             "brisk": cv2.BRISK_create}[method]()
 
 
-def _process_chunk(args):
-    """Worker: runs one chunk of drone images. Creates its own detector (not thread-safe)."""
-    chunk_df, tiles, drone_dir, method, dist, flight, viz_dir = args
+def _make_match_factory(method):
     detector = _make_detector(method)
+    matcher = (cv2.FlannBasedMatcher({"algorithm": 1, "trees": FLANN_TREES}, {"checks": FLANN_CHECKS})
+               if method == "sift" else cv2.BFMatcher(cv2.NORM_HAMMING))
 
     def match_factory(drone):
-        dg = cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY)
-        return lambda p: run_match(cv2.cvtColor(p, cv2.COLOR_BGR2GRAY), dg, detector, method)
+        kpd, dd = detector.detectAndCompute(cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY), None)
+        return lambda p: run_match(cv2.cvtColor(p, cv2.COLOR_BGR2GRAY), kpd, dd, detector, matcher)
 
+    return match_factory
+
+
+def save_baseline_viz(drone, patch, best, filename, viz_dir):
+    if not best["_matches"]: return
+    dg = cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY)
+    top = sorted(best["_matches"], key=lambda m: m.distance)[:TOP_MATCHES]
+    draw_and_save(dg, best["_kpd"], best["_sg"], best["_kps"], top, filename, viz_dir)
+
+
+def collect_rows(tiles, df, method, dist, drone_dir, flight, viz_dir, progress=True):
     return collect_pipeline_rows_multitile(
-        tiles, chunk_df, match_factory, dist,
-        drone_dir=drone_dir, flight=flight,
-        viz_dir=viz_dir, progress=False)
+        tiles, df, _make_match_factory(method), dist, drone_dir=drone_dir, flight=flight,
+        viz_fn=save_baseline_viz if viz_dir else None, viz_dir=viz_dir, progress=progress)
+
+
+def _process_chunk(args):
+    chunk_df, tiles, drone_dir, method, dist, flight, viz_dir = args
+    return collect_rows(tiles, chunk_df, method, dist, drone_dir, flight, viz_dir, progress=False)
 
 
 def main():
@@ -76,12 +88,6 @@ def main():
     print(f"  Method: {args.method.upper()} | Dist: {args.dist}m | "
           f"Workers: {n_workers} | Flights: {' '.join(flights)}")
 
-    def viz_fn(drone, patch, best, filename, viz_dir):
-        if not best["_matches"]: return
-        dg = cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY)
-        top = sorted(best["_matches"], key=lambda m: m.distance)[:TOP_MATCHES]
-        draw_and_save(dg, best["_kpd"], best["_sg"], best["_kps"], top, filename, viz_dir)
-
     log_path = OUT_CSV.replace(".csv", ".log")
     with TeeLogger(log_path):
         all_rows = []
@@ -90,24 +96,15 @@ def main():
             df = pd.read_csv(drone_csv)
             print(f"\n=== Flight {flight}: {len(df)} images ===")
 
-            chunks = [c.reset_index(drop=True) for c in np.array_split(df, n_workers) if len(c) > 0]
+            chunks = [c.reset_index(drop=True) for c in np.array_split(df, min(n_workers, max(len(df), 1)))]
             viz_dir_arg = VIZ_DIR if args.visualize else None
 
             if len(chunks) == 1:
-                # Single chunk — run sequentially with tqdm progress bar.
-                detector = _make_detector(args.method)
-                def match_factory(drone):
-                    dg = cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY)
-                    return lambda p: run_match(cv2.cvtColor(p, cv2.COLOR_BGR2GRAY), dg, detector, args.method)
-                rows = collect_pipeline_rows_multitile(
-                    tiles, df, match_factory, args.dist,
-                    drone_dir=drone_dir, flight=flight,
-                    viz_fn=viz_fn if args.visualize else None,
-                    viz_dir=viz_dir_arg)
+                rows = collect_rows(tiles, df, args.method, args.dist, drone_dir, flight, viz_dir_arg)
             else:
                 chunk_args = [(c, tiles, drone_dir, args.method, args.dist, flight, viz_dir_arg)
                               for c in chunks]
-                with mp.Pool(n_workers) as pool:
+                with mp.Pool(len(chunks)) as pool:
                     results = pool.map(_process_chunk, chunk_args)
                 rows = [r for chunk_rows in results for r in chunk_rows]
 
@@ -115,7 +112,7 @@ def main():
             flight_df = pd.DataFrame(rows)
             valid = flight_df[~flight_df["skipped"].fillna(False)]
             if not valid.empty:
-                print_summary(valid, args.dist, f"flight {flight}")
+                print_summary(valid, f"flight {flight}")
 
         out = pd.DataFrame(all_rows)
         out.to_csv(OUT_CSV, index=False)
@@ -123,7 +120,7 @@ def main():
             print(f"\n=== Overall ({len(flights)} flights) ===")
             valid_all = out[~out["skipped"].fillna(False)]
             if not valid_all.empty:
-                print_summary(valid_all, args.dist, OUT_CSV)
+                print_summary(valid_all, OUT_CSV)
 
 
 if __name__ == "__main__":

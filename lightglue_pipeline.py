@@ -1,4 +1,5 @@
 import argparse
+import multiprocessing
 import cv2
 import numpy as np
 import pandas as pd
@@ -92,6 +93,70 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
     return r
 
 
+def _load_model(device, method):
+    sift_det = None
+    if method == "disk":
+        extractor = DISK.from_pretrained("depth").eval().to(device)
+        extract_fn, lg_feat = extract_disk, "disk"
+    elif method == "dedodeb":
+        extractor = DeDoDe.from_pretrained(detector_weights="L-upright",
+                                           descriptor_weights="B-upright").eval().to(device)
+        extract_fn, lg_feat = extract_dedode, "dedodeb"
+    else:
+        sift_det  = cv2.SIFT_create(nfeatures=8192)
+        extractor = None
+        extract_fn, lg_feat = extract_sift, "sift"
+    matcher = LightGlue(lg_feat, filter_threshold=0.0,
+                        depth_confidence=-1, width_confidence=-1).eval().to(device)
+    return extractor, matcher, extract_fn, sift_det
+
+
+def _lg_viz_fn(drone, patch, best, filename, viz_dir):
+    if best["_valid"] is None or not best["_valid"][0].size:
+        return
+    d_idx, s_idx, conf = best["_valid"]
+    kpd_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in best["_kpd_np"]]
+    kps_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in best["_kps_np"]]
+    top = sorted([cv2.DMatch(int(i), int(j), 1.0 - c) for i, j, c in zip(d_idx, s_idx, conf)],
+                 key=lambda m: m.distance)[:TOP_MATCHES]
+    draw_and_save(drone, kpd_cv, patch, kps_cv, top, filename, viz_dir)
+
+
+def _make_match_factory(extractor, matcher, extract_fn, sift_det, device):
+    def match_factory(drone):
+        d0 = extract_fn(drone, extractor, device, sift_det=sift_det)
+        return lambda p: match_and_ransac(
+            *d0, *extract_fn(p, extractor, device, sift_det=sift_det),
+            matcher, 0.0, RANSAC_THRESH, device)
+    return match_factory
+
+
+def collect_flight_rows(flight, match_factory, dist, viz_dir, progress=True):
+    tiles, drone_dir, drone_csv, _ = load_flight(flight)
+    df = pd.read_csv(drone_csv)
+    if progress: print(f"\n=== Flight {flight}: {len(df)} images ===")
+    return collect_pipeline_rows_multitile(
+        tiles, df, match_factory, dist, min_inl=MIN_INL,
+        drone_dir=drone_dir, flight=flight,
+        viz_fn=_lg_viz_fn if viz_dir else None, viz_dir=viz_dir, progress=progress)
+
+
+def summarize_rows(rows, label):
+    if not rows: return
+    df = pd.DataFrame(rows)
+    if "skipped" not in df: return
+    valid = df[~df["skipped"].fillna(False)]
+    if not valid.empty: print_summary(valid, label, min_inl=MIN_INL)
+
+
+def _worker(args):
+    flight_group, gpu_id, method, dist, viz_dir = args
+    device = torch.device(f"cuda:{gpu_id}")
+    extractor, matcher, extract_fn, sift_det = _load_model(device, method)
+    match_factory = _make_match_factory(extractor, matcher, extract_fn, sift_det, device)
+    return [r for f in flight_group for r in collect_flight_rows(f, match_factory, dist, viz_dir, False)]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist",      type=float, default=25.0)
@@ -102,74 +167,44 @@ def main():
     args = ap.parse_args()
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
-    device  = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"  Device: {device}")
-
-    print(f"  Loading models ({args.method}) ... ", end="", flush=True)
-    sift_det = None
-    if args.method == "disk":
-        extractor = DISK.from_pretrained("depth").eval().to(device)
-        extract_fn, lg_feat = extract_disk, "disk"
-    elif args.method == "dedodeb":
-        extractor = DeDoDe.from_pretrained(detector_weights="L-upright",
-                                           descriptor_weights="B-upright").eval().to(device)
-        extract_fn, lg_feat = extract_dedode, "dedodeb"
-    else:
-        sift_det  = cv2.SIFT_create(nfeatures=8192)
-        extractor = None
-        extract_fn, lg_feat = extract_sift, "sift"
-    matcher = LightGlue(lg_feat, filter_threshold=0.0,
-                        depth_confidence=-1, width_confidence=-1).eval().to(device)
-    print("done")
-
+    n_gpus  = max(1, torch.cuda.device_count())
+    viz_dir = VIZ_DIR if args.visualize else None
     print(f"  Method: {args.method.upper()} | RANSAC: {RANSAC_THRESH} | MinInl: {MIN_INL} | "
-          f"Dist: {args.dist}m | Flights: {' '.join(flights)}")
+          f"Dist: {args.dist}m | Flights: {' '.join(flights)} | GPUs: {n_gpus}")
 
-    def match_factory(drone):
-        kpd, descd, extd = extract_fn(drone, extractor, device, sift_det=sift_det)
-        def match_fn(p):
-            kps, descs, exts = extract_fn(p, extractor, device, sift_det=sift_det)
-            return match_and_ransac(kpd, descd, extd, kps, descs, exts,
-                                    matcher, 0.0, RANSAC_THRESH, device)
-        return match_fn
-
-    def viz_fn(drone, patch, best, filename, viz_dir):
-        if best["_valid"] is None or not best["_valid"][0].size:
-            return
-        d_idx, s_idx, conf = best["_valid"]
-        kpd_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in best["_kpd_np"]]
-        kps_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in best["_kps_np"]]
-        top = sorted([cv2.DMatch(int(i), int(j), 1.0 - c) for i, j, c in zip(d_idx, s_idx, conf)],
-                     key=lambda m: m.distance)[:TOP_MATCHES]
-        draw_and_save(drone, kpd_cv, patch, kps_cv, top, filename, viz_dir)
+    groups = [g for g in [flights[i::n_gpus] for i in range(n_gpus)] if g]
 
     log_path = OUT_CSV.replace(".csv", ".log")
     with TeeLogger(log_path):
-        all_rows = []
-        for flight in flights:
-            tiles, drone_dir, drone_csv, _ = load_flight(flight)
-            df = pd.read_csv(drone_csv)
-            print(f"\n=== Flight {flight}: {len(df)} images ===")
+        if len(groups) == 1:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            print(f"  Device: {device}")
+            print(f"  Loading models ({args.method}) ... ", end="", flush=True)
+            extractor, matcher, extract_fn, sift_det = _load_model(device, args.method)
+            print("done")
 
-            rows = collect_pipeline_rows_multitile(tiles, df, match_factory, args.dist,
-                                                    min_inl=MIN_INL,
-                                                    drone_dir=drone_dir, flight=flight,
-                                                    viz_fn=viz_fn if args.visualize else None,
-                                                    viz_dir=VIZ_DIR if args.visualize else None)
-            all_rows.extend(rows)
-
-            flight_df = pd.DataFrame(rows)
-            valid = flight_df[~flight_df["skipped"].fillna(False)]
-            if not valid.empty:
-                print_summary(valid, args.dist, f"flight {flight}", min_inl=MIN_INL)
+            match_factory = _make_match_factory(extractor, matcher, extract_fn, sift_det, device)
+            all_rows = []
+            for flight in flights:
+                rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir)
+                all_rows.extend(rows)
+                summarize_rows(rows, f"flight {flight}")
+        else:
+            ctx = multiprocessing.get_context("spawn")
+            worker_args = [(g, i, args.method, args.dist, viz_dir)
+                           for i, g in enumerate(groups)]
+            with ctx.Pool(len(groups)) as pool:
+                results = pool.map(_worker, worker_args)
+            all_rows = [r for chunk in results for r in chunk]
+            for flight in flights:
+                summarize_rows([r for r in all_rows if r.get("flight") == flight],
+                               f"flight {flight}")
 
         out = pd.DataFrame(all_rows)
         out.to_csv(OUT_CSV, index=False)
         if len(flights) > 1:
             print(f"\n=== Overall ({len(flights)} flights) ===")
-            valid_all = out[~out["skipped"].fillna(False)]
-            if not valid_all.empty:
-                print_summary(valid_all, args.dist, OUT_CSV, min_inl=MIN_INL)
+            summarize_rows(all_rows, OUT_CSV)
 
 
 if __name__ == "__main__":

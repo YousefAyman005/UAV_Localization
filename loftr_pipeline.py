@@ -1,4 +1,5 @@
 import argparse
+import multiprocessing
 import cv2
 import numpy as np
 import pandas as pd
@@ -40,6 +41,42 @@ def match_loftr(drone_t, sat_t, matcher, conf_thresh):
     return r
 
 
+def _load_model(device, pretrained):
+    return LoFTR(pretrained=pretrained).eval().to(device)
+
+
+def _make_match_factory(matcher, device):
+    def match_factory(drone):
+        drone_t = img_to_tensor(drone, device)
+        return lambda p: match_loftr(drone_t, img_to_tensor(p, device), matcher, 0.0)
+    return match_factory
+
+
+def collect_flight_rows(flight, match_factory, dist, viz_dir, progress=True):
+    tiles, drone_dir, drone_csv, _ = load_flight(flight)
+    df = pd.read_csv(drone_csv)
+    if progress: print(f"\n=== Flight {flight}: {len(df)} images ===")
+    return collect_pipeline_rows_multitile(
+        tiles, df, match_factory, dist, drone_dir=drone_dir, flight=flight,
+        viz_fn=save_dense_viz if viz_dir else None, viz_dir=viz_dir, progress=progress)
+
+
+def summarize_rows(rows, label):
+    if not rows: return
+    df = pd.DataFrame(rows)
+    if "skipped" not in df: return
+    valid = df[~df["skipped"].fillna(False)]
+    if not valid.empty: print_summary(valid, label)
+
+
+def _worker(args):
+    flight_group, gpu_id, pretrained, dist, viz_dir = args
+    device = torch.device(f"cuda:{gpu_id}")
+    matcher = _load_model(device, pretrained)
+    match_factory = _make_match_factory(matcher, device)
+    return [r for f in flight_group for r in collect_flight_rows(f, match_factory, dist, viz_dir, False)]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist",       type=float, default=25.0)
@@ -50,43 +87,44 @@ def main():
     args = ap.parse_args()
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
-    device  = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"  Device: {device}")
-    print(f"  Loading LoFTR ({args.pretrained}) ... ", end="", flush=True)
-    matcher = LoFTR(pretrained=args.pretrained).eval().to(device)
-    print("done")
-    print(f"  Method: LoFTR ({args.pretrained}) | Dist: {args.dist}m | Flights: {' '.join(flights)}")
+    n_gpus  = max(1, torch.cuda.device_count())
+    viz_dir = VIZ_DIR if args.visualize else None
+    print(f"  Method: LoFTR ({args.pretrained}) | Dist: {args.dist}m | "
+          f"Flights: {' '.join(flights)} | GPUs: {n_gpus}")
 
-    def match_factory(drone):
-        drone_t = img_to_tensor(drone, device)
-        return lambda p: match_loftr(drone_t, img_to_tensor(p, device), matcher, 0.0)
+    groups = [g for g in [flights[i::n_gpus] for i in range(n_gpus)] if g]
 
     log_path = OUT_CSV.replace(".csv", ".log")
     with TeeLogger(log_path):
-        all_rows = []
-        for flight in flights:
-            tiles, drone_dir, drone_csv, _ = load_flight(flight)
-            df = pd.read_csv(drone_csv)
-            print(f"\n=== Flight {flight}: {len(df)} images ===")
+        if len(groups) == 1:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            print(f"  Device: {device}")
+            print(f"  Loading LoFTR ({args.pretrained}) ... ", end="", flush=True)
+            matcher = _load_model(device, args.pretrained)
+            print("done")
 
-            rows = collect_pipeline_rows_multitile(tiles, df, match_factory, args.dist,
-                                                    drone_dir=drone_dir, flight=flight,
-                                                    viz_fn=save_dense_viz if args.visualize else None,
-                                                    viz_dir=VIZ_DIR if args.visualize else None)
-            all_rows.extend(rows)
-
-            flight_df = pd.DataFrame(rows)
-            valid = flight_df[~flight_df["skipped"].fillna(False)]
-            if not valid.empty:
-                print_summary(valid, args.dist, f"flight {flight}")
+            match_factory = _make_match_factory(matcher, device)
+            all_rows = []
+            for flight in flights:
+                rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir)
+                all_rows.extend(rows)
+                summarize_rows(rows, f"flight {flight}")
+        else:
+            ctx = multiprocessing.get_context("spawn")
+            worker_args = [(g, i, args.pretrained, args.dist, viz_dir)
+                           for i, g in enumerate(groups)]
+            with ctx.Pool(len(groups)) as pool:
+                results = pool.map(_worker, worker_args)
+            all_rows = [r for chunk in results for r in chunk]
+            for flight in flights:
+                summarize_rows([r for r in all_rows if r.get("flight") == flight],
+                               f"flight {flight}")
 
         out = pd.DataFrame(all_rows)
         out.to_csv(OUT_CSV, index=False)
         if len(flights) > 1:
             print(f"\n=== Overall ({len(flights)} flights) ===")
-            valid_all = out[~out["skipped"].fillna(False)]
-            if not valid_all.empty:
-                print_summary(valid_all, args.dist, OUT_CSV)
+            summarize_rows(all_rows, OUT_CSV)
 
 
 if __name__ == "__main__":
