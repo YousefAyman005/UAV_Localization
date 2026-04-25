@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --gpus=4
 #SBATCH --mem=32G
-#SBATCH --time=2:00:00
+#SBATCH --time=5:00
 
 METHOD=${1:-sift}
 case "$METHOD" in
