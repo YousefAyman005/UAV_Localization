@@ -75,9 +75,8 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
     transformers==4.49.0
 
   # ── SatCLIP ────────────────────────────────────────────────────────────────
-  # No pyproject.toml — clone and install editable so imports resolve.
+  # No setup.py/pyproject.toml — clone and add to PYTHONPATH via %environment.
   git clone --depth 1 https://github.com/microsoft/satclip.git /opt/satclip
-  pip install --no-cache-dir -e /opt/satclip
 
   # ── Roma PyPI package (rotation library, MATCHA internal dep) ──────────────
   pip install --no-cache-dir roma==1.5.0
