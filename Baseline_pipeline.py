@@ -78,10 +78,12 @@ def main():
     ap.add_argument("--visualize", action="store_true")
     ap.add_argument("--flights",   nargs="+", default=["all"],
                     help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
+    ap.add_argument("--workers",   type=int, default=None,
+                    help="Number of parallel workers (default: cpu_count)")
     args = ap.parse_args()
 
     flights   = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
-    n_workers = os.cpu_count() or 1
+    n_workers = args.workers or os.cpu_count() or 1
     OUT_CSV   = OUT_CSV_TEMPLATE.format(method=args.method)
     VIZ_DIR   = VIZ_DIR_TEMPLATE.format(method=args.method)
 

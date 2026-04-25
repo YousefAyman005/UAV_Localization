@@ -6,8 +6,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
+#SBATCH --gpus=4
 #SBATCH --mem=32G
-#SBATCH --time=2:00
+#SBATCH --time=2:00:00
 
 METHOD=${1:-sift}
 case "$METHOD" in
@@ -31,6 +32,7 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/Baseline_pipeline.py \
         --method "${METHOD}" \
+        --workers 4 \
         --flights all
 APPTAINER_EXIT=$?
 
