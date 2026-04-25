@@ -89,9 +89,15 @@ def crop_sat(sat, cx, cy, g, crop_w, crop_h):
     cx = min(max(int(round(cx)), 0), g["w"] - 1)
     cy = min(max(int(round(cy)), 0), g["h"] - 1)
     sx, sy = crop_w / SZ_W, crop_h / SZ_H
-    M = np.float32([[sx, 0, cx - crop_w//2 + (sx - 1) / 2],
-                    [0, sy, cy - crop_h//2 + (sy - 1) / 2]])
-    return cv2.warpAffine(sat, M, (SZ_W, SZ_H), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+    # Extract a local ROI to stay under OpenCV's SHRT_MAX source-size limit
+    x0 = max(0, cx - crop_w // 2 - 1)
+    y0 = max(0, cy - crop_h // 2 - 1)
+    x1 = min(g["w"], cx + crop_w // 2 + 1)
+    y1 = min(g["h"], cy + crop_h // 2 + 1)
+    roi = sat[y0:y1, x0:x1]
+    M = np.float32([[sx, 0, cx - crop_w // 2 + (sx - 1) / 2 - x0],
+                    [0, sy, cy - crop_h // 2 + (sy - 1) / 2 - y0]])
+    return cv2.warpAffine(roi, M, (SZ_W, SZ_H), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
                           borderMode=cv2.BORDER_REFLECT)
 
 
