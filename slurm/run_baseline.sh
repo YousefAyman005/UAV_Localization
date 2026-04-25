@@ -33,7 +33,7 @@ apptainer run --nv \
     /opt/uav_localization/Baseline_pipeline.py \
         --method "${METHOD}" \
         --workers 4 \
-        --flights 03
+        --flights all
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
