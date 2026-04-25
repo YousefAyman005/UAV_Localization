@@ -29,10 +29,10 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
   # ── PyTorch (CUDA 12.4) ────────────────────────────────────────────────────
   # RoMa requires torch>=2.5.1 — this drives the version choice.
   # MATCHA requires >=2.3.0, JamMa's requirements.txt pin is not enforced by pip.
-  conda install -y \
-    pytorch==2.5.1 torchvision==0.20.1 pytorch-cuda=12.4 \
-    -c pytorch -c nvidia
-  conda clean -afy
+  # Installed via pip (not conda) to avoid conda MKL conflicts with CUDA extensions.
+  pip install --no-cache-dir \
+    torch==2.5.1 torchvision==0.20.1 \
+    --index-url https://download.pytorch.org/whl/cu124
 
   # ── Standard Python packages ───────────────────────────────────────────────
   pip install --no-cache-dir \
@@ -45,8 +45,8 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
     lightning \
     torchgeo rasterio
 
-  # ── kornia pinned (JamMa requires 0.7.0; LightGlue/LoFTR compatible) ───────
-  pip install --no-cache-dir kornia==0.7.0
+  # ── kornia pinned (>=0.7.3 satisfies torchgeo; JamMa compatible) ────────────
+  pip install --no-cache-dir "kornia>=0.7.3,<0.8"
 
   # ── CUDA extensions (compile from source) ──────────────────────────────────
   # Compile for: Volta(7.0), Turing(7.5), Ampere(8.0/8.6), Ada(8.9), Hopper(9.0)
