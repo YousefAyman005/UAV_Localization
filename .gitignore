@@ -35,5 +35,7 @@ cache/
 *.sif
 *.sandbox/
 
+*.tar
+*.out
 # Jupyter
 .ipynb_checkpoints/
