@@ -1,24 +1,18 @@
 import argparse
-import os
+import multiprocessing
 import cv2
 import numpy as np
 import pandas as pd
 import torch
-from tqdm import tqdm
 from visloc_utils import (
-    MIN_INL, CROP_W, CROP_H, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, JPEG_QUALITY,
-    load_satellite, gps_to_px, crop_sat, pred_offset_m, print_summary, altitude_scales,
+    RANSAC_THRESH,
+    FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
+    print_summary, save_dense_viz, TeeLogger,
 )
 from kornia.feature import LoFTR
 
-FLIGHT    = "03"
-BASE      = f"UAV_Visloc_example/{FLIGHT}"
-SAT_TIF   = f"{BASE}/satellite{FLIGHT}.tif"
-DRONE_DIR = f"{BASE}/drone"
-DRONE_CSV = f"{BASE}/{FLIGHT}.csv"
-SAT_CSV   = "UAV_Visloc_example/satellite_ coordinates_range.csv"
-OUT_CSV   = "visloc_loftr_results.csv"
-VIZ_DIR   = "visloc_loftr_visualizations"
+OUT_CSV = "visloc_loftr_results.csv"
+VIZ_DIR = "visloc_loftr_visualizations"
 
 
 def img_to_tensor(bgr, device):
@@ -29,104 +23,108 @@ def img_to_tensor(bgr, device):
 def match_loftr(drone_t, sat_t, matcher, conf_thresh):
     with torch.inference_mode():
         out = matcher({"image0": drone_t, "image1": sat_t})
-
     kp0  = out["keypoints0"].cpu().numpy()
     kp1  = out["keypoints1"].cpu().numpy()
     conf = out["confidence"].cpu().numpy()
-
-    r    = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0), good=0,
-                inliers=0, H=None, _kp0=kp0, _kp1=kp1, _conf=conf, _mask=None)
+    r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0), good=0, inliers=0,
+             H=None, _kp0=kp0, _kp1=kp1, _conf=conf, _mask=None)
     mask = conf >= conf_thresh
-    r["good"] = int(mask.sum())
+    r["good"], r["_mask"] = int(mask.sum()), mask
     if r["good"] < 4:
         return r
-
-    H, mask_h = cv2.findHomography(kp0[mask].reshape(-1, 1, 2).astype(np.float32),
-                                   kp1[mask].reshape(-1, 1, 2).astype(np.float32),
-                                   cv2.RANSAC, RANSAC_THRESH)
-    if H is not None and mask_h is not None:
-        r["inliers"], r["H"] = int(mask_h.sum()), H
-    r["_mask"] = mask
+    H, mh = cv2.findHomography(kp0[mask].reshape(-1, 1, 2).astype(np.float32),
+                               kp1[mask].reshape(-1, 1, 2).astype(np.float32),
+                               cv2.USAC_MAGSAC, RANSAC_THRESH,
+                               maxIters=5000, confidence=0.9999)
+    if H is not None and mh is not None:
+        r["inliers"], r["H"] = int(mh.sum()), H
     return r
+
+
+def _load_model(device, pretrained):
+    return LoFTR(pretrained=pretrained).eval().to(device)
+
+
+def _make_match_factory(matcher, device):
+    def match_factory(drone):
+        drone_t = img_to_tensor(drone, device)
+        return lambda p: match_loftr(drone_t, img_to_tensor(p, device), matcher, 0.0)
+    return match_factory
+
+
+def collect_flight_rows(flight, match_factory, dist, viz_dir, progress=True):
+    tiles, drone_dir, drone_csv, _ = load_flight(flight)
+    df = pd.read_csv(drone_csv)
+    if progress: print(f"\n=== Flight {flight}: {len(df)} images ===")
+    return collect_pipeline_rows_multitile(
+        tiles, df, match_factory, dist, drone_dir=drone_dir, flight=flight,
+        viz_fn=save_dense_viz if viz_dir else None, viz_dir=viz_dir, progress=progress)
+
+
+def summarize_rows(rows, label):
+    if not rows: return
+    df = pd.DataFrame(rows)
+    if "skipped" not in df: return
+    valid = df[~df["skipped"].fillna(False)]
+    if not valid.empty: print_summary(valid, label)
+
+
+def _worker(args):
+    flight_group, gpu_id, pretrained, dist, viz_dir = args
+    device = torch.device(f"cuda:{gpu_id}")
+    matcher = _load_model(device, pretrained)
+    match_factory = _make_match_factory(matcher, device)
+    return [r for f in flight_group for r in collect_flight_rows(f, match_factory, dist, viz_dir, False)]
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit",      type=int,   default=400)
     ap.add_argument("--dist",       type=float, default=25.0)
-    ap.add_argument("--conf",       type=float, default=0.0)
     ap.add_argument("--pretrained", choices=["outdoor", "indoor"], default="outdoor")
     ap.add_argument("--visualize",  action="store_true")
+    ap.add_argument("--flights",    nargs="+", default=["all"],
+                    help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
     args = ap.parse_args()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"  Device: {device}")
-    print(f"  Loading LoFTR ({args.pretrained}) ... ", end="", flush=True)
-    matcher = LoFTR(pretrained=args.pretrained).eval().to(device)
-    print("done")
+    flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
+    n_gpus  = max(1, torch.cuda.device_count())
+    viz_dir = VIZ_DIR if args.visualize else None
+    print(f"  Method: LoFTR ({args.pretrained}) | Dist: {args.dist}m | "
+          f"Flights: {' '.join(flights)} | GPUs: {n_gpus}")
 
-    sat, geo = load_satellite(SAT_TIF, SAT_CSV)
-    df = pd.read_csv(DRONE_CSV).head(args.limit)
-    print(f"  Method: LoFTR ({args.pretrained}) | Conf: {args.conf} | Dist: {args.dist}m | {len(df)} images\n")
+    groups = [g for g in [flights[i::n_gpus] for i in range(n_gpus)] if g]
 
-    if args.visualize:
-        os.makedirs(VIZ_DIR, exist_ok=True)
+    log_path = OUT_CSV.replace(".csv", ".log")
+    with TeeLogger(log_path):
+        if len(groups) == 1:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            print(f"  Device: {device}")
+            print(f"  Loading LoFTR ({args.pretrained}) ... ", end="", flush=True)
+            matcher = _load_model(device, args.pretrained)
+            print("done")
 
-    rows = []
-    for _, row in tqdm(df.iterrows(), total=len(df), unit="img"):
-        f, lat, lon = row["filename"], float(row["lat"]), float(row["lon"])
-        drone = cv2.imread(os.path.join(DRONE_DIR, f))
-        if drone is None:
-            rows.append(dict(filename=f, skipped=True)); continue
-        drone   = cv2.resize(drone, (SZ_W, SZ_H))
-        cx, cy  = gps_to_px(lat, lon, geo)
-        drone_t = img_to_tensor(drone, device)
+            match_factory = _make_match_factory(matcher, device)
+            all_rows = []
+            for flight in flights:
+                rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir)
+                all_rows.extend(rows)
+                summarize_rows(rows, f"flight {flight}")
+        else:
+            ctx = multiprocessing.get_context("spawn")
+            worker_args = [(g, i, args.pretrained, args.dist, viz_dir)
+                           for i, g in enumerate(groups)]
+            with ctx.Pool(len(groups)) as pool:
+                results = pool.map(_worker, worker_args)
+            all_rows = [r for chunk in results for r in chunk]
+            for flight in flights:
+                summarize_rows([r for r in all_rows if r.get("flight") == flight],
+                               f"flight {flight}")
 
-        best, best_crop, patch = None, None, None
-        for s in altitude_scales(float(row["height"]), geo):
-            crop_w = max(SZ_W, int(CROP_W * s))
-            crop_h = max(SZ_H, int(CROP_H * s))
-            p = crop_sat(sat, cx, cy, geo, crop_w, crop_h)
-            if p is None:
-                continue
-            r = match_loftr(drone_t, img_to_tensor(p, device), matcher, args.conf)
-            if best is None or r["inliers"] > best["inliers"]:
-                best, best_crop, patch = r, (crop_w, crop_h), p
-
-        if best is None:
-            rows.append(dict(filename=f, skipped=True)); continue
-
-        r = best
-        off = pred_offset_m(r["H"], cx, cy, *best_crop, geo, lat, lon) if r["inliers"] >= MIN_INL else None
-        off_m, plat, plon = off if off else (None, None, None)
-        success = off_m is not None and off_m <= args.dist
-
-        rows.append(dict(filename=f, lat=lat, lon=lon, height=float(row["height"]),
-                         skipped=False, crop_w=best_crop[0], crop_h=best_crop[1],
-                         sat_kp=r["sat_kp"], drone_kp=r["drone_kp"],
-                         raw=r["raw"], good=r["good"], inliers=r["inliers"],
-                         inlier_ratio=round(r["inliers"]/r["good"], 4) if r["good"] else 0,
-                         pred_lat=round(plat, 7) if plat is not None else None,
-                         pred_lon=round(plon, 7) if plon is not None else None,
-                         offset_m=round(off_m, 2) if off_m is not None else None,
-                         success=success))
-
-        if args.visualize and r["_mask"] is not None and r["good"] > 0:
-            kp0, kp1, conf, mask = r["_kp0"], r["_kp1"], r["_conf"], r["_mask"]
-            kpd_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp0[mask]]
-            kps_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp1[mask]]
-            top = sorted([cv2.DMatch(i, i, 1.0 - c) for i, c in enumerate(conf[mask])],
-                         key=lambda m: m.distance)[:TOP_MATCHES]
-            viz = cv2.drawMatches(drone, kpd_cv, patch, kps_cv, top, None,
-                                  flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-            cv2.imwrite(os.path.join(VIZ_DIR, f"{os.path.splitext(f)[0]}_matches.jpg"),
-                        viz, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
-
-    out = pd.DataFrame(rows)
-    out.to_csv(OUT_CSV, index=False)
-    if out.empty or "skipped" not in out.columns:
-        print("\n  No images processed."); return
-    print_summary(out[~out["skipped"].fillna(False)], args.dist, OUT_CSV)
+        out = pd.DataFrame(all_rows)
+        out.to_csv(OUT_CSV, index=False)
+        if len(flights) > 1:
+            print(f"\n=== Overall ({len(flights)} flights) ===")
+            summarize_rows(all_rows, OUT_CSV)
 
 
 if __name__ == "__main__":

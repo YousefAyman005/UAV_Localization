@@ -28,6 +28,15 @@ source .venv/bin/activate
 
 **`generate_uav_crops.py`** — Abandoned alternative approach (crops UAV from satellite images). Not used.
 
+**Benchmark pipelines** — run UAV-to-satellite localization on UAV_VisLoc (flight 03) and write `visloc_<method>_results.csv`. Shared utilities in `visloc_utils.py`:
+- Feature-matching (keypoints → RANSAC → homography → GPS): `Baseline_pipeline.py`, `lightglue_pipeline.py`, `loftr_pipeline.py`, `roma_pipeline.py`, `matcha_pipeline.py`, `jamma_pipeline.py`
+- Global-embedding retrieval (pure image-to-image, no homography): `clip_pipeline.py` — runs classic CLIP, GeoCLIP, and SatCLIP. Tiles the satellite GeoTIFF, caches per-model embeddings under `cache/clip_gallery/`, picks top-1 tile by cosine similarity.
+  - Deps: `pip install open_clip_torch geoclip` and `git clone https://github.com/microsoft/satclip` (add to PYTHONPATH).
+  - SatCLIP weights: `weights/satclip-vit16-l40.ckpt` (download from https://huggingface.co/microsoft/SatCLIP-ViT16-L40).
+  - Usage: `.venv/bin/python3 clip_pipeline.py --model all --limit 100 --dist 25`
+
+All pipelines are orchestrated on Kaggle via `kaggle_benchmark.ipynb` (one section per method family).
+
 ## Dataset Layout
 
 ```

@@ -1,17 +1,39 @@
 # Dataset folders
 berlin_grid_dataset/
 UAV_VisLoc_example/
-
+UAV_VisLoc_dataset/
+/docs/
 # CSV files
 *.csv
+*.log
 # Visualizations
 *.jpg
+# zip files
+*.zip
+# Weights / checkpoints
+*.pth
+*.ckpt
+*.pt
+*.bin
+weights/
+
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .venv/
 sift_eval.py
+cache/
+.cache/
 
 # OS
 .DS_Store
 .env
+
+# Apptainer / Singularity
+*.sif
+*.sandbox/
+
+# Jupyter
+.ipynb_checkpoints/
