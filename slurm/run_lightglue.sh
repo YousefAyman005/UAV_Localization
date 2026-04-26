@@ -24,7 +24,7 @@ mkdir -p "${SLURM_SUBMIT_DIR}/weights"
 apptainer run --nv \
     --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
-    --bind "$DATAPOOL3/datasets/Visloc/weights:/opt/uav_localization/weights:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights:/opt/uav_localization/weights" \
     --bind "${LOCAL_JOB_DIR}/job_results:/data/job_results" \
     --env TORCH_HOME=/opt/uav_localization/weights/torch_hub \
     --env HF_HOME=/opt/uav_localization/weights/huggingface \
