@@ -6,9 +6,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --gpus=1
+#SBATCH --gpus=2
 #SBATCH --mem=32G
-#SBATCH --time=12:00:00
+#SBATCH --time=5:00
 
 METHOD=${1:-disk}
 case "$METHOD" in
@@ -32,8 +32,19 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/lightglue_pipeline.py \
         --method "${METHOD}" \
-        --flights all
+        --flights all \
+        --visualize
 APPTAINER_EXIT=$?
+
+# Rename outputs to include method so disk/dedodeb/sift results don't collide
+mv "${LOCAL_JOB_DIR}/job_results/visloc_lightglue_results.csv" \
+   "${LOCAL_JOB_DIR}/job_results/visloc_lightglue_${METHOD}_results.csv" 2>/dev/null || true
+mv "${LOCAL_JOB_DIR}/job_results/visloc_lightglue_results.log" \
+   "${LOCAL_JOB_DIR}/job_results/visloc_lightglue_${METHOD}_results.log" 2>/dev/null || true
+if [ -d "${LOCAL_JOB_DIR}/job_results/visloc_lightglue_visualizations" ]; then
+    mv "${LOCAL_JOB_DIR}/job_results/visloc_lightglue_visualizations" \
+       "${LOCAL_JOB_DIR}/job_results/visloc_lightglue_${METHOD}_visualizations"
+fi
 
 cd "${LOCAL_JOB_DIR}"
 tar -cf "zz_${SLURM_JOB_ID}_lightglue_${METHOD}.tar" job_results

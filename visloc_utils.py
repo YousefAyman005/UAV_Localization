@@ -18,7 +18,8 @@ RANSAC_THRESH  = 5.0
 TOP_MATCHES    = 50
 JPEG_QUALITY   = 85
 ACC_THRESHOLDS = [5, 10, 15, 20]   # metres for A@N accuracy columns
-SAMPLE_N       = 9                  # images in the per-flight sample grid
+BEST_N         = 20                 # images in the per-flight best-matches grid
+WORST_N        = 20                 # images in the per-flight worst-matches grid
 
 _HERE             = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR       = os.path.join(_HERE, "UAV_VisLoc_dataset")
@@ -167,28 +168,29 @@ def save_dense_viz(drone, patch, best, filename, viz_dir):
     draw_and_save(drone, kpd, patch, kps, top, filename, viz_dir)
 
 
-def save_sample_grid(samples, viz_dir, flight):
+def save_sample_grid(samples, viz_dir, flight, label):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    n = min(len(samples), SAMPLE_N)
+    n = len(samples)
     if n == 0: return
-    fig, axes = plt.subplots(n, 2, figsize=(8, n * 2.5))
+    fig, axes = plt.subplots(n, 2, figsize=(10, n * 2.0))
     if n == 1: axes = axes[None]
-    for i, (drone_bgr, patch_bgr, row) in enumerate(samples[:n]):
+    for i, (drone_bgr, patch_bgr, row) in enumerate(samples):
         off = row.get("offset_m")
+        inl = row.get("inliers", 0)
         color = "limegreen" if off is not None and off <= 20 else "tomato"
-        lbl = (f"{row['filename']}\nerr={off:.1f}m" if off is not None
-               else f"{row['filename']}\nno fix")
+        lbl = (f"{row['filename']}\nerr={off:.1f}m  inl={inl}" if off is not None
+               else f"{row['filename']}\nno fix  inl={inl}")
         axes[i, 0].imshow(cv2.cvtColor(drone_bgr, cv2.COLOR_BGR2RGB))
         axes[i, 0].axis("off")
         if i == 0: axes[i, 0].set_title("drone", fontsize=8)
         axes[i, 1].imshow(cv2.cvtColor(patch_bgr, cv2.COLOR_BGR2RGB))
         axes[i, 1].axis("off")
         axes[i, 1].set_title(lbl, fontsize=6, color=color)
-    fig.suptitle(f"Flight {flight} — top {n} matched samples (by inliers)", fontsize=9)
+    fig.suptitle(f"Flight {flight} — {label} {n} samples (by inliers)", fontsize=9)
     plt.tight_layout()
-    out = os.path.join(viz_dir, f"flight{flight}_samples.jpg")
+    out = os.path.join(viz_dir, f"flight{flight}_{label}.jpg")
     fig.savefig(out, dpi=100, bbox_inches="tight")
     plt.close(fig)
     print(f"  Sample grid → {out}")
@@ -256,7 +258,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
     if viz_fn is not None and viz_dir is None: raise ValueError("viz_dir is required when viz_fn is set")
     clahe_fn = (lambda p: apply_clahe_lab(p, clahe)) if clahe is not None else None
     if viz_dir is not None: os.makedirs(viz_dir, exist_ok=True)
-    rows, _samples = [], []
+    rows, _best, _worst = [], [], []
     running = {t: 0 for t in ACC_THRESHOLDS}
     n_valid = 0
     pbar = tqdm(df.iterrows(), total=len(df), unit="img", disable=not progress)
@@ -288,14 +290,25 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
                                   for t in ACC_THRESHOLDS}, refresh=False)
 
         if viz_dir is not None and patch is not None:
-            heapq.heappush(_samples, (-best["inliers"], len(_samples),
-                                      drone.copy(), patch.copy(), r.copy()))
-            if len(_samples) > SAMPLE_N:
-                heapq.heappop(_samples)
+            idx = len(_best) + len(_worst)
+            # Best 20: min-heap on inliers, pop minimum → keeps top BEST_N
+            heapq.heappush(_best, (best["inliers"], idx, drone.copy(), patch.copy(), r.copy()))
+            if len(_best) > BEST_N:
+                heapq.heappop(_best)
+            # Worst 20: max-heap (negate inliers), pop highest → keeps bottom WORST_N
+            heapq.heappush(_worst, (-best["inliers"], idx, drone.copy(), patch.copy(), r.copy()))
+            if len(_worst) > WORST_N:
+                heapq.heappop(_worst)
 
-    if viz_dir is not None and _samples:
-        top = sorted(_samples, key=lambda x: x[0])
-        save_sample_grid([(d, p, rd) for _, _, d, p, rd in top], viz_dir, flight or "all")
+    if viz_dir is not None:
+        if _best:
+            best_sorted = sorted(_best, key=lambda x: -x[0])
+            save_sample_grid([(d, p, r) for _, _, d, p, r in best_sorted],
+                             viz_dir, flight or "all", label="best20")
+        if _worst:
+            worst_sorted = sorted(_worst, key=lambda x: -x[0])
+            save_sample_grid([(d, p, r) for _, _, d, p, r in worst_sorted],
+                             viz_dir, flight or "all", label="worst20")
     return rows
 
 

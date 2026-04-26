@@ -6,9 +6,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --gpus=1
+#SBATCH --gpus=2
 #SBATCH --mem=64G
-#SBATCH --time=24:00:00
+#SBATCH --time=5:00
 
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in
@@ -32,8 +32,19 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/roma_pipeline.py \
         --pretrained "${PRETRAINED}" \
-        --flights all
+        --flights all \
+        --visualize
 APPTAINER_EXIT=$?
+
+# Rename outputs to include pretrained variant so outdoor/indoor results don't collide
+mv "${LOCAL_JOB_DIR}/job_results/visloc_roma_results.csv" \
+   "${LOCAL_JOB_DIR}/job_results/visloc_roma_${PRETRAINED}_results.csv" 2>/dev/null || true
+mv "${LOCAL_JOB_DIR}/job_results/visloc_roma_results.log" \
+   "${LOCAL_JOB_DIR}/job_results/visloc_roma_${PRETRAINED}_results.log" 2>/dev/null || true
+if [ -d "${LOCAL_JOB_DIR}/job_results/visloc_roma_visualizations" ]; then
+    mv "${LOCAL_JOB_DIR}/job_results/visloc_roma_visualizations" \
+       "${LOCAL_JOB_DIR}/job_results/visloc_roma_${PRETRAINED}_visualizations"
+fi
 
 cd "${LOCAL_JOB_DIR}"
 tar -cf "zz_${SLURM_JOB_ID}_roma_${PRETRAINED}.tar" job_results
