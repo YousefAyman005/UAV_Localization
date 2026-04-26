@@ -54,10 +54,10 @@ def _make_match_factory(method):
 
 
 def save_baseline_viz(drone, patch, best, filename, viz_dir):
-    if not best["_matches"]: return
-    dg = cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY)
-    top = sorted(best["_matches"], key=lambda m: m.distance)[:TOP_MATCHES]
-    draw_and_save(dg, best["_kpd"], best["_sg"], best["_kps"], top, filename, viz_dir)
+    matches = best.get("_matches") or []
+    top = sorted(matches, key=lambda m: m.distance)[:TOP_MATCHES] if matches else []
+    draw_and_save(drone, best.get("_kpd", []), patch, best.get("_kps", []),
+                  top, filename, viz_dir, H=best.get("H"))
 
 
 def collect_rows(tiles, df, method, dist, drone_dir, flight, viz_dir, progress=True):

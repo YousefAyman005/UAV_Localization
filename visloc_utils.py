@@ -151,7 +151,23 @@ def make_result_row(filename, lat, lon, height, r, best_crop, off_m, plat, plon)
     return row
 
 
-def draw_and_save(drone, kpd, patch, kps, matches, filename, viz_dir):
+def _ensure_bgr(img):
+    return img if img.ndim == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+
+def _draw_pred_circle(patch, H):
+    if H is None: return patch
+    out = _ensure_bgr(patch).copy()
+    px = cv2.perspectiveTransform(
+        np.float32([[SZ_W/2, SZ_H/2]]).reshape(-1, 1, 2), H).reshape(2)
+    cx, cy = int(round(px[0])), int(round(px[1]))
+    cv2.circle(out, (cx, cy), 30, (0, 255, 255), 3)   # yellow ring: predicted location
+    cv2.circle(out, (cx, cy), 4,  (0, 0, 255),  -1)   # red dot: predicted center
+    return out
+
+
+def draw_and_save(drone, kpd, patch, kps, matches, filename, viz_dir, H=None):
+    patch = _draw_pred_circle(patch, H)
     viz = cv2.drawMatches(drone, kpd, patch, kps, matches, None,
                           flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     cv2.imwrite(os.path.join(viz_dir, f"{os.path.splitext(filename)[0]}_matches.jpg"),
@@ -159,41 +175,19 @@ def draw_and_save(drone, kpd, patch, kps, matches, filename, viz_dir):
 
 
 def save_dense_viz(drone, patch, best, filename, viz_dir):
-    if best.get("_mask") is None or best.get("good", 0) <= 0: return
-    kp0, kp1, conf, mask = best["_kp0"], best["_kp1"], best["_conf"], best["_mask"]
-    kpd = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp0[mask]]
-    kps = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp1[mask]]
-    top = sorted([cv2.DMatch(i, i, 1.0-c) for i, c in enumerate(conf[mask])],
-                 key=lambda m: m.distance)[:TOP_MATCHES]
-    draw_and_save(drone, kpd, patch, kps, top, filename, viz_dir)
-
-
-def save_sample_grid(samples, viz_dir, flight, label):
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    n = len(samples)
-    if n == 0: return
-    fig, axes = plt.subplots(n, 2, figsize=(10, n * 2.0))
-    if n == 1: axes = axes[None]
-    for i, (drone_bgr, patch_bgr, row) in enumerate(samples):
-        off = row.get("offset_m")
-        inl = row.get("inliers", 0)
-        color = "limegreen" if off is not None and off <= 20 else "tomato"
-        lbl = (f"{row['filename']}\nerr={off:.1f}m  inl={inl}" if off is not None
-               else f"{row['filename']}\nno fix  inl={inl}")
-        axes[i, 0].imshow(cv2.cvtColor(drone_bgr, cv2.COLOR_BGR2RGB))
-        axes[i, 0].axis("off")
-        if i == 0: axes[i, 0].set_title("drone", fontsize=8)
-        axes[i, 1].imshow(cv2.cvtColor(patch_bgr, cv2.COLOR_BGR2RGB))
-        axes[i, 1].axis("off")
-        axes[i, 1].set_title(lbl, fontsize=6, color=color)
-    fig.suptitle(f"Flight {flight} — {label} {n} samples (by inliers)", fontsize=9)
-    plt.tight_layout()
-    out = os.path.join(viz_dir, f"flight{flight}_{label}.jpg")
-    fig.savefig(out, dpi=100, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Sample grid → {out}")
+    kp0, kp1 = best.get("_kp0"), best.get("_kp1")
+    if kp0 is None or kp1 is None:
+        return
+    mask = best.get("_mask")
+    if mask is None or mask.sum() == 0:
+        kpd, kps, top = [], [], []
+    else:
+        conf = best["_conf"]
+        kpd = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp0[mask]]
+        kps = [cv2.KeyPoint(float(x), float(y), 1) for x, y in kp1[mask]]
+        top = sorted([cv2.DMatch(i, i, 1.0-c) for i, c in enumerate(conf[mask])],
+                     key=lambda m: m.distance)[:TOP_MATCHES]
+    draw_and_save(drone, kpd, patch, kps, top, filename, viz_dir, H=best.get("H"))
 
 def get_flight09_tile_paths(dataset_dir=None):
     root = dataset_dir or DATASET_DIR
@@ -279,7 +273,6 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
         off_m, plat, plon = off if off else (None, None, None)
         r = make_result_row(f, lat, lon, height, best, best_crop, off_m, plat, plon)
         if flight is not None: r["flight"] = flight
-        if viz_fn is not None: viz_fn(drone, patch, best, f, viz_dir)
         rows.append(r)
 
         if off_m is not None:
@@ -290,26 +283,28 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
                 pbar.set_postfix({f"A@{t}": f"{100*running[t]/n_valid:.0f}%"
                                   for t in ACC_THRESHOLDS}, refresh=False)
 
-        if viz_dir is not None and patch is not None:
+        if viz_fn is not None and patch is not None:
             sample_counter += 1
-            # Best 20: min-heap on inliers, pop minimum → keeps top BEST_N
-            heapq.heappush(_best, (best["inliers"], sample_counter, drone.copy(), patch.copy(), r.copy()))
+            # Best: min-heap on inliers, pop minimum → keeps top BEST_N by inliers
+            heapq.heappush(_best, (best["inliers"], sample_counter,
+                                   drone.copy(), patch.copy(), r.copy(), best))
             if len(_best) > BEST_N:
                 heapq.heappop(_best)
-            # Worst 20: max-heap (negate inliers), pop highest → keeps bottom WORST_N
-            heapq.heappush(_worst, (-best["inliers"], sample_counter, drone.copy(), patch.copy(), r.copy()))
+            # Worst: max-heap (negate), pop maximum → keeps bottom WORST_N by inliers
+            heapq.heappush(_worst, (-best["inliers"], sample_counter,
+                                    drone.copy(), patch.copy(), r.copy(), best))
             if len(_worst) > WORST_N:
                 heapq.heappop(_worst)
 
-    if viz_dir is not None:
-        if _best:
-            best_sorted = sorted(_best, key=lambda x: -x[0])
-            save_sample_grid([(d, p, r) for _, _, d, p, r in best_sorted],
-                             viz_dir, flight or "all", label="best20")
-        if _worst:
-            worst_sorted = sorted(_worst, key=lambda x: -x[0])
-            save_sample_grid([(d, p, r) for _, _, d, p, r in worst_sorted],
-                             viz_dir, flight or "all", label="worst20")
+    if viz_fn is not None:
+        flight_tag = flight or "all"
+        for label, samples in (("best", sorted(_best, key=lambda x: -x[0])),
+                               ("worst", sorted(_worst, key=lambda x: -x[0]))):
+            for rank, (_, _, dr, pa, rd, bd) in enumerate(samples, 1):
+                base = os.path.splitext(rd["filename"])[0]
+                fname = f"{flight_tag}_{label}{rank:02d}_inl{rd['inliers']}_{base}.jpg"
+                viz_fn(dr, pa, bd, fname, viz_dir)
+        print(f"  Saved {len(_best)} best + {len(_worst)} worst match visualizations → {viz_dir}")
     return rows
 
 

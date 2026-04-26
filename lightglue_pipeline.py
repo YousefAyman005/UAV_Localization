@@ -112,14 +112,16 @@ def _load_model(device, method):
 
 
 def _lg_viz_fn(drone, patch, best, filename, viz_dir):
-    if best["_valid"] is None or not best["_valid"][0].size:
-        return
-    d_idx, s_idx, conf = best["_valid"]
     kpd_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in best["_kpd_np"]]
     kps_cv = [cv2.KeyPoint(float(x), float(y), 1) for x, y in best["_kps_np"]]
-    top = sorted([cv2.DMatch(int(i), int(j), 1.0 - c) for i, j, c in zip(d_idx, s_idx, conf)],
-                 key=lambda m: m.distance)[:TOP_MATCHES]
-    draw_and_save(drone, kpd_cv, patch, kps_cv, top, filename, viz_dir)
+    valid = best.get("_valid")
+    if valid is None or not valid[0].size:
+        top = []
+    else:
+        d_idx, s_idx, conf = valid
+        top = sorted([cv2.DMatch(int(i), int(j), 1.0 - c) for i, j, c in zip(d_idx, s_idx, conf)],
+                     key=lambda m: m.distance)[:TOP_MATCHES]
+    draw_and_save(drone, kpd_cv, patch, kps_cv, top, filename, viz_dir, H=best.get("H"))
 
 
 def _make_match_factory(extractor, matcher, extract_fn, sift_det, device):
