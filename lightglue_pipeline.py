@@ -11,8 +11,8 @@ from visloc_utils import (
 )
 from kornia.feature import LightGlue, DISK, DeDoDe
 
-OUT_CSV = "visloc_lightglue_results.csv"
-VIZ_DIR = "visloc_lightglue_visualizations"
+OUT_CSV_TEMPLATE = "visloc_lightglue_{method}_results.csv"
+VIZ_DIR_TEMPLATE = "visloc_lightglue_{method}_visualizations"
 
 
 def bgr_to_tensor(bgr, device):
@@ -168,6 +168,8 @@ def main():
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     n_gpus  = max(1, torch.cuda.device_count())
+    OUT_CSV = OUT_CSV_TEMPLATE.format(method=args.method)
+    VIZ_DIR = VIZ_DIR_TEMPLATE.format(method=args.method)
     viz_dir = VIZ_DIR if args.visualize else None
     print(f"  Method: {args.method.upper()} | RANSAC: {RANSAC_THRESH} | MinInl: {MIN_INL} | "
           f"Dist: {args.dist}m | Flights: {' '.join(flights)} | GPUs: {n_gpus}")
