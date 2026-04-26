@@ -259,6 +259,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
     clahe_fn = (lambda p: apply_clahe_lab(p, clahe)) if clahe is not None else None
     if viz_dir is not None: os.makedirs(viz_dir, exist_ok=True)
     rows, _best, _worst = [], [], []
+    sample_counter = 0
     running = {t: 0 for t in ACC_THRESHOLDS}
     n_valid = 0
     pbar = tqdm(df.iterrows(), total=len(df), unit="img", disable=not progress)
@@ -290,13 +291,13 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
                                   for t in ACC_THRESHOLDS}, refresh=False)
 
         if viz_dir is not None and patch is not None:
-            idx = len(_best) + len(_worst)
+            sample_counter += 1
             # Best 20: min-heap on inliers, pop minimum → keeps top BEST_N
-            heapq.heappush(_best, (best["inliers"], idx, drone.copy(), patch.copy(), r.copy()))
+            heapq.heappush(_best, (best["inliers"], sample_counter, drone.copy(), patch.copy(), r.copy()))
             if len(_best) > BEST_N:
                 heapq.heappop(_best)
             # Worst 20: max-heap (negate inliers), pop highest → keeps bottom WORST_N
-            heapq.heappush(_worst, (-best["inliers"], idx, drone.copy(), patch.copy(), r.copy()))
+            heapq.heappush(_worst, (-best["inliers"], sample_counter, drone.copy(), patch.copy(), r.copy()))
             if len(_worst) > WORST_N:
                 heapq.heappop(_worst)
 
