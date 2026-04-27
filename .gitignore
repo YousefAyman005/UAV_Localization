@@ -37,5 +37,8 @@ cache/
 
 *.tar
 *.out
+logs/
+stats/
+tar/
 # Jupyter
 .ipynb_checkpoints/
