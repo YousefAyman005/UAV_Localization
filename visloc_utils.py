@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 Image.MAX_IMAGE_PIXELS = None  # allow large satellite TIFs
 
-MIN_INL        = 10
+MIN_INL        = 7
 CROP_W         = 2048    # base satellite crop width (px)
 SZ_W, SZ_H    = 1024, 680
 CROP_H         = CROP_W * SZ_H // SZ_W   # 1360; keeps scale_x == scale_y
@@ -17,7 +17,7 @@ SCALES         = [0.5, 0.75, 1.0, 1.25, 1.5]
 RANSAC_THRESH  = 5.0
 TOP_MATCHES    = 50
 JPEG_QUALITY   = 85
-ACC_THRESHOLDS = [5, 10, 15, 20]   # metres for A@N accuracy columns
+ACC_THRESHOLDS = [5, 10, 15, 20, 25]   # metres for A@N accuracy columns
 BEST_N         = 20                 # images in the per-flight best-matches grid
 WORST_N        = 20                 # images in the per-flight worst-matches grid
 

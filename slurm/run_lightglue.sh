@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=2
 #SBATCH --mem=32G
-#SBATCH --time=4:00:00
+#SBATCH --time=16:00:00
 
 METHOD=${1:-disk}
 case "$METHOD" in
@@ -33,7 +33,7 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/lightglue_pipeline.py \
         --method "${METHOD}" \
-        --flights 01 \
+        --flights all \
         --visualize
 APPTAINER_EXIT=$?
 
