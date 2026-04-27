@@ -1,9 +1,8 @@
 #!/bin/bash
-set -uo pipefail
-#SBATCH --job-name=uav-matcha
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=youssef.elsayed@hhi.fraunhofer.de
-#SBATCH --output=%j_%x.out
+#SBATCH --job-name=uav-matcha
+#SBATCH --output=logs/%j_%x.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
@@ -12,20 +11,21 @@ set -uo pipefail
 #SBATCH --time=12:00:00
 
 source "/etc/slurm/local_job_dir.sh"
+echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
-
-WEIGHTS=/data/datapool3/datasets/Visloc/weights
+mkdir -p "${SLURM_SUBMIT_DIR}/UAV_VisLoc_dataset"
+mkdir -p "${SLURM_SUBMIT_DIR}/weights"
 
 apptainer run --nv \
-    --bind "/data/datapool3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
-    --bind "${HOME}/UAV_Localization:/opt/uav_localization:ro" \
-    --bind "${WEIGHTS}:/opt/uav_localization/weights:ro" \
+    --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights:/opt/uav_localization/weights:ro" \
     --bind "${LOCAL_JOB_DIR}/job_results:/data/job_results" \
     --env TORCH_HOME=/opt/uav_localization/weights/torch_hub \
     --env HF_HOME=/opt/uav_localization/weights/huggingface \
     --pwd /data/job_results \
-    "${HOME}/UAV_Localization/uav_localization.sif" \
-    /opt/uav_localization/matcha_pipeline.py \
+    "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
+    /opt/uav_localization/pipelines/matcha_pipeline.py \
         --weights /opt/uav_localization/weights/matcha_pretrained.pth \
         --amp \
         --flights all
@@ -33,7 +33,7 @@ APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
 tar -cf "zz_${SLURM_JOB_ID}_matcha.tar" job_results
-cp "zz_${SLURM_JOB_ID}_matcha.tar" "${SLURM_SUBMIT_DIR}/"
+cp "zz_${SLURM_JOB_ID}_matcha.tar" "${SLURM_SUBMIT_DIR}/tar/"
 rm -rf "${LOCAL_JOB_DIR}/job_results"
 
 exit $APPTAINER_EXIT

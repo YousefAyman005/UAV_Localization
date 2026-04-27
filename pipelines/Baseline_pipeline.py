@@ -4,7 +4,7 @@ import argparse
 import cv2
 import numpy as np
 import pandas as pd
-from visloc_utils import (
+from pipelines.visloc_utils import (
     RANSAC_THRESH, TOP_MATCHES,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, draw_and_save, TeeLogger,

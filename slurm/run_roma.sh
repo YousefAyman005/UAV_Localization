@@ -1,13 +1,12 @@
 #!/bin/bash
-set -uo pipefail
-#SBATCH --job-name=uav-roma
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=youssef.elsayed@hhi.fraunhofer.de
-#SBATCH --output=%j_%x.out
+#SBATCH --job-name=uav-roma
+#SBATCH --output=logs/%j_%x.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --gpus=1
+#SBATCH --cpus-per-task=16
+#SBATCH --gpus=3
 #SBATCH --mem=64G
 #SBATCH --time=24:00:00
 
@@ -18,27 +17,30 @@ case "$PRETRAINED" in
 esac
 
 source "/etc/slurm/local_job_dir.sh"
+echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
-
-WEIGHTS=/data/datapool3/datasets/Visloc/weights
+mkdir -p "${LOCAL_JOB_DIR}/torch_home/hub"
 
 apptainer run --nv \
-    --bind "/data/datapool3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
-    --bind "${HOME}/UAV_Localization:/opt/uav_localization:ro" \
-    --bind "${WEIGHTS}:/opt/uav_localization/weights:ro" \
+    --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights/torch_hub/checkpoints:/data/torch_home/hub/checkpoints:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights/huggingface:/data/torch_home/huggingface:ro" \
+    --bind "${LOCAL_JOB_DIR}/torch_home:/data/torch_home" \
     --bind "${LOCAL_JOB_DIR}/job_results:/data/job_results" \
-    --env TORCH_HOME=/opt/uav_localization/weights/torch_hub \
-    --env HF_HOME=/opt/uav_localization/weights/huggingface \
+    --env TORCH_HOME=/data/torch_home \
+    --env HF_HOME=/data/torch_home/huggingface \
     --pwd /data/job_results \
-    "${HOME}/UAV_Localization/uav_localization.sif" \
-    /opt/uav_localization/roma_pipeline.py \
+    "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
+    /opt/uav_localization/pipelines/roma_pipeline.py \
         --pretrained "${PRETRAINED}" \
-        --flights all
+        --flights all \
+        --visualize
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
 tar -cf "zz_${SLURM_JOB_ID}_roma_${PRETRAINED}.tar" job_results
-cp "zz_${SLURM_JOB_ID}_roma_${PRETRAINED}.tar" "${SLURM_SUBMIT_DIR}/"
+cp "zz_${SLURM_JOB_ID}_roma_${PRETRAINED}.tar" "${SLURM_SUBMIT_DIR}/tar/"
 rm -rf "${LOCAL_JOB_DIR}/job_results"
 
 exit $APPTAINER_EXIT
