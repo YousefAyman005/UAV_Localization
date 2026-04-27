@@ -5,10 +5,10 @@
 #SBATCH --output=%j_%x.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --gpus=2
+#SBATCH --cpus-per-task=16
+#SBATCH --gpus=3
 #SBATCH --mem=64G
-#SBATCH --time=5:00
+#SBATCH --time=24:00:00
 
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in
@@ -17,6 +17,7 @@ case "$PRETRAINED" in
 esac
 
 source "/etc/slurm/local_job_dir.sh"
+echo "$PWD/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
 mkdir -p "${LOCAL_JOB_DIR}/torch_home/hub"
 

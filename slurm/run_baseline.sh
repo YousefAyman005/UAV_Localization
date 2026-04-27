@@ -17,6 +17,7 @@ case "$METHOD" in
 esac
 
 source "/etc/slurm/local_job_dir.sh"
+echo "$PWD/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
 mkdir -p "${SLURM_SUBMIT_DIR}/UAV_VisLoc_dataset"
 mkdir -p "${SLURM_SUBMIT_DIR}/weights"

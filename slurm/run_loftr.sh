@@ -5,10 +5,10 @@
 #SBATCH --output=%j_%x.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --gpus=1
-#SBATCH --mem=32G
-#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=24
+#SBATCH --gpus=3
+#SBATCH --mem=64G
+#SBATCH --time=30:00
 
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in
@@ -17,6 +17,7 @@ case "$PRETRAINED" in
 esac
 
 source "/etc/slurm/local_job_dir.sh"
+echo "$PWD/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
 mkdir -p "${SLURM_SUBMIT_DIR}/UAV_VisLoc_dataset"
 mkdir -p "${SLURM_SUBMIT_DIR}/weights"
@@ -32,7 +33,7 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/loftr_pipeline.py \
         --pretrained "${PRETRAINED}" \
-        --flights all
+        --flights 01
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
