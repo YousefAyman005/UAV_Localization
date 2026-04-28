@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
-from pipelines.visloc_utils import (
+from visloc_utils import (
     RANSAC_THRESH,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, save_dense_viz, TeeLogger,

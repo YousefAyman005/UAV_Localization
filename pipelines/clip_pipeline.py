@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from PIL import Image
 from tqdm import tqdm
 
-from pipelines.visloc_utils import (
+from visloc_utils import (
     SZ_W, SZ_H,
     FLIGHTS_AVAILABLE, get_flight_paths, get_flight09_tile_paths, load_flight09_tiles,
     load_satellite, haversine_m, TeeLogger,

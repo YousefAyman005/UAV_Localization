@@ -12,7 +12,7 @@
 
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in
-  outdoor|indoor) ;
+  outdoor|indoor) ;;
   *) echo "Usage: sbatch $0 outdoor|indoor" >&2; exit 1 ;;
 esac
 

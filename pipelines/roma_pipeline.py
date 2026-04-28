@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
-from pipelines.visloc_utils import (
+from visloc_utils import (
     MIN_INL, SZ_W, SZ_H, RANSAC_THRESH,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, save_dense_viz, TeeLogger,

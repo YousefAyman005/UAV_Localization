@@ -16,7 +16,7 @@ if not torch.cuda.is_available():
     torch.Tensor.cuda = lambda self, *a, **k: self                   # tensor.cuda() -> self
     torch.nn.Module.cuda = lambda self, *a, **k: self                # module.cuda() -> self
 
-from pipelines.visloc_utils import (
+from visloc_utils import (
     MIN_INL, SZ_W, SZ_H, RANSAC_THRESH,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, save_dense_viz, TeeLogger,
