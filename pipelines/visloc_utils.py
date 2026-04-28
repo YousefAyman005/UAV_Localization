@@ -22,7 +22,7 @@ BEST_N         = 20                 # images in the per-flight best-matches grid
 WORST_N        = 20                 # images in the per-flight worst-matches grid
 
 _HERE             = os.path.dirname(os.path.abspath(__file__))
-DATASET_DIR       = os.path.join(_HERE, "UAV_VisLoc_dataset")
+DATASET_DIR       = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
 FLIGHTS_AVAILABLE = [f"{i:02d}" for i in range(1, 12)]
 _UAV_HFOV_DEG     = 70.0
 
