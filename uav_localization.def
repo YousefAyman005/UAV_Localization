@@ -3,7 +3,7 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 %environment
   export PATH=/opt/conda/bin:$PATH
-  export PYTHONPATH=/opt/satclip:$PYTHONPATH
+  export PYTHONPATH=/opt/matcha:/opt/satclip:$PYTHONPATH
   export CUDA_HOME=/usr/local/cuda
   export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 
@@ -61,10 +61,10 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
   pip install --no-cache-dir \
     "git+https://github.com/Parskatt/RoMa.git@edd1b8b"
 
-  # MATCHA — pulls diffusers==0.15.0 and huggingface-hub==0.23.4 as deps;
-  # both are overridden immediately below.
-  pip install --no-cache-dir \
-    "git+https://github.com/nv-dvl/matcha.git"
+  # MATCHA — pyproject.toml doesn't package the matcha/ source dir, so pip install
+  # only installs metadata. Clone instead and expose via PYTHONPATH (%environment).
+  git clone --depth 1 https://github.com/nv-dvl/matcha.git /opt/matcha
+  pip install --no-cache-dir $(grep -v "^#" /opt/matcha/requirements.txt | tr '\n' ' ') || true
 
   # Override MATCHA's older HuggingFace pins to the versions used in all pipelines.
   # matcha_pipeline.py monkey-patches the diffusers API difference at runtime.
