@@ -64,7 +64,6 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
   # MATCHA — pyproject.toml doesn't package the matcha/ source dir, so pip install
   # only installs metadata. Clone instead and expose via PYTHONPATH (%environment).
   git clone --depth 1 https://github.com/nv-dvl/matcha.git /opt/matcha
-  pip install --no-cache-dir $(grep -v "^#" /opt/matcha/requirements.txt | tr '\n' ' ') || true
 
   # Override MATCHA's older HuggingFace pins to the versions used in all pipelines.
   # matcha_pipeline.py monkey-patches the diffusers API difference at runtime.
