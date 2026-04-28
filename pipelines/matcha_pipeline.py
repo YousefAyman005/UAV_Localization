@@ -21,7 +21,7 @@ from visloc_utils import (
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, save_dense_viz, TeeLogger,
 )
-from matcha.feature.matcha_feat import MatchaFeature
+from matcha.feature.matcha_feature import MatchaFeature
 from matcha.matcher.base_matcher import BaseMatcher
 from matcha.utils.device import to_numpy
 
