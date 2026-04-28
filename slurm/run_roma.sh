@@ -6,9 +6,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --gpus=3
-#SBATCH --mem=64G
-#SBATCH --time=24:00:00
+#SBATCH --gpus=2
+#SBATCH --mem=48G
+#SBATCH --time=8:00:00
 
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in

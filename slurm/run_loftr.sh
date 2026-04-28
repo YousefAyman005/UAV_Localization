@@ -6,13 +6,13 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
-#SBATCH --gpus=3
-#SBATCH --mem=64G
-#SBATCH --time=30:00
+#SBATCH --gpus=2
+#SBATCH --mem=48G
+#SBATCH --time=8:00:00
 
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in
-  outdoor|indoor) ;;
+  outdoor|indoor) ;
   *) echo "Usage: sbatch $0 outdoor|indoor" >&2; exit 1 ;;
 esac
 
