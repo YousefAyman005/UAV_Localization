@@ -19,19 +19,19 @@ esac
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
-mkdir -p "${SLURM_SUBMIT_DIR}/UAV_VisLoc_dataset"
-mkdir -p "${SLURM_SUBMIT_DIR}/weights"
-mkdir -p "${SLURM_SUBMIT_DIR}/cache/clip_gallery"
-mkdir -p "$DATAPOOL3/datasets/Visloc/weights/clip_gallery"
+mkdir -p "${LOCAL_JOB_DIR}/torch_home/hub"
 
 apptainer run --nv \
     --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights:/opt/uav_localization/weights:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights/torch_hub/checkpoints:/data/torch_home/hub/checkpoints:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights/huggingface:/data/torch_home/huggingface:ro" \
+    --bind "${LOCAL_JOB_DIR}/torch_home:/data/torch_home" \
     --bind "${LOCAL_JOB_DIR}/job_results:/data/job_results" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/clip_gallery:/opt/uav_localization/cache/clip_gallery" \
-    --env TORCH_HOME=/opt/uav_localization/weights/torch_hub \
-    --env HF_HOME=/opt/uav_localization/weights/huggingface \
+    --env TORCH_HOME=/data/torch_home \
+    --env HF_HOME=/data/torch_home/huggingface \
     --pwd /data/job_results \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/clip_pipeline.py \
