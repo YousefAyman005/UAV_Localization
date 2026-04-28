@@ -34,7 +34,7 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/loftr_pipeline.py \
         --pretrained "${PRETRAINED}" \
-        --flights 01
+        --flights all
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
