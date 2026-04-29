@@ -10,13 +10,19 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 %post
   # ── System packages ────────────────────────────────────────────────────────
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update && apt-get install -y --no-install-recommends \
-    wget curl git build-essential cmake ninja-build \
+  apt-get update
+  # Install wget/curl/certs first so subsequent steps can download files
+  # even if later apt-get calls trigger a fork error in container post-install scripts.
+  apt-get install -y --no-install-recommends \
+    wget curl ca-certificates git
+  # Remaining build deps; libgdal-dev/gdal-bin omitted — rasterio uses its own bundled GDAL.
+  apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build \
     libglib2.0-0 libsm6 libxext6 libxrender-dev \
-    libgl1-mesa-glx libgdal-dev gdal-bin \
+    libgl1-mesa-glx \
     libgeos-dev libproj-dev \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    || true
+  rm -rf /var/lib/apt/lists/*
 
   # ── Miniconda (pinned for reproducibility) ─────────────────────────────────
   wget -q https://repo.anaconda.com/miniconda/Miniconda3-py310_24.1.2-0-Linux-x86_64.sh \
