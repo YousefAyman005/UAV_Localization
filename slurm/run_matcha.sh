@@ -18,6 +18,7 @@ mkdir -p "${LOCAL_JOB_DIR}/torch_home/hub"
 apptainer run --nv \
     --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights/matcha_pretrained.pth:/opt/uav_localization/weights/matcha_pretrained.pth:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/torch_hub/checkpoints:/data/torch_home/hub/checkpoints:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/huggingface:/data/torch_home/huggingface:ro" \
     --bind "${LOCAL_JOB_DIR}/torch_home:/data/torch_home" \
