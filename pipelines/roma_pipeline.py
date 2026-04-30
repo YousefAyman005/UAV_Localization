@@ -58,9 +58,11 @@ def _make_match_factory(matcher, device, num_matches):
     return match_factory
 
 
-def collect_flight_rows(flight, match_factory, dist, viz_dir, progress=True):
+def collect_flight_rows(flight, match_factory, dist, viz_dir, limit=None, progress=True):
     tiles, drone_dir, drone_csv, _ = load_flight(flight)
     df = pd.read_csv(drone_csv)
+    if limit is not None:
+        df = df.head(limit)
     if progress: print(f"\n=== Flight {flight}: {len(df)} images ===")
     return collect_pipeline_rows_multitile(
         tiles, df, match_factory, dist, min_inl=MIN_INL,
@@ -77,11 +79,11 @@ def summarize_rows(rows, label):
 
 
 def _worker(args):
-    flight_group, gpu_id, pretrained, dist, num_matches, viz_dir = args
+    flight_group, gpu_id, pretrained, dist, num_matches, viz_dir, limit = args
     device = torch.device(f"cuda:{gpu_id}")
     matcher = _load_model(device, pretrained)
     match_factory = _make_match_factory(matcher, device, num_matches)
-    return [r for f in flight_group for r in collect_flight_rows(f, match_factory, dist, viz_dir, False)]
+    return [r for f in flight_group for r in collect_flight_rows(f, match_factory, dist, viz_dir, limit, False)]
 
 
 def main():
@@ -92,6 +94,8 @@ def main():
     ap.add_argument("--visualize",   action="store_true")
     ap.add_argument("--flights",     nargs="+", default=["all"],
                     help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
+    ap.add_argument("--limit",       type=int,   default=None,
+                    help="Cap number of drone images per flight (for quick tests)")
     args = ap.parse_args()
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
@@ -115,12 +119,12 @@ def main():
             match_factory = _make_match_factory(matcher, device, args.num_matches)
             all_rows = []
             for flight in flights:
-                rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir)
+                rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir, args.limit)
                 all_rows.extend(rows)
                 summarize_rows(rows, f"flight {flight}")
         else:
             ctx = multiprocessing.get_context("spawn")
-            worker_args = [(g, i, args.pretrained, args.dist, args.num_matches, viz_dir)
+            worker_args = [(g, i, args.pretrained, args.dist, args.num_matches, viz_dir, args.limit)
                            for i, g in enumerate(groups)]
             with ctx.Pool(len(groups)) as pool:
                 results = pool.map(_worker, worker_args)
