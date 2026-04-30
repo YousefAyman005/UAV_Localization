@@ -70,6 +70,9 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
   # MATCHA — pyproject.toml doesn't package the matcha/ source dir, so pip install
   # only installs metadata. Clone instead and expose via PYTHONPATH (%environment).
   git clone --depth 1 https://github.com/nv-dvl/matcha.git /opt/matcha
+  # stabilityai/stable-diffusion-2-1 was deleted from HuggingFace. Redirect DIFT to
+  # a local copy mounted at /data/sd21 (bind-mounted from DATAPOOL3 at runtime).
+  sed -i 's|stabilityai/stable-diffusion-2-1|/data/sd21|g' /opt/matcha/third_party/dift/dift_sd.py
 
   # Override MATCHA's older HuggingFace pins to the versions used in all pipelines.
   # matcha_pipeline.py monkey-patches the diffusers API difference at runtime.

@@ -6,9 +6,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --gpus=2
-#SBATCH --mem=48G
-#SBATCH --time=8:00:00
+#SBATCH --gpus=1
+#SBATCH --mem=32G
+#SBATCH --time=1:00:00
 
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in
@@ -34,8 +34,9 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/roma_pipeline.py \
         --pretrained "${PRETRAINED}" \
-        --flights all \
-        --visualize
+        --flights 03 \
+        --visualize \
+        --limit 100
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
