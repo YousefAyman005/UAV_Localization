@@ -9,11 +9,11 @@ from tqdm import tqdm
 
 Image.MAX_IMAGE_PIXELS = None  # allow large satellite TIFs
 
-MIN_INL        = 7
-CROP_W         = 2048    # base satellite crop width (px)
+MIN_INL        = 12
+CROP_W         = 2048    # legacy crop width (used by debug_compare.py)
 SZ_W, SZ_H    = 1024, 680
-CROP_H         = CROP_W * SZ_H // SZ_W   # 1360; keeps scale_x == scale_y
-SCALES         = [0.5, 0.75, 1.0, 1.25, 1.5]
+CROP_H         = CROP_W * SZ_H // SZ_W   # legacy: 1360
+SCALES         = [0.5, 0.75, 1.0, 1.25, 1.5]   # legacy fallback list
 RANSAC_THRESH  = 5.0
 TOP_MATCHES    = 50
 JPEG_QUALITY   = 85
@@ -85,12 +85,71 @@ def _tile_for_gps(tiles, lat, lon):
     return sat, geo, min(max(cx, 0), geo["w"]-1), min(max(cy, 0), geo["h"]-1)
 
 
+def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
+                sz_w=SZ_W, sz_h=SZ_H, hfov_deg=_UAV_HFOV_DEG):
+    """Sample a metric-isotropic, optionally heading-rotated patch from the satellite.
+
+    The output (sz_h, sz_w) image has the same metres-per-pixel in both axes as the
+    resized drone (whose footprint width is 2*h*tan(HFOV/2)). One warpAffine cancels
+    out (a) plate-carrée latitude anisotropy, (b) drone-vs-crop aspect mismatch, and
+    (c) drone heading rotation in a single resampling.
+
+    yaw_deg is compass-convention (positive = CW from north). Pass `Phi1` directly.
+
+    Returns (patch, pred_to_gps) — pred_to_gps(px, py) maps an output-patch pixel
+    back to (lat, lon). Returns (None, None) if the crop falls outside the satellite.
+    """
+    m_per_px = 2.0 * height_m * math.tan(math.radians(hfov_deg / 2)) / sz_w
+    mid_lat = (geo["lt_lat"] + geo["rb_lat"]) / 2
+    px_per_m_x = geo["pplon"] / (math.cos(math.radians(mid_lat)) * 111_320)
+    px_per_m_y = geo["pplat"] / 111_320
+    src_w_px = sz_w * m_per_px * px_per_m_x
+    src_h_px = sz_h * m_per_px * px_per_m_y
+
+    theta = math.radians(yaw_deg)
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    a =  m_per_px * px_per_m_x * cos_t
+    b = -m_per_px * px_per_m_x * sin_t
+    c =  m_per_px * px_per_m_y * sin_t
+    d =  m_per_px * px_per_m_y * cos_t
+    tx = cx - a * (sz_w / 2) - b * (sz_h / 2)
+    ty = cy - c * (sz_w / 2) - d * (sz_h / 2)
+
+    half_diag = int(math.ceil(math.hypot(src_w_px, src_h_px) / 2)) + 4
+    cx_i, cy_i = int(round(cx)), int(round(cy))
+    x0 = max(0, cx_i - half_diag)
+    y0 = max(0, cy_i - half_diag)
+    x1 = min(geo["w"], cx_i + half_diag)
+    y1 = min(geo["h"], cy_i + half_diag)
+    if x1 <= x0 or y1 <= y0:
+        return None, None
+    roi = sat[y0:y1, x0:x1]
+    M_roi = np.float32([[a, b, tx - x0], [c, d, ty - y0]])
+    patch = cv2.warpAffine(
+        roi, M_roi, (sz_w, sz_h),
+        flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+        borderMode=cv2.BORDER_REFLECT,
+    )
+
+    def pred_to_gps(px, py):
+        sx = a * px + b * py + tx
+        sy = c * px + d * py + ty
+        plat = geo["lt_lat"] - sy / geo["pplat"]
+        plon = geo["lt_lon"] + sx / geo["pplon"]
+        return plat, plon
+
+    return patch, pred_to_gps
+
+
+# ---- legacy helpers retained for debug_compare.py ---------------------------
+
 def crop_sat(sat, cx, cy, g, crop_w, crop_h):
+    """Legacy axis-aligned, fixed-aspect crop. Used only by debug_compare.py
+    to render the "before-fix" panel; not in the active matching pipeline."""
     if not (0 <= cx < g["w"] and 0 <= cy < g["h"]): return None
     cx = min(max(int(round(cx)), 0), g["w"] - 1)
     cy = min(max(int(round(cy)), 0), g["h"] - 1)
     sx, sy = crop_w / SZ_W, crop_h / SZ_H
-    # Extract a local ROI to stay under OpenCV's SHRT_MAX source-size limit
     x0 = max(0, cx - crop_w // 2 - 1)
     y0 = max(0, cy - crop_h // 2 - 1)
     x1 = min(g["w"], cx + crop_w // 2 + 1)
@@ -102,34 +161,12 @@ def crop_sat(sat, cx, cy, g, crop_w, crop_h):
                           borderMode=cv2.BORDER_REFLECT)
 
 
-def pred_offset_m(H, cx, cy, crop_w, crop_h, geo, lat, lon):
-    if H is None: return None
-    px_c, py_c = cv2.perspectiveTransform(
-        np.float32([[SZ_W/2, SZ_H/2]]).reshape(-1,1,2), H).reshape(2)
-    plat = geo["lt_lat"] - ((cy-crop_h/2) + py_c*(crop_h/SZ_H)) / geo["pplat"]
-    plon = geo["lt_lon"] + ((cx-crop_w/2) + px_c*(crop_w/SZ_W)) / geo["pplon"]
-    return haversine_m(lat, lon, plat, plon), plat, plon
-
-
 def altitude_scales(height_m, geo):
+    """Legacy altitude→scale heuristic. Used only by debug_compare.py."""
     target_s = (2*height_m*math.tan(math.radians(_UAV_HFOV_DEG/2))
                 / (math.cos(math.radians((geo["lt_lat"]+geo["rb_lat"])/2)) * 111_320 / geo["pplon"])
                 / CROP_W)
     return sorted(SCALES, key=lambda s: abs(s-target_s))
-
-
-def scale_sweep(sat, cx, cy, geo, height_m, match_fn, clahe_fn=None, early_stop_inliers=None):
-    best, best_crop, best_patch = None, None, None
-    for s in altitude_scales(height_m, geo):
-        crop_w, crop_h = max(SZ_W, int(CROP_W*s)), max(SZ_H, int(CROP_H*s))
-        p = crop_sat(sat, cx, cy, geo, crop_w, crop_h)
-        if p is None: continue
-        if clahe_fn is not None: p = clahe_fn(p)
-        r = match_fn(p)
-        if best is None or r["inliers"] > best["inliers"]:
-            best, best_crop, best_patch = r, (crop_w, crop_h), p
-            if early_stop_inliers is not None and best["inliers"] >= early_stop_inliers: break
-    return best, best_crop, best_patch
 
 
 def apply_clahe_lab(bgr, clahe):
@@ -245,11 +282,13 @@ def load_flight(flight, dataset_dir=None):
 
 
 def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_INL,
-                                     clahe=None, viz_fn=None, viz_dir=None,
-                                     drone_dir=None, flight=None, progress=True):
+                                     clahe="auto", viz_fn=None, viz_dir=None,
+                                     drone_dir=None, flight=None, progress=True,
+                                     hfov_deg=_UAV_HFOV_DEG):
     import heapq
     if drone_dir is None: raise ValueError("drone_dir is required")
     if viz_fn is not None and viz_dir is None: raise ValueError("viz_dir is required when viz_fn is set")
+    if clahe == "auto": clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     clahe_fn = (lambda p: apply_clahe_lab(p, clahe)) if clahe is not None else None
     if viz_dir is not None: os.makedirs(viz_dir, exist_ok=True)
     rows, _best, _worst = [], [], []
@@ -260,18 +299,28 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
     for _, row in pbar:
         f = row["filename"]
         lat, lon, height = float(row["lat"]), float(row["lon"]), float(row["height"])
+        yaw = float(row["Phi1"])
         drone = cv2.imread(os.path.join(drone_dir, f))
         if drone is None: rows.append(_skip_row(f, flight)); continue
         drone = cv2.resize(drone, (SZ_W, SZ_H))
         if clahe_fn is not None: drone = clahe_fn(drone)
 
         sat, geo, cx, cy = _tile_for_gps(tiles, lat, lon)
-        best, best_crop, patch = scale_sweep(sat, cx, cy, geo, height,
-                                             match_factory(drone), clahe_fn=clahe_fn)
+        patch, pred_to_gps = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw, hfov_deg=hfov_deg)
+        if patch is None: rows.append(_skip_row(f, flight)); continue
+        if clahe_fn is not None: patch = clahe_fn(patch)
+        best = match_factory(drone)(patch)
         if best is None: rows.append(_skip_row(f, flight)); continue
-        off = pred_offset_m(best["H"], cx, cy, *best_crop, geo, lat, lon) if best["inliers"] >= min_inl else None
-        off_m, plat, plon = off if off else (None, None, None)
-        r = make_result_row(f, lat, lon, height, best, best_crop, off_m, plat, plon)
+
+        if best.get("inliers", 0) >= min_inl and best.get("H") is not None:
+            px_c, py_c = cv2.perspectiveTransform(
+                np.float32([[SZ_W/2, SZ_H/2]]).reshape(-1, 1, 2),
+                best["H"]).reshape(2)
+            plat, plon = pred_to_gps(float(px_c), float(py_c))
+            off_m = haversine_m(lat, lon, plat, plon)
+        else:
+            plat = plon = off_m = None
+        r = make_result_row(f, lat, lon, height, best, (SZ_W, SZ_H), off_m, plat, plon)
         if flight is not None: r["flight"] = flight
         rows.append(r)
 

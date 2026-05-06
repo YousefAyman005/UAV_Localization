@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from visloc_utils import (
-    RANSAC_THRESH, TOP_MATCHES,
+    RANSAC_THRESH, TOP_MATCHES, _UAV_HFOV_DEG,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, draw_and_save, TeeLogger,
 )
@@ -60,15 +60,18 @@ def save_baseline_viz(drone, patch, best, filename, viz_dir):
                   top, filename, viz_dir, H=best.get("H"))
 
 
-def collect_rows(tiles, df, method, dist, drone_dir, flight, viz_dir, progress=True):
+def collect_rows(tiles, df, method, dist, drone_dir, flight, viz_dir,
+                 hfov_deg, clahe_arg, progress=True):
     return collect_pipeline_rows_multitile(
         tiles, df, _make_match_factory(method), dist, drone_dir=drone_dir, flight=flight,
-        viz_fn=save_baseline_viz if viz_dir else None, viz_dir=viz_dir, progress=progress)
+        viz_fn=save_baseline_viz if viz_dir else None, viz_dir=viz_dir, progress=progress,
+        hfov_deg=hfov_deg, clahe=clahe_arg)
 
 
 def _process_chunk(args):
-    chunk_df, tiles, drone_dir, method, dist, flight, viz_dir = args
-    return collect_rows(tiles, chunk_df, method, dist, drone_dir, flight, viz_dir, progress=False)
+    chunk_df, tiles, drone_dir, method, dist, flight, viz_dir, hfov_deg, clahe_arg = args
+    return collect_rows(tiles, chunk_df, method, dist, drone_dir, flight, viz_dir,
+                        hfov_deg, clahe_arg, progress=False)
 
 
 def main():
@@ -80,14 +83,23 @@ def main():
                     help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
     ap.add_argument("--workers",   type=int, default=None,
                     help="Number of parallel workers (default: cpu_count)")
+    ap.add_argument("--limit",     type=int, default=None,
+                    help="Run only the first N frames per flight (default: all)")
+    ap.add_argument("--hfov",      type=float, default=None,
+                    help=f"UAV horizontal FOV in degrees (default: {_UAV_HFOV_DEG})")
+    ap.add_argument("--no-clahe",  action="store_true",
+                    help="Disable CLAHE preprocessing (on by default)")
     args = ap.parse_args()
 
     flights   = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     n_workers = args.workers or os.cpu_count() or 1
     OUT_CSV   = OUT_CSV_TEMPLATE.format(method=args.method)
     VIZ_DIR   = VIZ_DIR_TEMPLATE.format(method=args.method)
+    hfov_deg  = args.hfov if args.hfov is not None else _UAV_HFOV_DEG
+    clahe_arg = None if args.no_clahe else "auto"
 
-    print(f"  Method: {args.method.upper()} | Dist: {args.dist}m | "
+    print(f"  Method: {args.method.upper()} | Dist: {args.dist}m | HFOV: {hfov_deg}° | "
+          f"CLAHE: {'off' if args.no_clahe else 'on'} | "
           f"Workers: {n_workers} | Flights: {' '.join(flights)}")
 
     log_path = OUT_CSV.replace(".csv", ".log")
@@ -96,15 +108,21 @@ def main():
         for flight in flights:
             tiles, drone_dir, drone_csv, _ = load_flight(flight)
             df = pd.read_csv(drone_csv)
+            if args.limit is not None:
+                df = df.iloc[:args.limit].reset_index(drop=True)
             print(f"\n=== Flight {flight}: {len(df)} images ===")
 
-            chunks = [c.reset_index(drop=True) for c in np.array_split(df, min(n_workers, max(len(df), 1)))]
+            n_chunks = min(n_workers, max(len(df), 1))
+            edges = np.linspace(0, len(df), n_chunks + 1, dtype=int)
+            chunks = [df.iloc[edges[i]:edges[i+1]].reset_index(drop=True) for i in range(n_chunks)]
             viz_dir_arg = VIZ_DIR if args.visualize else None
 
             if len(chunks) == 1:
-                rows = collect_rows(tiles, df, args.method, args.dist, drone_dir, flight, viz_dir_arg)
+                rows = collect_rows(tiles, df, args.method, args.dist, drone_dir, flight,
+                                    viz_dir_arg, hfov_deg, clahe_arg)
             else:
-                chunk_args = [(c, tiles, drone_dir, args.method, args.dist, flight, viz_dir_arg)
+                chunk_args = [(c, tiles, drone_dir, args.method, args.dist, flight,
+                               viz_dir_arg, hfov_deg, clahe_arg)
                               for c in chunks]
                 with mp.Pool(len(chunks)) as pool:
                     results = pool.map(_process_chunk, chunk_args)

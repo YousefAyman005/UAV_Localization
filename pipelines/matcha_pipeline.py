@@ -17,7 +17,7 @@ if not torch.cuda.is_available():
     torch.nn.Module.cuda = lambda self, *a, **k: self                # module.cuda() -> self
 
 from visloc_utils import (
-    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH,
+    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, _UAV_HFOV_DEG,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, save_dense_viz, TeeLogger,
 )
@@ -148,14 +148,15 @@ def _make_match_factory(matcher, img_w, img_h, device, use_amp):
     return match_factory
 
 
-def collect_flight_rows(flight, match_factory, dist, viz_dir, progress=True):
+def collect_flight_rows(flight, match_factory, dist, viz_dir, hfov_deg, clahe_arg, progress=True):
     tiles, drone_dir, drone_csv, _ = load_flight(flight)
     df = pd.read_csv(drone_csv)
     if progress: print(f"\n=== Flight {flight}: {len(df)} images ===")
     return collect_pipeline_rows_multitile(
         tiles, df, match_factory, dist, min_inl=MIN_INL,
         drone_dir=drone_dir, flight=flight,
-        viz_fn=save_dense_viz if viz_dir else None, viz_dir=viz_dir, progress=progress)
+        viz_fn=save_dense_viz if viz_dir else None, viz_dir=viz_dir, progress=progress,
+        hfov_deg=hfov_deg, clahe=clahe_arg)
 
 
 def summarize_rows(rows, label):
@@ -167,11 +168,13 @@ def summarize_rows(rows, label):
 
 
 def _worker(args):
-    flight_group, gpu_id, weights, img_w, img_h, dist, amp, viz_dir = args
+    flight_group, gpu_id, weights, img_w, img_h, dist, amp, viz_dir, hfov_deg, clahe_arg = args
     device = torch.device(f"cuda:{gpu_id}")
     matcher = _load_model(device, weights, img_w, img_h)
     match_factory = _make_match_factory(matcher, img_w, img_h, device, amp)
-    return [r for f in flight_group for r in collect_flight_rows(f, match_factory, dist, viz_dir, False)]
+    return [r for f in flight_group
+            for r in collect_flight_rows(f, match_factory, dist, viz_dir,
+                                         hfov_deg, clahe_arg, False)]
 
 
 def main():
@@ -185,6 +188,10 @@ def main():
     ap.add_argument("--visualize", action="store_true")
     ap.add_argument("--flights",   nargs="+", default=["all"],
                     help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
+    ap.add_argument("--hfov",      type=float, default=None,
+                    help=f"UAV horizontal FOV in degrees (default: {_UAV_HFOV_DEG})")
+    ap.add_argument("--no-clahe",  action="store_true",
+                    help="Disable CLAHE preprocessing (on by default)")
     args = ap.parse_args()
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
@@ -198,10 +205,13 @@ def main():
             "and place it in ./weights/."
         )
 
-    n_gpus  = max(1, torch.cuda.device_count())
-    viz_dir = VIZ_DIR if args.visualize else None
+    n_gpus    = max(1, torch.cuda.device_count())
+    viz_dir   = VIZ_DIR if args.visualize else None
+    hfov_deg  = args.hfov if args.hfov is not None else _UAV_HFOV_DEG
+    clahe_arg = None if args.no_clahe else "auto"
     print(f"  Method: MATCHA | Size: {args.img_w}x{args.img_h} | AMP: {args.amp} | "
-          f"RANSAC: {RANSAC_THRESH}px | MinInl: {MIN_INL} | "
+          f"RANSAC: {RANSAC_THRESH}px | MinInl: {MIN_INL} | HFOV: {hfov_deg}° | "
+          f"CLAHE: {'off' if args.no_clahe else 'on'} | "
           f"Dist: {args.dist}m | Flights: {' '.join(flights)} | GPUs: {n_gpus}")
 
     groups = [g for g in [flights[i::n_gpus] for i in range(n_gpus)] if g]
@@ -218,13 +228,14 @@ def main():
             match_factory = _make_match_factory(matcher, args.img_w, args.img_h, device, args.amp)
             all_rows = []
             for flight in flights:
-                rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir)
+                rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir,
+                                           hfov_deg, clahe_arg)
                 all_rows.extend(rows)
                 summarize_rows(rows, f"flight {flight}")
         else:
             ctx = multiprocessing.get_context("spawn")
             worker_args = [(g, i, args.weights, args.img_w, args.img_h,
-                            args.dist, args.amp, viz_dir)
+                            args.dist, args.amp, viz_dir, hfov_deg, clahe_arg)
                            for i, g in enumerate(groups)]
             with ctx.Pool(len(groups)) as pool:
                 results = pool.map(_worker, worker_args)
