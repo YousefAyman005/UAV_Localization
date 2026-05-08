@@ -1,44 +1,50 @@
-# Dataset folders
+# ── Dataset & outputs ────────────────────────────────────────────────────────
 berlin_grid_dataset/
+berlin_uav_dataset/
 UAV_VisLoc_example/
 UAV_VisLoc_dataset/
-/docs/
-# CSV files
+debug_compare/
+job_results/
+docs/
+stats/
+logs/
+tar/
+cache/
+.cache/
+
+# ── Generated files ───────────────────────────────────────────────────────────
 *.csv
 *.log
-# Visualizations
 *.jpg
-# zip files
 *.zip
-# Weights / checkpoints
-*.pth
-*.ckpt
-*.pt
-*.bin
-weights/
+*.tar
+*.out
 
-# Python
+# ── ML weights & checkpoints ──────────────────────────────────────────────────
+weights/
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.sif
+*.sandbox/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+.venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.venv/
-sift_eval.py
-cache/
-.cache/
 
-# OS
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── OS & environment ──────────────────────────────────────────────────────────
 .DS_Store
 .env
 
-# Apptainer / Singularity
-*.sif
-*.sandbox/
-
-*.tar
-*.out
-logs/
-stats/
-tar/
-# Jupyter
-.ipynb_checkpoints/
+# ── Misc ──────────────────────────────────────────────────────────────────────
+.claude/
+sift_eval.py
+CLAUDE.md
+*.ipynb
