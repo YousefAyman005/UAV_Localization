@@ -22,7 +22,6 @@ from visloc_utils import (
     CROP_W,
     SZ_H,
     SZ_W,
-    _UAV_HFOV_DEG,
     _tile_for_gps,
     altitude_scales,
     crop_sat as legacy_crop_sat,
@@ -47,11 +46,8 @@ def main():
     ap.add_argument("--step", type=int, default=1, help="row stride between samples")
     ap.add_argument("--yaw-sign", type=float, default=1.0,
                     help="multiply Phi1 by this before passing to metric_crop")
-    ap.add_argument("--hfov", type=float, default=None,
-                    help=f"UAV horizontal FOV in degrees (default: {_UAV_HFOV_DEG})")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
-    hfov = args.hfov if args.hfov is not None else _UAV_HFOV_DEG
 
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     out_dir = args.out or os.path.join(repo_root, "debug_compare", args.flight)
@@ -63,7 +59,7 @@ def main():
     df = df.iloc[sl]
 
     print(f"flight={args.flight}  rows {args.start}..{args.start + args.count * args.step - 1}"
-          f"  step={args.step}  yaw_sign={args.yaw_sign}  hfov={hfov}°  out={out_dir}")
+          f"  step={args.step}  yaw_sign={args.yaw_sign}  out={out_dir}")
 
     for _, row in df.iterrows():
         f = row["filename"]
@@ -82,16 +78,16 @@ def main():
         crop_w, crop_h = max(SZ_W, int(CROP_W * s)), max(SZ_H, int(CROP_H * s))
         legacy = legacy_crop_sat(sat, cx, cy, geo, crop_w, crop_h)
 
-        metric_north, _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=0.0, hfov_deg=hfov)
-        metric_rot, _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw, hfov_deg=hfov)
+        metric_north, _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=0.0)
+        metric_rot, _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw)
 
         top = np.hstack([
             _annotate(drone_r, "1. drone (resized 1024x680)"),
             _annotate(legacy,  f"2. legacy crop (scale={s:.2f}, {crop_w}x{crop_h})"),
         ])
         bot = np.hstack([
-            _annotate(metric_north, f"3. metric crop (north-up, isotropic m/px, hfov={hfov:.0f}°)"),
-            _annotate(metric_rot,   f"4. metric crop + yaw={yaw:+.1f}°, hfov={hfov:.0f}°"),
+            _annotate(metric_north, "3. metric crop (north-up, isotropic m/px)"),
+            _annotate(metric_rot,   f"4. metric crop + yaw={yaw:+.1f}°"),
         ])
         grid = np.vstack([top, bot])
 

@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from visloc_utils import (
-    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, _UAV_HFOV_DEG,
+    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, save_dense_viz, TeeLogger,
 )
@@ -58,7 +58,7 @@ def _make_match_factory(matcher, device, num_matches):
     return match_factory
 
 
-def collect_flight_rows(flight, match_factory, dist, viz_dir, hfov_deg, clahe_arg,
+def collect_flight_rows(flight, match_factory, dist, viz_dir, clahe_arg,
                         limit=None, progress=True):
     tiles, drone_dir, drone_csv, _ = load_flight(flight)
     df = pd.read_csv(drone_csv)
@@ -69,7 +69,7 @@ def collect_flight_rows(flight, match_factory, dist, viz_dir, hfov_deg, clahe_ar
         tiles, df, match_factory, dist, min_inl=MIN_INL,
         drone_dir=drone_dir, flight=flight,
         viz_fn=save_dense_viz if viz_dir else None, viz_dir=viz_dir, progress=progress,
-        hfov_deg=hfov_deg, clahe=clahe_arg)
+        clahe=clahe_arg)
 
 
 def summarize_rows(rows, label):
@@ -81,13 +81,13 @@ def summarize_rows(rows, label):
 
 
 def _worker(args):
-    flight_group, gpu_id, pretrained, dist, num_matches, viz_dir, limit, hfov_deg, clahe_arg = args
+    flight_group, gpu_id, pretrained, dist, num_matches, viz_dir, limit, clahe_arg = args
     device = torch.device(f"cuda:{gpu_id}")
     matcher = _load_model(device, pretrained)
     match_factory = _make_match_factory(matcher, device, num_matches)
     return [r for f in flight_group
             for r in collect_flight_rows(f, match_factory, dist, viz_dir,
-                                         hfov_deg, clahe_arg, limit, False)]
+                                         clahe_arg, limit, False)]
 
 
 def main():
@@ -100,8 +100,6 @@ def main():
                     help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
     ap.add_argument("--limit",       type=int,   default=None,
                     help="Cap number of drone images per flight (for quick tests)")
-    ap.add_argument("--hfov",        type=float, default=None,
-                    help=f"UAV horizontal FOV in degrees (default: {_UAV_HFOV_DEG})")
     ap.add_argument("--no-clahe",    action="store_true",
                     help="Disable CLAHE preprocessing (on by default)")
     args = ap.parse_args()
@@ -109,10 +107,9 @@ def main():
     flights   = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     n_gpus    = max(1, torch.cuda.device_count())
     viz_dir   = VIZ_DIR if args.visualize else None
-    hfov_deg  = args.hfov if args.hfov is not None else _UAV_HFOV_DEG
     clahe_arg = None if args.no_clahe else "auto"
     print(f"  Method: RoMa ({args.pretrained}) | NumMatches: {args.num_matches} | "
-          f"RANSAC: {RANSAC_THRESH}px | MinInl: {MIN_INL} | HFOV: {hfov_deg}° | "
+          f"RANSAC: {RANSAC_THRESH}px | MinInl: {MIN_INL} | "
           f"CLAHE: {'off' if args.no_clahe else 'on'} | "
           f"Dist: {args.dist}m | Flights: {' '.join(flights)} | GPUs: {n_gpus}")
 
@@ -131,13 +128,13 @@ def main():
             all_rows = []
             for flight in flights:
                 rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir,
-                                           hfov_deg, clahe_arg, args.limit)
+                                           clahe_arg, args.limit)
                 all_rows.extend(rows)
                 summarize_rows(rows, f"flight {flight}")
         else:
             ctx = multiprocessing.get_context("spawn")
             worker_args = [(g, i, args.pretrained, args.dist, args.num_matches, viz_dir,
-                            args.limit, hfov_deg, clahe_arg)
+                            args.limit, clahe_arg)
                            for i, g in enumerate(groups)]
             with ctx.Pool(len(groups)) as pool:
                 results = pool.map(_worker, worker_args)

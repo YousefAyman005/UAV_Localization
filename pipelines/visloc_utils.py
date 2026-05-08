@@ -10,6 +10,7 @@ from tqdm import tqdm
 Image.MAX_IMAGE_PIXELS = None  # allow large satellite TIFs
 
 MIN_INL        = 12
+MIN_PATCH_COVERAGE = 0.5  # skip metric_crop when <50% of source bbox lies inside the satellite tile
 CROP_W         = 2048    # legacy crop width (used by debug_compare.py)
 SZ_W, SZ_H    = 1024, 680
 CROP_H         = CROP_W * SZ_H // SZ_W   # legacy: 1360
@@ -85,21 +86,15 @@ def _tile_for_gps(tiles, lat, lon):
     return sat, geo, min(max(cx, 0), geo["w"]-1), min(max(cy, 0), geo["h"]-1)
 
 
-def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
-                sz_w=SZ_W, sz_h=SZ_H, hfov_deg=_UAV_HFOV_DEG):
+def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0, sz_w=SZ_W, sz_h=SZ_H):
     """Sample a metric-isotropic, optionally heading-rotated patch from the satellite.
-
-    The output (sz_h, sz_w) image has the same metres-per-pixel in both axes as the
-    resized drone (whose footprint width is 2*h*tan(HFOV/2)). One warpAffine cancels
-    out (a) plate-carrée latitude anisotropy, (b) drone-vs-crop aspect mismatch, and
-    (c) drone heading rotation in a single resampling.
 
     yaw_deg is compass-convention (positive = CW from north). Pass `Phi1` directly.
 
     Returns (patch, pred_to_gps) — pred_to_gps(px, py) maps an output-patch pixel
     back to (lat, lon). Returns (None, None) if the crop falls outside the satellite.
     """
-    m_per_px = 2.0 * height_m * math.tan(math.radians(hfov_deg / 2)) / sz_w
+    m_per_px = 2.0 * height_m * math.tan(math.radians(_UAV_HFOV_DEG / 2)) / sz_w
     mid_lat = (geo["lt_lat"] + geo["rb_lat"]) / 2
     px_per_m_x = geo["pplon"] / (math.cos(math.radians(mid_lat)) * 111_320)
     px_per_m_y = geo["pplat"] / 111_320
@@ -115,6 +110,20 @@ def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
     tx = cx - a * (sz_w / 2) - b * (sz_h / 2)
     ty = cy - c * (sz_w / 2) - d * (sz_h / 2)
 
+    # Skip when too little of the requested source rectangle lies inside the tile,
+    # otherwise warpAffine fills the rest from BORDER_CONSTANT and the patch is
+    # mostly black (and previously, with BORDER_REFLECT, mostly fabricated).
+    cx_corners = np.array([0.0, sz_w - 1, 0.0,        sz_w - 1])
+    cy_corners = np.array([0.0, 0.0,      sz_h - 1,   sz_h - 1])
+    sx_corners = a * cx_corners + b * cy_corners + tx
+    sy_corners = c * cx_corners + d * cy_corners + ty
+    bbox_w = sx_corners.max() - sx_corners.min()
+    bbox_h = sy_corners.max() - sy_corners.min()
+    inter_w = max(0.0, min(geo["w"], sx_corners.max()) - max(0.0, sx_corners.min()))
+    inter_h = max(0.0, min(geo["h"], sy_corners.max()) - max(0.0, sy_corners.min()))
+    if bbox_w * bbox_h <= 0 or (inter_w * inter_h) / (bbox_w * bbox_h) < MIN_PATCH_COVERAGE:
+        return None, None
+
     half_diag = int(math.ceil(math.hypot(src_w_px, src_h_px) / 2)) + 4
     cx_i, cy_i = int(round(cx)), int(round(cy))
     x0 = max(0, cx_i - half_diag)
@@ -128,7 +137,7 @@ def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
     patch = cv2.warpAffine(
         roi, M_roi, (sz_w, sz_h),
         flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
-        borderMode=cv2.BORDER_REFLECT,
+        borderMode=cv2.BORDER_CONSTANT,
     )
 
     def pred_to_gps(px, py):
@@ -158,7 +167,7 @@ def crop_sat(sat, cx, cy, g, crop_w, crop_h):
     M = np.float32([[sx, 0, cx - crop_w // 2 + (sx - 1) / 2 - x0],
                     [0, sy, cy - crop_h // 2 + (sy - 1) / 2 - y0]])
     return cv2.warpAffine(roi, M, (SZ_W, SZ_H), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
-                          borderMode=cv2.BORDER_REFLECT)
+                          borderMode=cv2.BORDER_CONSTANT)
 
 
 def altitude_scales(height_m, geo):
@@ -283,8 +292,7 @@ def load_flight(flight, dataset_dir=None):
 
 def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_INL,
                                      clahe="auto", viz_fn=None, viz_dir=None,
-                                     drone_dir=None, flight=None, progress=True,
-                                     hfov_deg=_UAV_HFOV_DEG):
+                                     drone_dir=None, flight=None, progress=True):
     import heapq
     if drone_dir is None: raise ValueError("drone_dir is required")
     if viz_fn is not None and viz_dir is None: raise ValueError("viz_dir is required when viz_fn is set")
@@ -306,7 +314,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
         if clahe_fn is not None: drone = clahe_fn(drone)
 
         sat, geo, cx, cy = _tile_for_gps(tiles, lat, lon)
-        patch, pred_to_gps = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw, hfov_deg=hfov_deg)
+        patch, pred_to_gps = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw)
         if patch is None: rows.append(_skip_row(f, flight)); continue
         if clahe_fn is not None: patch = clahe_fn(patch)
         best = match_factory(drone)(patch)

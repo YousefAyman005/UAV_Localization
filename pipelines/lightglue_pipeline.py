@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 from visloc_utils import (
-    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, _UAV_HFOV_DEG,
+    MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, draw_and_save, TeeLogger,
 )
@@ -133,7 +133,7 @@ def _make_match_factory(extractor, matcher, extract_fn, sift_det, device):
     return match_factory
 
 
-def collect_flight_rows(flight, match_factory, dist, viz_dir, hfov_deg, clahe_arg, progress=True):
+def collect_flight_rows(flight, match_factory, dist, viz_dir, clahe_arg, progress=True):
     tiles, drone_dir, drone_csv, _ = load_flight(flight)
     df = pd.read_csv(drone_csv)
     if progress: print(f"\n=== Flight {flight}: {len(df)} images ===")
@@ -141,7 +141,7 @@ def collect_flight_rows(flight, match_factory, dist, viz_dir, hfov_deg, clahe_ar
         tiles, df, match_factory, dist, min_inl=MIN_INL,
         drone_dir=drone_dir, flight=flight,
         viz_fn=_lg_viz_fn if viz_dir else None, viz_dir=viz_dir, progress=progress,
-        hfov_deg=hfov_deg, clahe=clahe_arg)
+        clahe=clahe_arg)
 
 
 def summarize_rows(rows, label):
@@ -153,13 +153,13 @@ def summarize_rows(rows, label):
 
 
 def _worker(args):
-    flight_group, gpu_id, method, dist, viz_dir, hfov_deg, clahe_arg = args
+    flight_group, gpu_id, method, dist, viz_dir, clahe_arg = args
     device = torch.device(f"cuda:{gpu_id}")
     extractor, matcher, extract_fn, sift_det = _load_model(device, method)
     match_factory = _make_match_factory(extractor, matcher, extract_fn, sift_det, device)
     return [r for f in flight_group
             for r in collect_flight_rows(f, match_factory, dist, viz_dir,
-                                         hfov_deg, clahe_arg, False)]
+                                         clahe_arg, False)]
 
 
 def main():
@@ -169,8 +169,6 @@ def main():
     ap.add_argument("--visualize", action="store_true")
     ap.add_argument("--flights",   nargs="+", default=["all"],
                     help="Flight IDs to evaluate, e.g. 01 03 05, or 'all' (default)")
-    ap.add_argument("--hfov",      type=float, default=None,
-                    help=f"UAV horizontal FOV in degrees (default: {_UAV_HFOV_DEG})")
     ap.add_argument("--no-clahe",  action="store_true",
                     help="Disable CLAHE preprocessing (on by default)")
     args = ap.parse_args()
@@ -180,10 +178,9 @@ def main():
     OUT_CSV   = OUT_CSV_TEMPLATE.format(method=args.method)
     VIZ_DIR   = VIZ_DIR_TEMPLATE.format(method=args.method)
     viz_dir   = VIZ_DIR if args.visualize else None
-    hfov_deg  = args.hfov if args.hfov is not None else _UAV_HFOV_DEG
     clahe_arg = None if args.no_clahe else "auto"
     print(f"  Method: {args.method.upper()} | RANSAC: {RANSAC_THRESH} | MinInl: {MIN_INL} | "
-          f"HFOV: {hfov_deg}° | CLAHE: {'off' if args.no_clahe else 'on'} | "
+          f"CLAHE: {'off' if args.no_clahe else 'on'} | "
           f"Dist: {args.dist}m | Flights: {' '.join(flights)} | GPUs: {n_gpus}")
 
     groups = [g for g in [flights[i::n_gpus] for i in range(n_gpus)] if g]
@@ -201,12 +198,12 @@ def main():
             all_rows = []
             for flight in flights:
                 rows = collect_flight_rows(flight, match_factory, args.dist, viz_dir,
-                                           hfov_deg, clahe_arg)
+                                           clahe_arg)
                 all_rows.extend(rows)
                 summarize_rows(rows, f"flight {flight}")
         else:
             ctx = multiprocessing.get_context("spawn")
-            worker_args = [(g, i, args.method, args.dist, viz_dir, hfov_deg, clahe_arg)
+            worker_args = [(g, i, args.method, args.dist, viz_dir, clahe_arg)
                            for i, g in enumerate(groups)]
             with ctx.Pool(len(groups)) as pool:
                 results = pool.map(_worker, worker_args)

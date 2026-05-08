@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from visloc_utils import (
-    RANSAC_THRESH, TOP_MATCHES, _UAV_HFOV_DEG,
+    RANSAC_THRESH, TOP_MATCHES,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
     print_summary, draw_and_save, TeeLogger,
 )
@@ -61,17 +61,17 @@ def save_baseline_viz(drone, patch, best, filename, viz_dir):
 
 
 def collect_rows(tiles, df, method, dist, drone_dir, flight, viz_dir,
-                 hfov_deg, clahe_arg, progress=True):
+                 clahe_arg, progress=True):
     return collect_pipeline_rows_multitile(
         tiles, df, _make_match_factory(method), dist, drone_dir=drone_dir, flight=flight,
         viz_fn=save_baseline_viz if viz_dir else None, viz_dir=viz_dir, progress=progress,
-        hfov_deg=hfov_deg, clahe=clahe_arg)
+        clahe=clahe_arg)
 
 
 def _process_chunk(args):
-    chunk_df, tiles, drone_dir, method, dist, flight, viz_dir, hfov_deg, clahe_arg = args
+    chunk_df, tiles, drone_dir, method, dist, flight, viz_dir, clahe_arg = args
     return collect_rows(tiles, chunk_df, method, dist, drone_dir, flight, viz_dir,
-                        hfov_deg, clahe_arg, progress=False)
+                        clahe_arg, progress=False)
 
 
 def main():
@@ -85,8 +85,6 @@ def main():
                     help="Number of parallel workers (default: cpu_count)")
     ap.add_argument("--limit",     type=int, default=None,
                     help="Run only the first N frames per flight (default: all)")
-    ap.add_argument("--hfov",      type=float, default=None,
-                    help=f"UAV horizontal FOV in degrees (default: {_UAV_HFOV_DEG})")
     ap.add_argument("--no-clahe",  action="store_true",
                     help="Disable CLAHE preprocessing (on by default)")
     args = ap.parse_args()
@@ -95,10 +93,9 @@ def main():
     n_workers = args.workers or os.cpu_count() or 1
     OUT_CSV   = OUT_CSV_TEMPLATE.format(method=args.method)
     VIZ_DIR   = VIZ_DIR_TEMPLATE.format(method=args.method)
-    hfov_deg  = args.hfov if args.hfov is not None else _UAV_HFOV_DEG
     clahe_arg = None if args.no_clahe else "auto"
 
-    print(f"  Method: {args.method.upper()} | Dist: {args.dist}m | HFOV: {hfov_deg}° | "
+    print(f"  Method: {args.method.upper()} | Dist: {args.dist}m | "
           f"CLAHE: {'off' if args.no_clahe else 'on'} | "
           f"Workers: {n_workers} | Flights: {' '.join(flights)}")
 
@@ -119,10 +116,10 @@ def main():
 
             if len(chunks) == 1:
                 rows = collect_rows(tiles, df, args.method, args.dist, drone_dir, flight,
-                                    viz_dir_arg, hfov_deg, clahe_arg)
+                                    viz_dir_arg, clahe_arg)
             else:
                 chunk_args = [(c, tiles, drone_dir, args.method, args.dist, flight,
-                               viz_dir_arg, hfov_deg, clahe_arg)
+                               viz_dir_arg, clahe_arg)
                               for c in chunks]
                 with mp.Pool(len(chunks)) as pool:
                     results = pool.map(_process_chunk, chunk_args)
