@@ -138,6 +138,12 @@ def main():
             valid_all = out[~out["skipped"].fillna(False)]
             if not valid_all.empty:
                 print_summary(valid_all, OUT_CSV)
+            if "07" in flights:
+                no07 = out[out["flight"] != "07"]
+                valid_no07 = no07[~no07["skipped"].fillna(False)]
+                if not valid_no07.empty:
+                    print(f"\n=== Overall (without flight 07) ===")
+                    print_summary(valid_no07, OUT_CSV)
 
 
 if __name__ == "__main__":

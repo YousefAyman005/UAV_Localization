@@ -307,7 +307,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, dist, min_inl=MIN_
     for _, row in pbar:
         f = row["filename"]
         lat, lon, height = float(row["lat"]), float(row["lon"]), float(row["height"])
-        yaw = float(row["Phi1"])
+        yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
         drone = cv2.imread(os.path.join(drone_dir, f))
         if drone is None: rows.append(_skip_row(f, flight)); continue
         drone = cv2.resize(drone, (SZ_W, SZ_H))

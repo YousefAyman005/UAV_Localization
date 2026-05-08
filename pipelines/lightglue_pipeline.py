@@ -217,6 +217,9 @@ def main():
         if len(flights) > 1:
             print(f"\n=== Overall ({len(flights)} flights) ===")
             summarize_rows(all_rows, OUT_CSV)
+            if "07" in flights:
+                print(f"\n=== Overall (without flight 07) ===")
+                summarize_rows([r for r in all_rows if r.get("flight") != "07"], OUT_CSV)
 
 
 if __name__ == "__main__":
