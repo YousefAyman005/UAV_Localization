@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --gpus=2
+#SBATCH --gpus=1
 #SBATCH --mem=48G
 #SBATCH --time=8:00:00
 
@@ -34,7 +34,8 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/loftr_pipeline.py \
         --pretrained "${PRETRAINED}" \
-        --flights all
+        --flights all \
+        --visualize
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
