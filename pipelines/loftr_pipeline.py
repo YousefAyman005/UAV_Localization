@@ -7,7 +7,7 @@ import torch
 from visloc_utils import (
     RANSAC_THRESH,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
-    print_summary, save_dense_viz, TeeLogger,
+    print_summary, save_dense_viz, TeeLogger, setup_viz_dir,
 )
 from kornia.feature import LoFTR
 
@@ -95,6 +95,7 @@ def main():
     n_gpus    = max(1, torch.cuda.device_count())
     viz_dir   = VIZ_DIR if args.visualize else None
     clahe_arg = None if args.no_clahe else "auto"
+    setup_viz_dir(viz_dir)
     print(f"  Method: LoFTR ({args.pretrained}) | Dist: {args.dist}m | "
           f"CLAHE: {'off' if args.no_clahe else 'on'} | Flights: {' '.join(flights)} | GPUs: {n_gpus}")
 
@@ -132,9 +133,6 @@ def main():
         if len(flights) > 1:
             print(f"\n=== Overall ({len(flights)} flights) ===")
             summarize_rows(all_rows, OUT_CSV)
-            if "07" in flights:
-                print(f"\n=== Overall (without flight 07) ===")
-                summarize_rows([r for r in all_rows if r.get("flight") != "07"], OUT_CSV)
 
 
 if __name__ == "__main__":

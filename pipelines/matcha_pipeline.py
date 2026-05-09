@@ -19,7 +19,7 @@ if not torch.cuda.is_available():
 from visloc_utils import (
     MIN_INL, SZ_W, SZ_H, RANSAC_THRESH,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
-    print_summary, save_dense_viz, TeeLogger,
+    print_summary, save_dense_viz, TeeLogger, setup_viz_dir,
 )
 from matcha.feature.matcha_feature import MatchaFeature
 from matcha.matcher.base_matcher import BaseMatcher
@@ -206,6 +206,7 @@ def main():
     n_gpus    = max(1, torch.cuda.device_count())
     viz_dir   = VIZ_DIR if args.visualize else None
     clahe_arg = None if args.no_clahe else "auto"
+    setup_viz_dir(viz_dir)
     print(f"  Method: MATCHA | Size: {args.img_w}x{args.img_h} | AMP: {args.amp} | "
           f"RANSAC: {RANSAC_THRESH}px | MinInl: {MIN_INL} | "
           f"CLAHE: {'off' if args.no_clahe else 'on'} | "

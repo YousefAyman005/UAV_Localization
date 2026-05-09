@@ -7,7 +7,7 @@ import torch
 from visloc_utils import (
     MIN_INL, SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
-    print_summary, draw_and_save, TeeLogger,
+    print_summary, draw_and_save, TeeLogger, setup_viz_dir,
 )
 from kornia.feature import LightGlue, DISK, DeDoDe
 
@@ -179,6 +179,7 @@ def main():
     VIZ_DIR   = VIZ_DIR_TEMPLATE.format(method=args.method)
     viz_dir   = VIZ_DIR if args.visualize else None
     clahe_arg = None if args.no_clahe else "auto"
+    setup_viz_dir(viz_dir)
     print(f"  Method: {args.method.upper()} | RANSAC: {RANSAC_THRESH} | MinInl: {MIN_INL} | "
           f"CLAHE: {'off' if args.no_clahe else 'on'} | "
           f"Dist: {args.dist}m | Flights: {' '.join(flights)} | GPUs: {n_gpus}")
@@ -217,9 +218,6 @@ def main():
         if len(flights) > 1:
             print(f"\n=== Overall ({len(flights)} flights) ===")
             summarize_rows(all_rows, OUT_CSV)
-            if "07" in flights:
-                print(f"\n=== Overall (without flight 07) ===")
-                summarize_rows([r for r in all_rows if r.get("flight") != "07"], OUT_CSV)
 
 
 if __name__ == "__main__":

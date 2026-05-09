@@ -19,12 +19,14 @@ RANSAC_THRESH  = 5.0
 TOP_MATCHES    = 50
 JPEG_QUALITY   = 85
 ACC_THRESHOLDS = [5, 10, 15, 20, 25]   # metres for A@N accuracy columns
-BEST_N         = 20                 # images in the per-flight best-matches grid
-WORST_N        = 20                 # images in the per-flight worst-matches grid
+BEST_N         = 10                 # images in the per-flight best-matches grid
+WORST_N        = 10                 # images in the per-flight worst-matches grid
+SAT_ZOOM       = 2.0                # satellite patch covers SAT_ZOOM× the linear UAV FOV
 
 _HERE             = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR       = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
-FLIGHTS_AVAILABLE = [f"{i:02d}" for i in range(1, 12)]
+# Flight 07's satellite is a 3000x170 strip — too narrow for metric_crop, dropped.
+FLIGHTS_AVAILABLE = [f"{i:02d}" for i in range(1, 12) if i != 7]
 _UAV_HFOV_DEG     = 70.0
 
 
@@ -86,15 +88,18 @@ def _tile_for_gps(tiles, lat, lon):
     return sat, geo, min(max(cx, 0), geo["w"]-1), min(max(cy, 0), geo["h"]-1)
 
 
-def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0, sz_w=SZ_W, sz_h=SZ_H):
+def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
+                sz_w=SZ_W, sz_h=SZ_H, sat_zoom=SAT_ZOOM):
     """Sample a metric-isotropic, optionally heading-rotated patch from the satellite.
 
     yaw_deg is compass-convention (positive = CW from north). Pass `Phi1` directly.
+    sat_zoom > 1 widens the satellite footprint relative to the UAV FOV (UAV's
+    image content occupies ~1/sat_zoom of the patch's linear extent).
 
     Returns (patch, pred_to_gps) — pred_to_gps(px, py) maps an output-patch pixel
     back to (lat, lon). Returns (None, None) if the crop falls outside the satellite.
     """
-    m_per_px = 2.0 * height_m * math.tan(math.radians(_UAV_HFOV_DEG / 2)) / sz_w
+    m_per_px = 2.0 * height_m * math.tan(math.radians(_UAV_HFOV_DEG / 2)) / sz_w * sat_zoom
     mid_lat = (geo["lt_lat"] + geo["rb_lat"]) / 2
     px_per_m_x = geo["pplon"] / (math.cos(math.radians(mid_lat)) * 111_320)
     px_per_m_y = geo["pplat"] / 111_320
@@ -279,6 +284,15 @@ def load_flight09_tiles(tile_paths, sat_csv):
 
 def _skip_row(f, flight):
     return {"filename": f, "skipped": True, **({} if flight is None else {"flight": flight})}
+
+
+def setup_viz_dir(viz_dir):
+    """Clear the visualization directory at pipeline startup so old runs do not accumulate."""
+    if viz_dir is None:
+        return
+    import shutil
+    shutil.rmtree(viz_dir, ignore_errors=True)
+    os.makedirs(viz_dir, exist_ok=True)
 
 
 def load_flight(flight, dataset_dir=None):

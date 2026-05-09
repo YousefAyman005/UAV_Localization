@@ -7,7 +7,7 @@ import pandas as pd
 from visloc_utils import (
     RANSAC_THRESH, TOP_MATCHES,
     FLIGHTS_AVAILABLE, load_flight, collect_pipeline_rows_multitile,
-    print_summary, draw_and_save, TeeLogger,
+    print_summary, draw_and_save, TeeLogger, setup_viz_dir,
 )
 
 OUT_CSV_TEMPLATE = "visloc_{method}_results.csv"
@@ -94,6 +94,7 @@ def main():
     OUT_CSV   = OUT_CSV_TEMPLATE.format(method=args.method)
     VIZ_DIR   = VIZ_DIR_TEMPLATE.format(method=args.method)
     clahe_arg = None if args.no_clahe else "auto"
+    setup_viz_dir(VIZ_DIR if args.visualize else None)
 
     print(f"  Method: {args.method.upper()} | Dist: {args.dist}m | "
           f"CLAHE: {'off' if args.no_clahe else 'on'} | "
@@ -138,12 +139,6 @@ def main():
             valid_all = out[~out["skipped"].fillna(False)]
             if not valid_all.empty:
                 print_summary(valid_all, OUT_CSV)
-            if "07" in flights:
-                no07 = out[out["flight"] != "07"]
-                valid_no07 = no07[~no07["skipped"].fillna(False)]
-                if not valid_no07.empty:
-                    print(f"\n=== Overall (without flight 07) ===")
-                    print_summary(valid_no07, OUT_CSV)
 
 
 if __name__ == "__main__":
