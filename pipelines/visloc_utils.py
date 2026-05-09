@@ -10,7 +10,7 @@ from tqdm import tqdm
 Image.MAX_IMAGE_PIXELS = None  # allow large satellite TIFs
 
 MIN_INL        = 12
-MIN_PATCH_COVERAGE = 0.5  # skip metric_crop when <50% of source bbox lies inside the satellite tile
+MIN_PATCH_COVERAGE = 0.25  # skip metric_crop when <25% of source bbox lies inside the satellite tile
 CROP_W         = 2048    # legacy crop width (used by debug_compare.py)
 SZ_W, SZ_H    = 1024, 680
 CROP_H         = CROP_W * SZ_H // SZ_W   # legacy: 1360
@@ -21,7 +21,7 @@ JPEG_QUALITY   = 85
 ACC_THRESHOLDS = [5, 10, 15, 20, 25]   # metres for A@N accuracy columns
 BEST_N         = 10                 # images in the per-flight best-matches grid
 WORST_N        = 10                 # images in the per-flight worst-matches grid
-SAT_ZOOM       = 2.0                # satellite patch covers SAT_ZOOM× the linear UAV FOV
+SAT_ZOOM       = 1.75               # satellite patch covers SAT_ZOOM× the linear UAV FOV
 
 _HERE             = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR       = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
@@ -142,7 +142,7 @@ def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
     patch = cv2.warpAffine(
         roi, M_roi, (sz_w, sz_h),
         flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
-        borderMode=cv2.BORDER_CONSTANT,
+        borderMode=cv2.BORDER_REPLICATE,
     )
 
     def pred_to_gps(px, py):
