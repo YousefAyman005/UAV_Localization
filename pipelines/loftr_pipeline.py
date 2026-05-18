@@ -1,5 +1,8 @@
 """LoFTR (Detector-free local feature matching) + RANSAC."""
 
+import os
+import sys
+
 import cv2
 import numpy as np
 import torch
@@ -8,7 +11,10 @@ torch.manual_seed(0)
 
 from kornia.feature import LoFTR
 
-from visloc_utils import RANSAC_THRESH, run_pipeline
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from helpers.utils import RANSAC_THRESH
+from helpers.workers import run_pipeline
 
 
 def img_to_tensor(bgr, device):

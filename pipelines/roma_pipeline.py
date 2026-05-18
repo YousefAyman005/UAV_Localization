@@ -1,5 +1,8 @@
 """RoMa (Robust dense matcher) + RANSAC."""
 
+import os
+import sys
+
 import cv2
 import numpy as np
 import torch
@@ -9,7 +12,10 @@ torch.manual_seed(0)
 
 from romatch import roma_outdoor, roma_indoor
 
-from visloc_utils import SZ_W, SZ_H, RANSAC_THRESH, run_pipeline
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH
+from helpers.workers import run_pipeline
 
 
 def bgr_to_pil(bgr):

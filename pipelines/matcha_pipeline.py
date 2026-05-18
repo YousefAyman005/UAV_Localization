@@ -2,6 +2,7 @@
 
 import contextlib
 import os
+import sys
 
 import cv2
 import numpy as np
@@ -22,7 +23,10 @@ from matcha.feature.matcha_feature import MatchaFeature
 from matcha.matcher.base_matcher import BaseMatcher
 from matcha.utils.device import to_numpy
 
-from visloc_utils import SZ_W, SZ_H, RANSAC_THRESH, run_pipeline
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH
+from helpers.workers import run_pipeline
 
 
 def _bgr_to_tensor(bgr, img_w, img_h, device):

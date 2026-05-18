@@ -20,8 +20,8 @@ import sys
 import pandas as pd
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from visloc_utils import DATASET_DIR
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from helpers.utils import DATASET_DIR
 
 _CSV_RE = re.compile(r"visloc_.+_k(?P<k>[0-9.]+)_f(?P<flight>[0-9]+)_results\.csv$")
 

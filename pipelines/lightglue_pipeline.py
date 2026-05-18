@@ -1,5 +1,8 @@
 """LightGlue matcher with three feature backbones (DISK / DeDoDe / SIFT) + RANSAC."""
 
+import os
+import sys
+
 import cv2
 import numpy as np
 import torch
@@ -8,10 +11,11 @@ torch.manual_seed(0)
 
 from kornia.feature import LightGlue, DISK, DeDoDe
 
-from visloc_utils import (
-    SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES,
-    draw_and_save, run_pipeline,
-)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES
+from helpers.visualization import draw_and_save
+from helpers.workers import run_pipeline
 
 
 def bgr_to_tensor(bgr, device):

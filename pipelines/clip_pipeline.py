@@ -8,6 +8,7 @@ import argparse
 import math
 import multiprocessing
 import os
+import sys
 import time
 
 import cv2
@@ -18,7 +19,9 @@ import torch.nn.functional as F
 from PIL import Image
 from tqdm import tqdm
 
-from visloc_utils import (
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from helpers.utils import (
     SZ_W, SZ_H,
     FLIGHTS_AVAILABLE, get_flight_paths, get_flight09_tile_paths,
     load_flight09_tiles, load_satellite, haversine_m, TeeLogger,

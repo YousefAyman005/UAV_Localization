@@ -4,14 +4,17 @@ Run e.g.: ./.venv/bin/python3 Baseline_pipeline.py --method sift --flights 03 --
 """
 
 import multiprocessing as mp
+import os
+import sys
 
 import cv2
 import numpy as np
 
-from visloc_utils import (
-    RANSAC_THRESH, TOP_MATCHES,
-    draw_and_save, run_pipeline,
-)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from helpers.utils import RANSAC_THRESH, TOP_MATCHES
+from helpers.visualization import draw_and_save
+from helpers.workers import run_pipeline
 
 LOWE = 0.75
 FLANN_TREES, FLANN_CHECKS = 5, 50

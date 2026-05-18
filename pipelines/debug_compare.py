@@ -17,8 +17,8 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from visloc_utils import (
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from helpers.utils import (
     SZ_H, SZ_W,
     load_flight, metric_crop, metric_m_per_px, tile_for_gps,
 )
