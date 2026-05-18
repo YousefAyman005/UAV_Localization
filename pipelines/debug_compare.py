@@ -15,11 +15,12 @@ import sys
 import cv2
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from visloc_utils import (
-    SZ_H, SZ_W, UAV_HFOV_DEG,
-    load_flight, metric_crop, tile_for_gps,
+    SZ_H, SZ_W,
+    load_flight, metric_crop, metric_m_per_px, tile_for_gps,
 )
 
 
@@ -48,12 +49,12 @@ def legacy_crop_sat(sat, cx, cy, g, crop_w, crop_h):
                           borderMode=cv2.BORDER_CONSTANT)
 
 
-def altitude_scales(height_m, geo):
+def altitude_scales(height_m, geo, native_res):
     """Pick a legacy scale closest to what altitude implies."""
-    target = (2 * height_m * math.tan(math.radians(UAV_HFOV_DEG / 2))
-              / (math.cos(math.radians((geo["lt_lat"] + geo["rb_lat"]) / 2))
-                 * 111_320 / geo["pplon"])
-              / CROP_W)
+    m_per_px = metric_m_per_px(height_m, native_res=native_res)
+    sat_m_per_px = (math.cos(math.radians((geo["lt_lat"] + geo["rb_lat"]) / 2))
+                    * 111_320 / geo["pplon"])
+    target = m_per_px * SZ_W / sat_m_per_px / CROP_W
     return sorted(SCALES, key=lambda s: abs(s - target))
 
 
@@ -98,18 +99,26 @@ def main():
         height = float(row["height"])
         yaw    = float(row["Phi1"]) * args.yaw_sign
 
-        drone = cv2.imread(os.path.join(drone_dir, f))
+        drone_path = os.path.join(drone_dir, f)
+        try:
+            with Image.open(drone_path) as _im:
+                native_res = _im.size
+        except (FileNotFoundError, OSError):
+            print(f"  skip (no image): {f}"); continue
+        drone = cv2.imread(drone_path)
         if drone is None:
             print(f"  skip (no image): {f}"); continue
         drone_r = cv2.resize(drone, (SZ_W, SZ_H))
 
         sat, geo, cx, cy, _ = tile_for_gps(tiles, lat, lon)
-        s = altitude_scales(height, geo)[0]
+        s = altitude_scales(height, geo, native_res)[0]
         crop_w, crop_h = max(SZ_W, int(CROP_W * s)), max(SZ_H, int(CROP_H * s))
         legacy = legacy_crop_sat(sat, cx, cy, geo, crop_w, crop_h)
 
-        metric_north, _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=0.0)
-        metric_rot,   _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw)
+        metric_north, _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=0.0,
+                                      native_res=native_res)
+        metric_rot,   _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw,
+                                      native_res=native_res)
 
         top = np.hstack([
             _annotate(drone_r, "1. drone (resized 1024x680)"),

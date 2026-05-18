@@ -1,19 +1,6 @@
-"""Shared utilities for the UAV-VisLoc benchmark pipelines.
-
-Public API (used by pipelines/ and kaggle_benchmark.ipynb):
-  * Constants: SZ_W, SZ_H, RANSAC_THRESH, MIN_INL, TOP_MATCHES,
-               SAT_ZOOM, ACC_THRESHOLDS, JPEG_QUALITY, FLIGHTS_AVAILABLE
-  * Geo:       haversine_m, gps_to_px, metric_m_per_px
-  * Loading:   get_flight_paths, get_flight09_tile_paths,
-               load_satellite, load_flight09_tiles, load_flight
-  * Cropping:  tile_for_gps, metric_crop
-  * Viz:       draw_and_save, save_dense_viz, setup_viz_dir
-  * Driver:    collect_pipeline_rows_multitile, run_pipeline
-  * Misc:      TeeLogger
-"""
-
 import argparse
 import heapq
+import json
 import math
 import multiprocessing
 import os
@@ -39,24 +26,37 @@ RANSAC_THRESH      = 5.0
 MIN_INL            = 7
 TOP_MATCHES        = 50
 MIN_PATCH_COVERAGE = 0.2     # skip mostly-outside crops; edge samples still evaluate
-SAT_ZOOM           = 1.75    # patch covers SAT_ZOOM × UAV linear FOV
 ACC_THRESHOLDS     = [5, 10, 15, 20, 25]
 BEST_N, WORST_N    = 10, 10
 JPEG_QUALITY       = 85
-UAV_HFOV_DEG       = 70.0
 EARTH_R_M          = 6_371_000.0
 DEG_TO_M           = 111_320.0  # meters per degree latitude (flat-earth approx)
+
+# patch_span_m = K * altitude_m, then m_per_px = patch_span_m / SZ_W.
+# Default = SAT_ZOOM(1.75) * 2 * tan(35°) ≈ 2.451, preserves legacy 70°/1.75x behaviour.
+K_DEFAULT          = 1.75 * 2.0 * math.tan(math.radians(35.0))
 
 _HERE       = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
 # Flight 07's satellite is 3000×170 — too narrow for metric_crop; dropped.
 FLIGHTS_AVAILABLE = [f"{i:02d}" for i in range(1, 12) if i != 7]
 
+# Calibrated per native drone resolution; populated by pipelines/calibrate_k.py.
+# Key format: "WxH" (e.g. "3976x2652"). Falls back to K_DEFAULT on miss.
+_K_JSON = os.path.join(_HERE, "k_calibration.json")
+try:
+    with open(_K_JSON) as _f:
+        K_PER_RES = {tuple(int(x) for x in k.split("x")): float(v)
+                     for k, v in json.load(_f).items()}
+except FileNotFoundError:
+    K_PER_RES = {}
 
-# ── TeeLogger ───────────────────────────────────────────────────────────────
+# CLI override (set by run_pipeline when --k-override is passed); None = use lookup.
+K_OVERRIDE = None
 
+
+# stores terminal to log files
 class TeeLogger:
-    """Duplicate stdout to a log file inside a `with` block."""
     def __init__(self, path):
         self._f, self._out = open(path, "w", buffering=1), sys.stdout
     def write(self, m):  self._out.write(m); self._f.write(m)
@@ -84,9 +84,24 @@ def sat_px_to_gps(sx, sy, g):
     return g["lt_lat"] - sy / g["pplat"], g["lt_lon"] + sx / g["pplon"]
 
 
-def metric_m_per_px(height_m, sz_w=SZ_W, sat_zoom=SAT_ZOOM):
-    """Target ground-sampling distance (m/px) for the output patch."""
-    return 2.0 * height_m * math.tan(math.radians(UAV_HFOV_DEG / 2)) / sz_w * sat_zoom
+def _resolve_k(native_res):
+    if K_OVERRIDE is not None:
+        return K_OVERRIDE
+    if native_res is not None and native_res in K_PER_RES:
+        return K_PER_RES[native_res]
+    return K_DEFAULT
+
+
+def metric_m_per_px(height_m, native_res=None, sz_w=SZ_W):
+    """Target ground-sampling distance (m/px) for the output patch.
+
+    patch_span_m = K * height_m; m_per_px = patch_span_m / sz_w.
+    K is looked up from K_PER_RES by native drone resolution (or K_OVERRIDE
+    if set, or K_DEFAULT). This replaces the old HFOV-based formula since
+    UAV-VisLoc JPEGs are EXIF-stripped — K is calibrated empirically per
+    native resolution by pipelines/calibrate_k.py.
+    """
+    return _resolve_k(native_res) * height_m / sz_w
 
 
 # ── Satellite / flight loading ──────────────────────────────────────────────
@@ -201,10 +216,10 @@ def tile_for_gps(tiles, lat, lon):
             min(max(cy, 0), geo["h"] - 1), False)
 
 
-def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, sat_zoom):
+def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, native_res):
     """Build the 2×3 affine M mapping output-patch px → satellite px.
     The output patch is metric-isotropic with `m_per_px` GSD."""
-    m_per_px   = metric_m_per_px(height_m, sz_w=sz_w, sat_zoom=sat_zoom)
+    m_per_px   = metric_m_per_px(height_m, native_res=native_res, sz_w=sz_w)
     mid_lat    = (geo["lt_lat"] + geo["rb_lat"]) / 2
     sx_per_m   = geo["pplon"] / (math.cos(math.radians(mid_lat)) * DEG_TO_M)
     sy_per_m   = geo["pplat"] / DEG_TO_M
@@ -218,14 +233,16 @@ def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, sat_zoom):
 
 
 def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
-                sz_w=SZ_W, sz_h=SZ_H, sat_zoom=SAT_ZOOM):
+                sz_w=SZ_W, sz_h=SZ_H, native_res=None):
     """Sample a metric-isotropic, optionally heading-rotated patch around (cx,cy).
 
     yaw_deg is compass-convention (CW from north); pass `Phi1` directly.
+    native_res = (native_w, native_h) of the source drone image, used to look
+    up the calibrated K (patch-span-per-altitude) constant.
     Returns (patch, M) where M is the 2×3 affine output_px → satellite_px,
     or (None, None) when the source rectangle barely overlaps the tile.
     """
-    M, _ = _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, sat_zoom)
+    M, _ = _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, native_res)
     a, b, tx = M[0]; c, d, ty = M[1]
 
     # Reject crops where most of the source rectangle is outside the tile.
@@ -448,7 +465,13 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         lat, lon, height = float(row["lat"]), float(row["lon"]), float(row["height"])
         yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
 
-        drone = cv2.imread(os.path.join(drone_dir, f))
+        drone_path = os.path.join(drone_dir, f)
+        try:
+            with Image.open(drone_path) as _im:
+                native_res = _im.size  # (w, h) — header-only read
+        except (FileNotFoundError, OSError):
+            rows.append(_skip_row(f, flight)); continue
+        drone = cv2.imread(drone_path)
         if drone is None:
             rows.append(_skip_row(f, flight)); continue
         drone = cv2.resize(drone, (SZ_W, SZ_H))
@@ -458,7 +481,8 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         sat, geo, cx, cy, in_bounds = tile_for_gps(tiles, lat, lon)
         if not in_bounds:
             rows.append(_skip_row(f, flight)); continue
-        patch, M = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw)
+        patch, M = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw,
+                               native_res=native_res)
         if patch is None:
             rows.append(_skip_row(f, flight)); continue
         if clahe_fn:
@@ -468,7 +492,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         if best is None:
             rows.append(_skip_row(f, flight)); continue
 
-        m_per_px = metric_m_per_px(height)
+        m_per_px = metric_m_per_px(height, native_res=native_res)
         best["_m_per_px"] = m_per_px
 
         raw_pred_px = raw_err_px = raw_err_m = None
@@ -524,12 +548,17 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
 
 # ── Pipeline orchestrator ───────────────────────────────────────────────────
 
+def _sample_df(df, limit):
+    """Deterministic random sample of `limit` rows (no-op if limit covers df)."""
+    if limit is None or limit >= len(df):
+        return df.reset_index(drop=True)
+    return df.sample(n=limit, random_state=0).sort_index().reset_index(drop=True)
+
+
 def _collect_flight(flight, match_factory, viz_fn, viz_dir, clahe, limit,
                     min_inl, progress):
     tiles, drone_dir, drone_csv, _ = load_flight(flight)
-    df = pd.read_csv(drone_csv)
-    if limit is not None:
-        df = df.iloc[:limit].reset_index(drop=True)
+    df = _sample_df(pd.read_csv(drone_csv), limit)
     if progress:
         print(f"\n=== Flight {flight}: {len(df)} images ===")
     return collect_pipeline_rows_multitile(
@@ -538,8 +567,16 @@ def _collect_flight(flight, match_factory, viz_fn, viz_dir, clahe, limit,
         viz_fn=viz_fn if viz_dir else None, viz_dir=viz_dir, progress=progress)
 
 
+def _apply_k_override(run):
+    k = getattr(run["args"], "k_override", None)
+    if k is not None:
+        global K_OVERRIDE
+        K_OVERRIDE = float(k)
+
+
 def _gpu_worker(args):
     flight_group, gpu_id, spec, run = args
+    _apply_k_override(run)
     import torch  # imported lazily so CPU-only specs don't need torch
     torch.manual_seed(0); torch.cuda.manual_seed_all(0)
     device        = torch.device(f"cuda:{gpu_id}")
@@ -553,6 +590,7 @@ def _gpu_worker(args):
 
 def _cpu_worker(args):
     chunk_df, tiles, drone_dir, flight, spec, run = args
+    _apply_k_override(run)
     random.seed(0); np.random.seed(0); cv2.setRNGSeed(0)
     match_factory = spec["make_match_factory"](None, None, run["args"])
     return collect_pipeline_rows_multitile(
@@ -590,9 +628,7 @@ def _run_cpu_chunks(flights, workers, spec, run):
     rows = []
     for flight in flights:
         tiles, drone_dir, drone_csv, _ = load_flight(flight)
-        df = pd.read_csv(drone_csv)
-        if run["limit"] is not None:
-            df = df.iloc[:run["limit"]].reset_index(drop=True)
+        df = _sample_df(pd.read_csv(drone_csv), run["limit"])
         print(f"\n=== Flight {flight}: {len(df)} images ===")
         n_chunks = min(n_workers, max(len(df), 1))
         edges = np.linspace(0, len(df), n_chunks + 1, dtype=int)
@@ -627,6 +663,12 @@ def _add_common_args(parser):
                         help=f"Minimum RANSAC inliers to accept H (default: {MIN_INL}).")
     parser.add_argument("--no-clahe",    action="store_true",
                         help="Disable CLAHE preprocessing (on by default).")
+    parser.add_argument("--k-override",  type=float, default=None,
+                        help="Force K (patch_span_m = K*altitude); "
+                             "bypasses k_calibration.json. Used by the k sweep.")
+    parser.add_argument("--results-suffix", type=str, default=None,
+                        help="Append to results CSV / viz-dir names to avoid "
+                             "collision across sweep runs.")
 
 
 def run_pipeline(*, name, load_model, make_match_factory,
@@ -651,9 +693,15 @@ def run_pipeline(*, name, load_model, make_match_factory,
 
     flights  = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     name_str = name(args) if callable(name) else name
-    out_csv  = f"visloc_{name_str}_results.csv"
-    viz_dir  = f"visloc_{name_str}_visualizations" if args.visualize else None
+    suffix   = f"_{args.results_suffix}" if args.results_suffix else ""
+    out_csv  = f"visloc_{name_str}{suffix}_results.csv"
+    viz_dir  = f"visloc_{name_str}{suffix}_visualizations" if args.visualize else None
     setup_viz_dir(viz_dir)
+
+    if args.k_override is not None:
+        global K_OVERRIDE
+        K_OVERRIDE = float(args.k_override)
+        print(f"[k-override] forcing K = {K_OVERRIDE:.4f} for all flights")
 
     if banner:
         print(banner(args))
