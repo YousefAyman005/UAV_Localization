@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import torch
 
+torch.manual_seed(0)
+
 from kornia.feature import LightGlue, DISK, DeDoDe
 
 from visloc_utils import (

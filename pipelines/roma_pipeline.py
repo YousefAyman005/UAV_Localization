@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from PIL import Image
 
+torch.manual_seed(0)
+
 from romatch import roma_outdoor, roma_indoor
 
 from visloc_utils import SZ_W, SZ_H, RANSAC_THRESH, run_pipeline
@@ -26,12 +28,14 @@ def match_roma(drone_pil, sat_bgr, matcher, device, num_samples, conf_thresh=0.0
     r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0),
              good=int(mask.sum()), inliers=0, H=None,
              _kp0=kp0, _kp1=kp1, _conf=conf, _mask=mask)
-    if r["good"] >= 4:
-        H, mh = cv2.findHomography(kp0[mask].reshape(-1, 1, 2),
-                                    kp1[mask].reshape(-1, 1, 2),
-                                    cv2.USAC_MAGSAC, RANSAC_THRESH,
-                                    maxIters=5000, confidence=0.9999)
-        if H is not None and mh is not None:
+    if r["good"] >= 3:
+        M, mh = cv2.estimateAffinePartial2D(
+            kp0[mask], kp1[mask],
+            method=cv2.RANSAC,
+            ransacReprojThreshold=RANSAC_THRESH,
+            maxIters=5000, confidence=0.9999, refineIters=10)
+        if M is not None and mh is not None:
+            H = np.vstack([M, [0.0, 0.0, 1.0]]).astype(np.float64)
             r["inliers"], r["H"] = int(mh.sum()), H
     return r
 

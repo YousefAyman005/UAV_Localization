@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 import torch
 
+torch.manual_seed(0)
+
 # MATCHA hardcodes many CUDA calls. Shim them to no-ops on CPU-only machines.
 if not torch.cuda.is_available():
     torch.cuda.synchronize             = lambda *a, **k: None

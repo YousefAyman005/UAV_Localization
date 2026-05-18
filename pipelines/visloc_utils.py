@@ -17,6 +17,7 @@ import heapq
 import math
 import multiprocessing
 import os
+import random
 import shutil
 import sys
 
@@ -27,6 +28,9 @@ from PIL import Image
 from tqdm import tqdm
 
 Image.MAX_IMAGE_PIXELS = None  # large satellite TIFs
+
+# Deterministic RNGs for every pipeline that imports this module.
+random.seed(0); np.random.seed(0); cv2.setRNGSeed(0)
 
 # ── Constants ───────────────────────────────────────────────────────────────
 
@@ -537,6 +541,7 @@ def _collect_flight(flight, match_factory, viz_fn, viz_dir, clahe, limit,
 def _gpu_worker(args):
     flight_group, gpu_id, spec, run = args
     import torch  # imported lazily so CPU-only specs don't need torch
+    torch.manual_seed(0); torch.cuda.manual_seed_all(0)
     device        = torch.device(f"cuda:{gpu_id}")
     model         = spec["load_model"](device, run["args"])
     match_factory = spec["make_match_factory"](model, device, run["args"])
@@ -548,6 +553,7 @@ def _gpu_worker(args):
 
 def _cpu_worker(args):
     chunk_df, tiles, drone_dir, flight, spec, run = args
+    random.seed(0); np.random.seed(0); cv2.setRNGSeed(0)
     match_factory = spec["make_match_factory"](None, None, run["args"])
     return collect_pipeline_rows_multitile(
         tiles, chunk_df, match_factory,

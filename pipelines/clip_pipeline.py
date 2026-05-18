@@ -24,6 +24,8 @@ from visloc_utils import (
     load_flight09_tiles, load_satellite, haversine_m, TeeLogger,
 )
 
+torch.manual_seed(0)
+
 OUT_CSV_TEMPLATE = "visloc_{model}_results.csv"
 CACHE_DIR        = "cache/clip_gallery"
 SATCLIP_CKPT     = "weights/satclip-vit16-l40.ckpt"
@@ -308,6 +310,7 @@ def print_retrieval_summary(out, dist, label, t_gallery, t_retrieval,
 
 def _worker(worker_args):
     flight_group, gpu_id, model_name, args = worker_args
+    torch.manual_seed(0)
     device = torch.device(f"cuda:{gpu_id}")
     bundle = load_bundle(model_name, device, args.satclip_ckpt)
     return [(f, *run_flight(f, bundle, args, model_name, device)) for f in flight_group]
