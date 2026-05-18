@@ -19,11 +19,9 @@
 #   3000x2000 group: 05 10                     (2 flights)
 
 METHOD=${1:-disk}
-LIMIT=${2:-80}
-FLIGHTS=("01" "02" "03" "04" "05" "06" "08" "09" "10" "11")
-# Half 1: KS=(1.4 1.55 1.7 1.85 2.0 2.15 2.3)
-# Half 2: KS=(2.45 2.6 2.75 2.9 3.05 3.2)
-KS=(1.4 1.55 1.7 1.85 2.0 2.15 2.3)
+LIMIT=${2:-200}
+FLIGHTS=("01" "02" "03" "04" "06" "08" "09")
+KS=(0.70 0.85 1.00 1.15 1.30 1.45)
 
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
