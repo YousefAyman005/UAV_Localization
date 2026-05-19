@@ -3,6 +3,7 @@ import math
 import os
 import random
 import sys
+import zlib
 
 import cv2
 import numpy as np
@@ -321,9 +322,10 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
             rows.append(_skip_row(f, flight)); continue
 
         # Simulate a noisy GPS prior: offset the patch center by N(0, σ²) so
-        # the drone is NOT at the trivial dead-center of the patch. Seeded per
-        # (flight, filename) for reproducibility across reruns.
-        seed       = abs(hash((flight or "", f))) & 0xFFFFFFFF
+        # the drone is NOT at the trivial dead-center of the patch. crc32 hash
+        # is stable across processes (unlike builtin hash, which uses a per-
+        # process random seed) so per-row offsets are reproducible.
+        seed       = zlib.crc32(f"{flight or ''}/{f}".encode())
         dx_m, dy_m = np.random.default_rng(seed).normal(0.0, PRIOR_OFFSET_STD_M, 2)
         mid_lat    = (geo["lt_lat"] + geo["rb_lat"]) / 2
         sx_per_m   = geo["pplon"] / (math.cos(math.radians(mid_lat)) * DEG_TO_M)

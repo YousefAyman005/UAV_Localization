@@ -10,6 +10,7 @@ import multiprocessing
 import os
 import sys
 import time
+import zlib
 
 import cv2
 import numpy as np
@@ -22,7 +23,7 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
-    SZ_W, SZ_H,
+    SZ_W, SZ_H, DEG_TO_M, PRIOR_OFFSET_STD_M,
     FLIGHTS_AVAILABLE, get_flight_paths, get_flight09_tile_paths,
     load_flight09_tiles, load_satellite, haversine_m, TeeLogger,
 )
@@ -34,7 +35,7 @@ CACHE_DIR        = "cache/clip_gallery"
 SATCLIP_CKPT     = "weights/satclip-vit16-l40.ckpt"
 ACC_THRS         = [5, 10, 15, 20]
 
-MODELS = ("clip", "geoclip", "satclip")
+MODELS = ("clip", "geoclip", "satclip", "mobileclip", "dinov2")
 
 
 # ---------- model loaders --------------------------------------------------
@@ -45,6 +46,16 @@ def load_clip(device):
         "ViT-B-32", pretrained="laion2b_s34b_b79k")
     model.eval().to(device)
     return (lambda t: model.encode_image(t.to(device))), preprocess, 512
+
+
+def load_mobileclip(device):
+    import open_clip
+    model, _, preprocess = open_clip.create_model_and_transforms(
+        "MobileCLIP-S2", pretrained="datacompdr")
+    model.eval().to(device)
+    with torch.inference_mode():
+        dim = model.encode_image(torch.zeros(1, 3, 256, 256, device=device)).shape[-1]
+    return (lambda t: model.encode_image(t.to(device))), preprocess, dim
 
 
 def load_geoclip(device):
@@ -77,10 +88,29 @@ def load_satclip(device, ckpt):
     return (lambda t: m.visual(t.to(device))), preprocess, dim
 
 
+def load_dinov2(device):
+    """Self-supervised ViT-B/14 — non-CLIP baseline for retrieval."""
+    from torchvision import transforms
+    model = torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14")
+    model.eval().to(device)
+    preprocess = transforms.Compose([
+        transforms.Resize(224, interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                              std=[0.229, 0.224, 0.225]),
+    ])
+    with torch.inference_mode():
+        dim = model(torch.zeros(1, 3, 224, 224, device=device)).shape[-1]
+    return (lambda t: model(t.to(device))), preprocess, dim
+
+
 def load_bundle(name, device, satclip_ckpt):
-    if name == "clip":    return load_clip(device)
-    if name == "geoclip": return load_geoclip(device)
-    if name == "satclip": return load_satclip(device, satclip_ckpt)
+    if name == "clip":       return load_clip(device)
+    if name == "geoclip":    return load_geoclip(device)
+    if name == "satclip":    return load_satclip(device, satclip_ckpt)
+    if name == "mobileclip": return load_mobileclip(device)
+    if name == "dinov2":     return load_dinov2(device)
     raise ValueError(f"unknown model: {name}")
 
 
@@ -194,8 +224,12 @@ def haversine_m_vec(lat, lon, lats, lons):
 
 
 def retrieve(flight, bundle, emb, tile_ids, centers, df, drone_dir,
-             dist, topk, flight_tag=None):
-    """Run top-k retrieval; returns (rows, floors, t_retrieval)."""
+             dist, topk, gps_radii=(), flight_tag=None):
+    """Run top-k retrieval; returns (rows, floors, t_retrieval).
+
+    For each radius R in `gps_radii`, also computes the GT tile's rank
+    within tiles ≤ R m of a noisy prior (GT + N(0, PRIOR_OFFSET_STD_M²)),
+    stored as column `gt_rank_r<R>`. Sentinel -1 = GT outside radius."""
     encode, preprocess, _ = bundle
     lats_g, lons_g = centers[:, 0], centers[:, 1]
     topk_col = f"top{topk}_hit"
@@ -241,6 +275,24 @@ def retrieve(flight, bundle, emb, tile_ids, centers, df, drone_dir,
             **{f"success_{thr}": off_m <= thr for thr in ACC_THRS},
             topk_col: bool((all_dists[top_idx] <= dist).any()),
         }
+
+        # GPS-degraded variants: rank GT tile within tiles ≤ R m of a noisy
+        # prior. Per-row seed matches helpers.utils.collect_pipeline_rows_multitile.
+        if gps_radii:
+            seed       = zlib.crc32(f"{flight_tag or ''}/{f}".encode())
+            dx_m, dy_m = np.random.default_rng(seed).normal(0.0, PRIOR_OFFSET_STD_M, 2)
+            prior_lat  = lat + dy_m / DEG_TO_M
+            prior_lon  = lon + dx_m / (DEG_TO_M * math.cos(math.radians(lat)))
+            prior_d    = haversine_m_vec(prior_lat, prior_lon, lats_g, lons_g)
+            for R in gps_radii:
+                keep = prior_d <= R
+                if not keep.any() or not bool(keep[gt_tile]):
+                    r[f"gt_rank_r{R}"] = -1
+                else:
+                    sub = np.where(keep)[0]
+                    order = sub[np.argsort(-sims[sub])]
+                    r[f"gt_rank_r{R}"] = int(np.where(order == gt_tile)[0][0])
+
         if flight_tag: r["flight"] = flight_tag
         rows.append(r)
 
@@ -267,7 +319,8 @@ def run_flight(flight, bundle, args, model_name, device):
         df = df.iloc[:args.limit].reset_index(drop=True)
     rows, floors, t_retrieval = retrieve(
         flight, bundle, emb, tile_ids, centers, df, drone_dir,
-        args.dist, args.topk, flight_tag=flight)
+        args.dist, args.topk, gps_radii=tuple(args.gps_radii),
+        flight_tag=flight)
     return rows, floors, t_gallery, t_retrieval, cached
 
 
@@ -336,6 +389,9 @@ def parse_args():
     ap.add_argument("--satclip-ckpt",  type=str,   default=SATCLIP_CKPT)
     ap.add_argument("--rebuild-cache", action="store_true")
     ap.add_argument("--flights",       nargs="+", default=["all"])
+    ap.add_argument("--gps-radii",     nargs="*", type=int, default=[1000, 5000],
+                    help="Radii (m) for GPS-degraded GT-rank columns; pass "
+                         "no values to disable.")
     return ap.parse_args()
 
 
