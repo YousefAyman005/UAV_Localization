@@ -15,7 +15,6 @@ import sys
 import cv2
 import numpy as np
 import pandas as pd
-from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from helpers.utils import (
@@ -49,9 +48,9 @@ def legacy_crop_sat(sat, cx, cy, g, crop_w, crop_h):
                           borderMode=cv2.BORDER_CONSTANT)
 
 
-def altitude_scales(height_m, geo, native_res):
+def altitude_scales(height_m, geo, flight):
     """Pick a legacy scale closest to what altitude implies."""
-    m_per_px = metric_m_per_px(height_m, native_res=native_res)
+    m_per_px = metric_m_per_px(height_m, flight=flight)
     sat_m_per_px = (math.cos(math.radians((geo["lt_lat"] + geo["rb_lat"]) / 2))
                     * 111_320 / geo["pplon"])
     target = m_per_px * SZ_W / sat_m_per_px / CROP_W
@@ -100,25 +99,20 @@ def main():
         yaw    = float(row["Phi1"]) * args.yaw_sign
 
         drone_path = os.path.join(drone_dir, f)
-        try:
-            with Image.open(drone_path) as _im:
-                native_res = _im.size
-        except (FileNotFoundError, OSError):
-            print(f"  skip (no image): {f}"); continue
         drone = cv2.imread(drone_path)
         if drone is None:
             print(f"  skip (no image): {f}"); continue
         drone_r = cv2.resize(drone, (SZ_W, SZ_H))
 
         sat, geo, cx, cy, _ = tile_for_gps(tiles, lat, lon)
-        s = altitude_scales(height, geo, native_res)[0]
+        s = altitude_scales(height, geo, args.flight)[0]
         crop_w, crop_h = max(SZ_W, int(CROP_W * s)), max(SZ_H, int(CROP_H * s))
         legacy = legacy_crop_sat(sat, cx, cy, geo, crop_w, crop_h)
 
         metric_north, _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=0.0,
-                                      native_res=native_res)
+                                      flight=args.flight)
         metric_rot,   _ = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw,
-                                      native_res=native_res)
+                                      flight=args.flight)
 
         top = np.hstack([
             _annotate(drone_r, "1. drone (resized 1024x680)"),

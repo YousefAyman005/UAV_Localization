@@ -16,7 +16,6 @@ import random
 import numpy as np
 import pandas as pd
 
-from helpers import utils as _utils
 from helpers.results import _summarize
 from helpers.utils import (
     FLIGHTS_AVAILABLE, MIN_INL, TeeLogger,
@@ -44,15 +43,8 @@ def _collect_flight(flight, match_factory, viz_fn, viz_dir, clahe, limit,
         viz_fn=viz_fn if viz_dir else None, viz_dir=viz_dir, progress=progress)
 
 
-def _apply_k_override(run):
-    k = getattr(run["args"], "k_override", None)
-    if k is not None:
-        _utils.K_OVERRIDE = float(k)
-
-
 def _gpu_worker(args):
     flight_group, gpu_id, spec, run = args
-    _apply_k_override(run)
     import torch  # imported lazily so CPU-only specs don't need torch
     torch.manual_seed(0); torch.cuda.manual_seed_all(0)
     device        = torch.device(f"cuda:{gpu_id}")
@@ -66,7 +58,6 @@ def _gpu_worker(args):
 
 def _cpu_worker(args):
     chunk_df, tiles, drone_dir, flight, spec, run = args
-    _apply_k_override(run)
     import cv2
     random.seed(0); np.random.seed(0); cv2.setRNGSeed(0)
     match_factory = spec["make_match_factory"](None, None, run["args"])
@@ -140,12 +131,6 @@ def _add_common_args(parser):
                         help=f"Minimum RANSAC inliers to accept H (default: {MIN_INL}).")
     parser.add_argument("--no-clahe",    action="store_true",
                         help="Disable CLAHE preprocessing (on by default).")
-    parser.add_argument("--k-override",  type=float, default=None,
-                        help="Force K (patch_span_m = K*altitude); "
-                             "bypasses k_calibration.json. Used by the k sweep.")
-    parser.add_argument("--results-suffix", type=str, default=None,
-                        help="Append to results CSV / viz-dir names to avoid "
-                             "collision across sweep runs.")
 
 
 def run_pipeline(*, name, load_model, make_match_factory,
@@ -170,14 +155,9 @@ def run_pipeline(*, name, load_model, make_match_factory,
 
     flights  = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     name_str = name(args) if callable(name) else name
-    suffix   = f"_{args.results_suffix}" if args.results_suffix else ""
-    out_csv  = f"visloc_{name_str}{suffix}_results.csv"
-    viz_dir  = f"visloc_{name_str}{suffix}_visualizations" if args.visualize else None
+    out_csv  = f"visloc_{name_str}_results.csv"
+    viz_dir  = f"visloc_{name_str}_visualizations" if args.visualize else None
     setup_viz_dir(viz_dir)
-
-    if args.k_override is not None:
-        _utils.K_OVERRIDE = float(args.k_override)
-        print(f"[k-override] forcing K = {_utils.K_OVERRIDE:.4f} for all flights")
 
     if banner:
         print(banner(args))

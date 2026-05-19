@@ -1,12 +1,4 @@
-"""Core utilities: constants, geo helpers, satellite loading, metric crop,
-CLAHE preprocessing, and the per-flight matching loop.
-
-Visualization, parallel orchestration, and CSV summarization live in their
-own modules (visualization.py, workers.py, results.py).
-"""
-
 import heapq
-import json
 import math
 import os
 import random
@@ -36,27 +28,23 @@ JPEG_QUALITY       = 85
 EARTH_R_M          = 6_371_000.0
 DEG_TO_M           = 111_320.0  # meters per degree latitude (flat-earth approx)
 
-# patch_span_m = K * altitude_m, then m_per_px = patch_span_m / SZ_W.
-# Default = SAT_ZOOM(1.75) * 2 * tan(35°) ≈ 2.451, preserves legacy 70°/1.75x behaviour.
+# patch_span_m = SEARCH_FACTOR * K * altitude_m; m_per_px = patch_span_m / SZ_W.
+# K_PER_FLIGHT is the calibrated *drone-footprint* GSD per flight; SEARCH_FACTOR
+# makes the satellite patch larger than the drone view so there's room to
+# localize. PRIOR_OFFSET_STD_M is the σ of the simulated GPS prior added to the
+# patch center, so the drone is not at the trivial dead-center of the patch.
+K_PER_FLIGHT = {
+    "01": 1.00, "02": 1.00, "03": 0.95, "04": 1.10, "05": 0.50,
+    "06": 0.50, "08": 1.00, "09": 1.10, "10": 0.60, "11": 0.50,
+}
 K_DEFAULT          = 1.75 * 2.0 * math.tan(math.radians(35.0))
+SEARCH_FACTOR      = 1.5
+PRIOR_OFFSET_STD_M = 80.0
 
 _HERE       = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
 # Flight 07's satellite is 3000×170 — too narrow for metric_crop; dropped.
 FLIGHTS_AVAILABLE = [f"{i:02d}" for i in range(1, 12) if i != 7]
-
-# Calibrated per native drone resolution; populated by pipelines/calibrate_k.py.
-# Key format: "WxH" (e.g. "3976x2652"). Falls back to K_DEFAULT on miss.
-_K_JSON = os.path.join(_HERE, "k_calibration.json")
-try:
-    with open(_K_JSON) as _f:
-        K_PER_RES = {tuple(int(x) for x in k.split("x")): float(v)
-                     for k, v in json.load(_f).items()}
-except FileNotFoundError:
-    K_PER_RES = {}
-
-# CLI override (set by run_pipeline when --k-override is passed); None = use lookup.
-K_OVERRIDE = None
 
 
 # stores terminal to log files
@@ -88,24 +76,11 @@ def sat_px_to_gps(sx, sy, g):
     return g["lt_lat"] - sy / g["pplat"], g["lt_lon"] + sx / g["pplon"]
 
 
-def _resolve_k(native_res):
-    if K_OVERRIDE is not None:
-        return K_OVERRIDE
-    if native_res is not None and native_res in K_PER_RES:
-        return K_PER_RES[native_res]
-    return K_DEFAULT
-
-
-def metric_m_per_px(height_m, native_res=None, sz_w=SZ_W):
+def metric_m_per_px(height_m, flight=None, sz_w=SZ_W):
     """Target ground-sampling distance (m/px) for the output patch.
-
-    patch_span_m = K * height_m; m_per_px = patch_span_m / sz_w.
-    K is looked up from K_PER_RES by native drone resolution (or K_OVERRIDE
-    if set, or K_DEFAULT). This replaces the old HFOV-based formula since
-    UAV-VisLoc JPEGs are EXIF-stripped — K is calibrated empirically per
-    native resolution by pipelines/calibrate_k.py.
-    """
-    return _resolve_k(native_res) * height_m / sz_w
+    patch_span_m = SEARCH_FACTOR * K * height_m; m_per_px = patch_span_m / sz_w."""
+    k = K_PER_FLIGHT.get(str(flight), K_DEFAULT)
+    return SEARCH_FACTOR * k * height_m / sz_w
 
 
 # ── Satellite / flight loading ──────────────────────────────────────────────
@@ -220,10 +195,10 @@ def tile_for_gps(tiles, lat, lon):
             min(max(cy, 0), geo["h"] - 1), False)
 
 
-def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, native_res):
+def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, flight):
     """Build the 2×3 affine M mapping output-patch px → satellite px.
     The output patch is metric-isotropic with `m_per_px` GSD."""
-    m_per_px   = metric_m_per_px(height_m, native_res=native_res, sz_w=sz_w)
+    m_per_px   = metric_m_per_px(height_m, flight=flight, sz_w=sz_w)
     mid_lat    = (geo["lt_lat"] + geo["rb_lat"]) / 2
     sx_per_m   = geo["pplon"] / (math.cos(math.radians(mid_lat)) * DEG_TO_M)
     sy_per_m   = geo["pplat"] / DEG_TO_M
@@ -237,16 +212,15 @@ def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, native_res):
 
 
 def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
-                sz_w=SZ_W, sz_h=SZ_H, native_res=None):
+                sz_w=SZ_W, sz_h=SZ_H, flight=None):
     """Sample a metric-isotropic, optionally heading-rotated patch around (cx,cy).
 
     yaw_deg is compass-convention (CW from north); pass `Phi1` directly.
-    native_res = (native_w, native_h) of the source drone image, used to look
-    up the calibrated K (patch-span-per-altitude) constant.
+    `flight` selects the calibrated K (patch-span-per-altitude) from K_PER_FLIGHT.
     Returns (patch, M) where M is the 2×3 affine output_px → satellite_px,
     or (None, None) when the source rectangle barely overlaps the tile.
     """
-    M, _ = _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, native_res)
+    M, _ = _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, flight)
     a, b, tx = M[0]; c, d, ty = M[1]
 
     # Reject crops where most of the source rectangle is outside the tile.
@@ -335,11 +309,6 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
 
         drone_path = os.path.join(drone_dir, f)
-        try:
-            with Image.open(drone_path) as _im:
-                native_res = _im.size  # (w, h) — header-only read
-        except (FileNotFoundError, OSError):
-            rows.append(_skip_row(f, flight)); continue
         drone = cv2.imread(drone_path)
         if drone is None:
             rows.append(_skip_row(f, flight)); continue
@@ -350,8 +319,20 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         sat, geo, cx, cy, in_bounds = tile_for_gps(tiles, lat, lon)
         if not in_bounds:
             rows.append(_skip_row(f, flight)); continue
+
+        # Simulate a noisy GPS prior: offset the patch center by N(0, σ²) so
+        # the drone is NOT at the trivial dead-center of the patch. Seeded per
+        # (flight, filename) for reproducibility across reruns.
+        seed       = abs(hash((flight or "", f))) & 0xFFFFFFFF
+        dx_m, dy_m = np.random.default_rng(seed).normal(0.0, PRIOR_OFFSET_STD_M, 2)
+        mid_lat    = (geo["lt_lat"] + geo["rb_lat"]) / 2
+        sx_per_m   = geo["pplon"] / (math.cos(math.radians(mid_lat)) * DEG_TO_M)
+        sy_per_m   = geo["pplat"] / DEG_TO_M
+        cx        += dx_m * sx_per_m
+        cy        += dy_m * sy_per_m
+
         patch, M = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw,
-                               native_res=native_res)
+                               flight=flight)
         if patch is None:
             rows.append(_skip_row(f, flight)); continue
         if clahe_fn:
@@ -361,7 +342,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         if best is None:
             rows.append(_skip_row(f, flight)); continue
 
-        m_per_px = metric_m_per_px(height, native_res=native_res)
+        m_per_px = metric_m_per_px(height, flight=flight)
         best["_m_per_px"] = m_per_px
 
         raw_pred_px = raw_err_px = raw_err_m = None
