@@ -11,6 +11,7 @@ logs/
 tar/
 cache/
 .cache/
+/Thesis/
 
 # ── Generated files ───────────────────────────────────────────────────────────
 *.csv

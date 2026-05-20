@@ -25,42 +25,48 @@ mkdir -p "${LOCAL_JOB_DIR}/job_results"
 mkdir -p "${LOCAL_JOB_DIR}/torch_home/hub"
 
 run_in_container() {
+  # HF_HOME points at the read-only staged HF cache on $DATAPOOL3. All models
+  # used here (CLIP-ViT-B-32-laion2b, openai/clip-vit-large-patch14 for
+  # GeoCLIP) must be pre-downloaded on the login node into that cache.
+  # HF_HUB_OFFLINE=1 guarantees no download is attempted (which would crash
+  # on the read-only mount); a missing model errors loudly instead.
   apptainer run --nv \
     --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights:/opt/uav_localization/weights:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/torch_hub/checkpoints:/data/torch_home/hub/checkpoints:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/weights/torch_hub/facebookresearch_dinov2_main:/data/torch_home/hub/facebookresearch_dinov2_main:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/huggingface:/data/torch_home/huggingface:ro" \
     --bind "${LOCAL_JOB_DIR}/torch_home:/data/torch_home" \
     --bind "${LOCAL_JOB_DIR}/job_results:/data/job_results" \
     --env TORCH_HOME=/data/torch_home \
     --env HF_HOME=/data/torch_home/huggingface \
+    --env HF_HUB_OFFLINE=1 \
     --pwd /data/job_results \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     "$@"
 }
 
 EXIT=0
-# MobileCLIP & DINOv2 skipped for now — their weights aren't pre-staged on
-# the cluster and we don't want this run blocked on a download.
-for MODEL in clip geoclip satclip; do
+for MODEL in clip geoclip satclip mobileclip dinov2; do
   echo "=== model=${MODEL} ==="
-run_in_container \
-  /opt/uav_localization/pipelines/clip_pipeline.py \
+  run_in_container \
+    /opt/uav_localization/pipelines/clip_pipeline.py \
       --model "${MODEL}" \
-    --flights all \
-    --rebuild-cache \
-    --gps-radii 1000 5000 \
+      --flights all \
+      --rebuild-cache \
+      --gps-radii 1000 5000 \
       --satclip-ckpt /opt/uav_localization/weights/satclip-vit16-l40.ckpt \
-    --cache-dir /data/job_results/clip_gallery \
-  || EXIT=$?
+      --cache-dir /data/job_results/clip_gallery \
+    || EXIT=$?
 done
 
 echo "=== aggregating recall_summary.csv ==="
 run_in_container \
   /opt/uav_localization/analyze/retrieval_recall.py \
     --csvs visloc_clip_results.csv visloc_geoclip_results.csv \
-           visloc_satclip_results.csv \
+           visloc_satclip_results.csv visloc_mobileclip_results.csv \
+           visloc_dinov2_results.csv \
     --out  recall_summary.csv \
   || EXIT=$?
 

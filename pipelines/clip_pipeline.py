@@ -73,6 +73,14 @@ def load_satclip(device, ckpt):
             f"SatCLIP checkpoint not found at {ckpt}. Download from "
             "https://huggingface.co/microsoft/SatCLIP-ViT16-L40 (file "
             "satclip-vit16-l40.ckpt).")
+    # SatCLIP's package __init__ transitively imports a training-only
+    # `datamodules.s2geo_dataset` module that isn't always present in the
+    # upstream `--depth 1` clone. Stub it so inference-only loading works.
+    import sys as _sys, types as _types
+    for _n in ("datamodules", "datamodules.s2geo_dataset"):
+        _sys.modules.setdefault(_n, _types.ModuleType(_n))
+    _sys.modules["datamodules.s2geo_dataset"].S2GeoDataModule = type(
+        "S2GeoDataModule", (), {})
     from satclip.load import get_satclip
     from torchvision import transforms
     m = get_satclip(ckpt, device=device).eval()
@@ -89,9 +97,18 @@ def load_satclip(device, ckpt):
 
 
 def load_dinov2(device):
-    """Self-supervised ViT-B/14 — non-CLIP baseline for retrieval."""
+    """Self-supervised ViT-B/14 — non-CLIP baseline for retrieval.
+
+    Prefers a locally cached `facebookresearch_dinov2_main` repo under
+    $TORCH_HOME/hub/ so cluster compute nodes (no internet) work too. Falls
+    back to a network fetch from GitHub when the local copy is absent.
+    """
     from torchvision import transforms
-    model = torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14")
+    local_repo = os.path.join(torch.hub.get_dir(), "facebookresearch_dinov2_main")
+    if os.path.isdir(local_repo):
+        model = torch.hub.load(local_repo, "dinov2_vitb14", source="local")
+    else:
+        model = torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14")
     model.eval().to(device)
     preprocess = transforms.Compose([
         transforms.Resize(224, interpolation=transforms.InterpolationMode.BICUBIC),
