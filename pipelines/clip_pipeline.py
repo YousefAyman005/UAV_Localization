@@ -76,15 +76,18 @@ def load_satclip(device, ckpt):
             f"SatCLIP checkpoint not found at {ckpt}. Download from "
             "https://huggingface.co/microsoft/SatCLIP-ViT16-L40 (file "
             "satclip-vit16-l40.ckpt).")
-    # satclip's __init__ imports 'datamodules' as a sibling package that lives
-    # in the repo root (e.g. /opt/satclip/). Add that root to sys.path so the
-    # import resolves even when satclip is not installed as a proper package.
-    import importlib.util as _ilu
-    _spec = _ilu.find_spec("satclip")
-    if _spec is not None:
-        _repo_root = os.path.dirname(os.path.dirname(_spec.origin))
-        if _repo_root not in sys.path:
-            sys.path.insert(0, _repo_root)
+    # satclip.__init__ imports 'datamodules.s2geo_dataset' which is a training-
+    # only dependency not present in the inference container. Inject a stub so
+    # the import chain succeeds without the full training environment.
+    if "datamodules" not in sys.modules:
+        import types as _types
+        _stub_pkg  = _types.ModuleType("datamodules")
+        _stub_ds   = _types.ModuleType("datamodules.s2geo_dataset")
+        class _S2GeoDataModule: pass
+        _stub_ds.S2GeoDataModule        = _S2GeoDataModule
+        sys.modules["datamodules"]               = _stub_pkg
+        sys.modules["datamodules.s2geo_dataset"] = _stub_ds
+        setattr(_stub_pkg, "s2geo_dataset", _stub_ds)
     from satclip.load import get_satclip
     from torchvision import transforms
     m = get_satclip(ckpt, device=device).eval()
