@@ -48,10 +48,13 @@ def load_clip(device):
     return (lambda t: model.encode_image(t.to(device))), preprocess, 512
 
 
-def load_mobileclip(device):
+def load_mobileclip(device, ckpt=None):
     import open_clip
+    # Use a local weights file when provided (cluster nodes are offline).
+    # Download: huggingface-cli download apple/MobileCLIP-S2-OpenCLIP open_clip_pytorch_model.bin
+    pretrained = ckpt if (ckpt and os.path.isfile(ckpt)) else "datacompdr"
     model, _, preprocess = open_clip.create_model_and_transforms(
-        "MobileCLIP-S2", pretrained="datacompdr")
+        "MobileCLIP-S2", pretrained=pretrained)
     model.eval().to(device)
     with torch.inference_mode():
         dim = model.encode_image(torch.zeros(1, 3, 256, 256, device=device)).shape[-1]
@@ -73,6 +76,15 @@ def load_satclip(device, ckpt):
             f"SatCLIP checkpoint not found at {ckpt}. Download from "
             "https://huggingface.co/microsoft/SatCLIP-ViT16-L40 (file "
             "satclip-vit16-l40.ckpt).")
+    # satclip's __init__ imports 'datamodules' as a sibling package that lives
+    # in the repo root (e.g. /opt/satclip/). Add that root to sys.path so the
+    # import resolves even when satclip is not installed as a proper package.
+    import importlib.util as _ilu
+    _spec = _ilu.find_spec("satclip")
+    if _spec is not None:
+        _repo_root = os.path.dirname(os.path.dirname(_spec.origin))
+        if _repo_root not in sys.path:
+            sys.path.insert(0, _repo_root)
     from satclip.load import get_satclip
     from torchvision import transforms
     m = get_satclip(ckpt, device=device).eval()
@@ -114,11 +126,11 @@ def load_dinov2(device):
     return (lambda t: model(t.to(device))), preprocess, dim
 
 
-def load_bundle(name, device, satclip_ckpt):
+def load_bundle(name, device, satclip_ckpt, mobileclip_ckpt=None):
     if name == "clip":       return load_clip(device)
     if name == "geoclip":    return load_geoclip(device)
     if name == "satclip":    return load_satclip(device, satclip_ckpt)
-    if name == "mobileclip": return load_mobileclip(device)
+    if name == "mobileclip": return load_mobileclip(device, mobileclip_ckpt)
     if name == "dinov2":     return load_dinov2(device)
     raise ValueError(f"unknown model: {name}")
 
@@ -377,7 +389,7 @@ def _worker(worker_args):
     flight_group, gpu_id, model_name, args = worker_args
     torch.manual_seed(0)
     device = torch.device(f"cuda:{gpu_id}")
-    bundle = load_bundle(model_name, device, args.satclip_ckpt)
+    bundle = load_bundle(model_name, device, args.satclip_ckpt, args.mobileclip_ckpt)
     return [(f, *run_flight(f, bundle, args, model_name, device)) for f in flight_group]
 
 
@@ -395,7 +407,12 @@ def parse_args():
     ap.add_argument("--topk",          type=int,   default=5)
     ap.add_argument("--limit",         type=int,   default=None,
                     help="Cap drone images per flight (for quick tests).")
-    ap.add_argument("--satclip-ckpt",  type=str,   default=SATCLIP_CKPT)
+    ap.add_argument("--satclip-ckpt",    type=str, default=SATCLIP_CKPT)
+    ap.add_argument("--mobileclip-ckpt", type=str, default=None,
+                    help="Local path to MobileCLIP-S2 open_clip_pytorch_model.bin "
+                         "(needed on offline cluster nodes). Download with: "
+                         "huggingface-cli download apple/MobileCLIP-S2-OpenCLIP "
+                         "open_clip_pytorch_model.bin --local-dir weights/")
     ap.add_argument("--rebuild-cache", action="store_true")
     ap.add_argument("--flights",       nargs="+", default=["all"])
     ap.add_argument("--gps-radii",     nargs="*", type=int, default=[1000, 5000],
@@ -424,7 +441,7 @@ def main():
             if len(groups) == 1:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 print(f"  Loading {mname} ... ", end="", flush=True)
-                bundle = load_bundle(mname, device, args.satclip_ckpt)
+                bundle = load_bundle(mname, device, args.satclip_ckpt, args.mobileclip_ckpt)
                 print("done")
                 results = [(f, *run_flight(f, bundle, args, mname, device)) for f in flights]
                 del bundle

@@ -12,8 +12,8 @@
 
 MODEL=${1:-all}
 case "$MODEL" in
-  clip|geoclip|satclip|all) ;;
-  *) echo "Usage: sbatch $0 clip|geoclip|satclip|all" >&2; exit 1 ;;
+  clip|geoclip|satclip|mobileclip|dinov2|all) ;;
+  *) echo "Usage: sbatch $0 clip|geoclip|satclip|mobileclip|dinov2|all" >&2; exit 1 ;;
 esac
 
 source "/etc/slurm/local_job_dir.sh"
@@ -36,7 +36,8 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/clip_pipeline.py \
         --model "${MODEL}" \
-        --satclip-ckpt /opt/uav_localization/weights/satclip-vit16-l40.ckpt \
+        --satclip-ckpt    /opt/uav_localization/weights/satclip-vit16-l40.ckpt \
+        --mobileclip-ckpt /opt/uav_localization/weights/mobileclip-s2.bin \
         --cache-dir /opt/uav_localization/cache/clip_gallery \
         --flights all
 APPTAINER_EXIT=$?
