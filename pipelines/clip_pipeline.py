@@ -73,14 +73,6 @@ def load_satclip(device, ckpt):
             f"SatCLIP checkpoint not found at {ckpt}. Download from "
             "https://huggingface.co/microsoft/SatCLIP-ViT16-L40 (file "
             "satclip-vit16-l40.ckpt).")
-    # SatCLIP's package __init__ transitively imports a training-only
-    # `datamodules.s2geo_dataset` module that isn't always present in the
-    # upstream `--depth 1` clone. Stub it so inference-only loading works.
-    import sys as _sys, types as _types
-    for _n in ("datamodules", "datamodules.s2geo_dataset"):
-        _sys.modules.setdefault(_n, _types.ModuleType(_n))
-    _sys.modules["datamodules.s2geo_dataset"].S2GeoDataModule = type(
-        "S2GeoDataModule", (), {})
     from satclip.load import get_satclip
     from torchvision import transforms
     m = get_satclip(ckpt, device=device).eval()

@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
-#SBATCH --mem=64G
-#SBATCH --time=8:00:00
+#SBATCH --mem=46G
+#SBATCH --time=6:00:00
 
 # Week-1 retrieval-recall gate: clip_pipeline.py over 5 embedding models
 # (CLIP, GeoCLIP, SatCLIP, MobileCLIP-S2, DINOv2) × all flights, computing
