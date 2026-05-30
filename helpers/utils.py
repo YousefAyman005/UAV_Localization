@@ -258,6 +258,19 @@ def patch_px_to_gps(px, py, M, geo):
     return sat_px_to_gps(sx, sy, geo)
 
 
+def crop_gt_patch(tiles, lat, lon, height_m, yaw_deg=0.0, flight=None):
+    """Satellite patch centered on the *true* GPS of a drone image (no prior noise).
+
+    Shared by the captioner and the CLIP LoRA trainer so both operate on the
+    identical positive crop. Returns a BGR patch or None when the location is out
+    of bounds / barely overlaps the tile."""
+    sat, geo, cx, cy, in_bounds = tile_for_gps(tiles, lat, lon)
+    if not in_bounds:
+        return None
+    patch, _ = metric_crop(sat, geo, cx, cy, height_m, yaw_deg=yaw_deg, flight=flight)
+    return patch
+
+
 # ── CLAHE ───────────────────────────────────────────────────────────────────
 
 def _make_clahe(enabled):
