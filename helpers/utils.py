@@ -354,7 +354,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
             raw_pred_px, raw_err_px, raw_err_m = _predict_from_H(H, m_per_px)
             if best.get("inliers", 0) >= min_inl:
                 plat, plon = patch_px_to_gps(raw_pred_px[0], raw_pred_px[1], M, geo)
-                off_m = raw_err_m
+                off_m = haversine_m(lat, lon, plat, plon)
 
         r = _build_row(f, lat, lon, height, flight, best,
                        raw_pred_px, raw_err_px, raw_err_m, plat, plon,

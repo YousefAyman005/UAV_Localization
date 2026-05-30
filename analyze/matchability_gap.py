@@ -351,10 +351,11 @@ def save_qualitative(raw_csv, pq, out_dir, n=20, min_inlier_gap=5):
     # Lazy-load satellite tiles only for flights we actually need
     sat_cache = {}
     def _load(flight):
-        if flight not in sat_cache:
-            tiles, drone_dir, _, _ = load_flight(flight)
-            sat_cache[flight] = (tiles, drone_dir)
-        return sat_cache[flight]
+        key = f"{int(flight):02d}"
+        if key not in sat_cache:
+            tiles, drone_dir, _, _ = load_flight(key)
+            sat_cache[key] = (tiles, drone_dir)
+        return sat_cache[key]
 
     def _patch(r, sat_tiles, flight, height):
         sat, geo, cx, cy, _ = tile_for_gps(
@@ -365,7 +366,7 @@ def save_qualitative(raw_csv, pq, out_dir, n=20, min_inlier_gap=5):
     saved = 0
     for i, (_, qrow) in enumerate(gap_cases.iterrows(), 1):
         qkey    = qrow["query_key"]
-        flight  = qrow["flight"]
+        flight  = f"{int(qrow['flight']):02d}"
         fname   = qrow["filename"]
         sat_tiles, drone_dir = _load(flight)
 
