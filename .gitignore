@@ -47,5 +47,4 @@ matchanything_pipeline.py
 # ── Misc ──────────────────────────────────────────────────────────────────────
 .claude/
 sift_eval.py
-CLAUDE.md
 *.ipynb
