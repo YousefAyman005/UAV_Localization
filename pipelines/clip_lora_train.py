@@ -32,7 +32,10 @@ from tqdm import tqdm
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import crop_gt_patch, get_flight_paths, load_flight
+from helpers.utils import (
+    FLIGHTS_AVAILABLE, crop_gt_patch, get_flight_paths, load_flight,
+    split_flight_rows,
+)
 
 torch.manual_seed(0)
 
@@ -43,7 +46,6 @@ RES           = 224
 CAPTION_DIR   = "cache/captions"
 PAIRS_DIR     = "cache/pairs"
 OUT_DIR       = "weights/clip_lora"
-TRAIN_FLIGHTS = ["01", "02", "03", "04", "05", "06", "08", "09"]
 
 
 # ---------- pair index (pre-crop satellite patches once) -------------------
@@ -62,9 +64,10 @@ def _load_captions(flight, caption_dir):
     return caps
 
 
-def build_pair_index(flights, caption_dir, pairs_dir, limit):
+def build_pair_index(flights, caption_dir, pairs_dir, limit, split):
     """Return [(drone_path, sat_patch_path, caption), ...], pre-cropping sat
-    patches to disk on first use so training reads plain image files."""
+    patches to disk on first use so training reads plain image files.
+    Uses only the TRAIN spatial band of each flight (see split_flight_rows)."""
     import pandas as pd
     index = []
     for flight in flights:
@@ -76,6 +79,8 @@ def build_pair_index(flights, caption_dir, pairs_dir, limit):
         os.makedirs(out_dir, exist_ok=True)
         _, drone_dir, drone_csv, _ = get_flight_paths(flight)
         df = pd.read_csv(drone_csv)
+        df = split_flight_rows(df, which="train", test_frac=split["frac"],
+                               axis=split["axis"], buffer_frac=split["buffer"])
         if limit is not None:
             df = df.iloc[:limit]
 
@@ -205,9 +210,13 @@ def info_nce(a, b, logit_scale):
 
 def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"  Device: {device} | backbone {BACKBONE}")
+    flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
+    split = {"frac": args.test_frac, "axis": args.split_axis, "buffer": args.split_buffer}
+    print(f"  Device: {device} | backbone {BACKBONE} | train band "
+          f"(test_frac={args.test_frac}, axis={args.split_axis})")
 
-    index = build_pair_index(args.flights, args.caption_dir, args.pairs_dir, args.limit)
+    index = build_pair_index(flights, args.caption_dir, args.pairs_dir,
+                             args.limit, split)
     if not index:
         sys.exit("No training triples found. Run caption_crops.py first.")
     print(f"  Total triples: {len(index)}")
@@ -251,16 +260,22 @@ def train(args):
     with open(os.path.join(args.out_dir, "train_meta.json"), "w") as f:
         json.dump({"backbone": BACKBONE, "rank": args.rank, "alpha": args.alpha,
                    "epochs": args.epochs, "n_triples": len(index),
-                   "flights": args.flights}, f, indent=2)
+                   "flights": args.flights, "test_frac": args.test_frac,
+                   "split_axis": args.split_axis}, f, indent=2)
     print(f"  Saved LoRA adapter -> {args.out_dir}")
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--flights", nargs="+", default=TRAIN_FLIGHTS)
+    ap.add_argument("--flights", nargs="+", default=["all"])
     ap.add_argument("--caption-dir", default=CAPTION_DIR)
     ap.add_argument("--pairs-dir", default=PAIRS_DIR)
     ap.add_argument("--out-dir", default=OUT_DIR)
+    ap.add_argument("--test-frac", type=float, default=0.25,
+                    help="Spatial test band fraction held out per flight.")
+    ap.add_argument("--split-axis", choices=["auto", "lat", "lon"], default="auto")
+    ap.add_argument("--split-buffer", type=float, default=0.0,
+                    help="Guard band fraction dropped between train and test.")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--lr", type=float, default=1e-4)

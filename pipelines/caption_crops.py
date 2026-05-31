@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
     FLIGHTS_AVAILABLE, SZ_W, SZ_H, crop_gt_patch, get_flight_paths,
-    load_flight,
+    load_flight, split_flight_rows,
 )
 
 CAPTION_DIR    = "cache/captions"
@@ -245,12 +245,21 @@ def _bgr_to_pil(bgr):
     return Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
 
 
-def iter_sat_patches(flight, limit):
+def _split_df(df, which, args):
+    """Restrict to the band each caption target actually uses: sat->train,
+    drone->test. `args.no_split` disables this (caption every row)."""
+    if args.no_split:
+        return df.reset_index(drop=True)
+    return split_flight_rows(df, which=which, test_frac=args.test_frac,
+                             axis=args.split_axis, buffer_frac=args.split_buffer)
+
+
+def iter_sat_patches(flight, args):
     import pandas as pd
     tiles, _, drone_csv, _ = load_flight(flight)
-    df = pd.read_csv(drone_csv)
-    if limit is not None:
-        df = df.iloc[:limit]
+    df = _split_df(pd.read_csv(drone_csv), "train", args)   # GT crops train the bridge
+    if args.limit is not None:
+        df = df.iloc[:args.limit]
     for _, row in df.iterrows():
         yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
         patch = crop_gt_patch(tiles, float(row["lat"]), float(row["lon"]),
@@ -258,12 +267,12 @@ def iter_sat_patches(flight, limit):
         yield row["filename"], (None if patch is None else _bgr_to_pil(patch))
 
 
-def iter_drone_images(flight, limit):
+def iter_drone_images(flight, args):
     import pandas as pd
     _, drone_dir, drone_csv, _ = get_flight_paths(flight)
-    df = pd.read_csv(drone_csv)
-    if limit is not None:
-        df = df.iloc[:limit]
+    df = _split_df(pd.read_csv(drone_csv), "test", args)    # query images are the test band
+    if args.limit is not None:
+        df = df.iloc[:args.limit]
     for _, row in df.iterrows():
         img = cv2.imread(os.path.join(drone_dir, row["filename"]))
         if img is not None:
@@ -271,33 +280,58 @@ def iter_drone_images(flight, limit):
         yield row["filename"], (None if img is None else _bgr_to_pil(img))
 
 
+def iter_tile_patches(flight, tile_size, stride, limit):
+    """Yield (tile_id, patch) over the SAME grid the retrieval gallery uses.
+    tile_id is the global index matching clip_pipeline.build_flight_gallery."""
+    from pipelines.clip_pipeline import iter_tiles
+    tiles, _, _, _ = load_flight(flight)
+    gid = 0
+    for sat, geo in tiles:
+        for _tid, x0, y0, _lat, _lon in iter_tiles(geo, tile_size, stride):
+            if limit is not None and gid >= limit:
+                return
+            patch = sat[y0:y0 + tile_size, x0:x0 + tile_size]
+            yield gid, _bgr_to_pil(patch)
+            gid += 1
+
+
 # ---------- per-flight driver ----------------------------------------------
+
+def _source_and_path(flight, target, args):
+    """(generator, id_field, out_path) for the requested caption target."""
+    if target == "tile":
+        out = os.path.join(args.out_dir,
+                           f"{flight}_tile_ts{args.tile_size}_st{args.stride}.jsonl")
+        return (iter_tile_patches(flight, args.tile_size, args.stride, args.limit),
+                "tile_id", out)
+    gen = iter_sat_patches(flight, args) if target == "sat" \
+        else iter_drone_images(flight, args)
+    return gen, "filename", os.path.join(args.out_dir, f"{flight}_{target}.jsonl")
+
 
 def run_flight(caption, flight, target, args):
     os.makedirs(args.out_dir, exist_ok=True)
-    out_path = os.path.join(args.out_dir, f"{flight}_{target}.jsonl")
+    source, id_field, out_path = _source_and_path(flight, target, args)
     done = set()
     if os.path.isfile(out_path) and not args.overwrite:
         with open(out_path) as f:
             for line in f:
                 try:
-                    done.add(json.loads(line)["filename"])
+                    done.add(json.loads(line)[id_field])
                 except (json.JSONDecodeError, KeyError):
                     pass
     mode = "w" if args.overwrite else "a"
 
-    source = iter_sat_patches if target == "sat" else iter_drone_images
     n_new = n_skip = 0
     with open(out_path, mode, buffering=1) as f:
-        for fname, pil in tqdm(source(flight, args.limit),
-                               desc=f"  flight {flight} [{target}]", unit="img"):
-            if fname in done:
+        for key, pil in tqdm(source, desc=f"  flight {flight} [{target}]", unit="img"):
+            if key in done:
                 continue
             if pil is None:
                 n_skip += 1
                 continue
             text = _clean_caption(caption(pil))
-            f.write(json.dumps({"flight": flight, "filename": fname,
+            f.write(json.dumps({"flight": flight, id_field: key,
                                 "caption": text}) + "\n")
             n_new += 1
     print(f"  flight {flight} [{target}]: +{n_new} captions "
@@ -311,10 +345,23 @@ def main():
                     default="ollama",
                     help="ollama (default) is free & runs on your Mac.")
     ap.add_argument("--model", default=None, help="Override the backend's model id.")
-    ap.add_argument("--target", choices=["sat", "drone"], default="sat")
+    ap.add_argument("--target", choices=["sat", "drone", "tile"], default="sat",
+                    help="sat=GT crops (train), drone=query images (test), "
+                         "tile=gallery grid (satellite database).")
     ap.add_argument("--flights", nargs="+", default=["all"])
     ap.add_argument("--out-dir", default=CAPTION_DIR)
+    ap.add_argument("--tile-size", type=int, default=1024,
+                    help="Gallery tile size for --target tile (match clip_pipeline).")
+    ap.add_argument("--stride", type=int, default=512,
+                    help="Gallery tile stride for --target tile.")
     ap.add_argument("--max-tokens", type=int, default=120)
+    # Caption only the band each target uses (sat->train, drone->test) to avoid
+    # captioning rows the experiment never consumes. Keep in sync with training/eval.
+    ap.add_argument("--test-frac", type=float, default=0.25)
+    ap.add_argument("--split-axis", choices=["auto", "lat", "lon"], default="auto")
+    ap.add_argument("--split-buffer", type=float, default=0.0)
+    ap.add_argument("--no-split", action="store_true",
+                    help="Caption every row regardless of train/test band.")
     ap.add_argument("--limit", type=int, default=None,
                     help="Cap drone rows per flight (for quick tests).")
     ap.add_argument("--overwrite", action="store_true",

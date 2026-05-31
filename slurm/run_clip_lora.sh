@@ -41,7 +41,7 @@ apptainer run --nv \
     --pwd /data/job_results \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/clip_lora_train.py \
-        --flights 01 02 03 04 05 06 08 09 \
+        --flights all \
         --caption-dir /opt/uav_localization/cache/captions \
         --pairs-dir   /opt/uav_localization/cache/pairs \
         --out-dir     /opt/uav_localization/weights/clip_lora \

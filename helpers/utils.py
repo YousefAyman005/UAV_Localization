@@ -258,6 +258,31 @@ def patch_px_to_gps(px, py, M, geo):
     return sat_px_to_gps(sx, sy, geo)
 
 
+def split_flight_rows(df, which="train", test_frac=0.25, axis="auto",
+                      buffer_frac=0.0):
+    """Deterministic SPATIAL split of a flight's drone rows.
+
+    Drone frames along a flight overlap heavily, so a random split leaks ground
+    between train and test. Instead we sort by the wider-spread geographic axis
+    (lat or lon) and take a contiguous band at one end as `test`, the rest as
+    `train`. `buffer_frac` drops a guard band between them to remove seam overlap.
+    `which` ∈ {train, test, all}; returns the filtered df (row order preserved)."""
+    if which == "all" or test_frac <= 0 or df.empty:
+        return df.reset_index(drop=True)
+    lat = df["lat"].to_numpy(dtype=float)
+    lon = df["lon"].to_numpy(dtype=float)
+    if axis == "auto":
+        axis = "lat" if (lat.max() - lat.min()) >= (lon.max() - lon.min()) else "lon"
+    order  = np.argsort(df[axis].to_numpy(dtype=float))
+    n      = len(df)
+    n_test = int(round(n * test_frac))
+    n_buf  = int(round(n * buffer_frac))
+    test_idx  = order[n - n_test:]                  # top band → test
+    train_idx = order[: max(0, n - n_test - n_buf)]  # bottom band (minus buffer)
+    keep = test_idx if which == "test" else train_idx
+    return df.iloc[np.sort(keep)].reset_index(drop=True)
+
+
 def crop_gt_patch(tiles, lat, lon, height_m, yaw_deg=0.0, flight=None):
     """Satellite patch centered on the *true* GPS of a drone image (no prior noise).
 

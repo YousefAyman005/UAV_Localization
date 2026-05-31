@@ -49,7 +49,7 @@ apptainer run --nv \
     --pwd /data/job_results \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/clip_fusion_pipeline.py \
-        --flights 10 11 \
+        --flights all \
         ${LORA_ARG} \
         --fuse-alpha 0.0 0.3 0.5 0.7 1.0 \
         --caption-dir /opt/uav_localization/cache/captions \

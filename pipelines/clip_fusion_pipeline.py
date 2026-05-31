@@ -37,7 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
     SZ_W, SZ_H, DEG_TO_M, PRIOR_OFFSET_STD_M, FLIGHTS_AVAILABLE,
-    haversine_m, TeeLogger,
+    haversine_m, split_flight_rows, TeeLogger,
 )
 from pipelines.clip_pipeline import (
     ACC_THRS, CACHE_DIR, build_flight_gallery, haversine_m_vec,
@@ -98,6 +98,39 @@ def load_drone_captions(flight, caption_dir):
                 except (json.JSONDecodeError, KeyError):
                     pass
     return caps
+
+
+def load_tile_captions(flight, caption_dir, tile_size, stride):
+    path = os.path.join(caption_dir, f"{flight}_tile_ts{tile_size}_st{stride}.jsonl")
+    caps = {}
+    if os.path.isfile(path):
+        with open(path) as f:
+            for line in f:
+                try:
+                    r = json.loads(line)
+                    caps[int(r["tile_id"])] = r["caption"]
+                except (json.JSONDecodeError, KeyError, ValueError):
+                    pass
+    return caps
+
+
+def fuse_gallery(emb, tile_ids, tilecaps, clip, tokenizer, alpha):
+    """Blend each gallery tile's image embedding with its caption embedding:
+    fused = normalize(alpha*img + (1-alpha)*text). Tiles without a caption keep
+    their image embedding."""
+    present = [(i, tilecaps[int(t)]) for i, t in enumerate(tile_ids)
+               if int(t) in tilecaps]
+    if not present:
+        print("  WARN: no tile captions found; gallery stays image-only.")
+        return emb
+    idx = [i for i, _ in present]
+    txt = encode_text(clip, tokenizer, [c for _, c in present])
+    fused = emb.copy()
+    fused[idx] = alpha * emb[idx] + (1.0 - alpha) * txt
+    norms = np.linalg.norm(fused, axis=1, keepdims=True) + 1e-12
+    print(f"  Gallery fused with text on {len(idx)}/{len(tile_ids)} tiles "
+          f"(alpha={alpha}).")
+    return (fused / norms).astype(np.float32)
 
 
 # ---------- fused retrieval (parallels clip_pipeline.retrieve) -------------
@@ -196,7 +229,20 @@ def run_flight(flight, bundle, clip, tokenizer, args, model_name, device):
                              model_name, args.rebuild_cache)
     print(f"  Gallery: {len(tile_ids)} tiles | dim={emb.shape[1]} | "
           f"{'cached' if cached else f'built in {t_gallery:.1f}s'}")
+
+    # Optionally blend the satellite gallery with per-tile captions (symmetric
+    # fusion). Done per-alpha; the base image gallery above is built/cached once.
+    gallery = emb
+    if args.sat_text and args.fuse_alpha_val < 1.0:
+        tilecaps = load_tile_captions(flight, args.caption_dir,
+                                      args.tile_size, args.stride)
+        gallery = fuse_gallery(emb, tile_ids, tilecaps, clip, tokenizer,
+                               args.fuse_alpha_val)
+
+    # Test band only — the held-out spatial portion of this flight.
     df = pd.read_csv(drone_csv)
+    df = split_flight_rows(df, which="test", test_frac=args.test_frac,
+                           axis=args.split_axis, buffer_frac=args.split_buffer)
     if args.limit is not None:
         df = df.iloc[:args.limit].reset_index(drop=True)
     captions = load_drone_captions(flight, args.caption_dir)
@@ -204,7 +250,7 @@ def run_flight(flight, bundle, clip, tokenizer, args, model_name, device):
         print(f"  WARN: no drone captions for flight {flight}; alpha<1 falls back "
               f"to image-only.")
     rows, floors, t_ret = retrieve_fusion(
-        flight, bundle, clip, tokenizer, emb, tile_ids, centers, df, drone_dir,
+        flight, bundle, clip, tokenizer, gallery, tile_ids, centers, df, drone_dir,
         captions, args.fuse_alpha_val, args.dist, args.topk,
         gps_radii=tuple(args.gps_radii), flight_tag=flight)
     return rows, floors, t_gallery, t_ret, cached
@@ -212,11 +258,17 @@ def run_flight(flight, bundle, clip, tokenizer, args, model_name, device):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--flights", nargs="+", default=["10", "11"])
+    ap.add_argument("--flights", nargs="+", default=["all"])
     ap.add_argument("--lora-ckpt", default=None,
                     help="LoRA adapter dir; omit for the stock-CLIP baseline.")
     ap.add_argument("--fuse-alpha", nargs="+", type=float, default=[0.0, 0.5, 0.7, 1.0],
-                    help="Sweep of image weights (0=text-only end is 1).")
+                    help="Image weight on BOTH query and gallery; 0=text-only, 1=image-only.")
+    ap.add_argument("--no-sat-text", dest="sat_text", action="store_false",
+                    help="Disable gallery-side text (query-only fusion).")
+    ap.add_argument("--test-frac", type=float, default=0.25,
+                    help="Spatial test band fraction per flight (match training).")
+    ap.add_argument("--split-axis", choices=["auto", "lat", "lon"], default="auto")
+    ap.add_argument("--split-buffer", type=float, default=0.0)
     ap.add_argument("--caption-dir", default=CAPTION_DIR)
     ap.add_argument("--dist", type=float, default=25.0)
     ap.add_argument("--tile-size", type=int, default=1024)

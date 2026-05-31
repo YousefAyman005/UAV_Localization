@@ -13,9 +13,11 @@
 # FREE captioning with a local VLM on the GPU (no API cost, fully offline).
 # Prereqs: the VLM weights must be cached under
 #   $DATAPOOL3/datasets/Visloc/weights/huggingface  (pre-download Qwen2-VL once).
-# Args: TARGET (sat|drone) then extra flags. Captions persist to DATAPOOL3.
-#   sbatch slurm/run_caption.sh sat   --flights 01 02 03 04 05 06 08 09
-#   sbatch slurm/run_caption.sh drone --flights 10 11
+# Args: TARGET (sat|drone|tile) then extra flags. Captions persist to DATAPOOL3.
+# With a within-flight spatial split, caption ALL flights for every target:
+#   sbatch slurm/run_caption.sh sat   --flights all   # GT crops (training band)
+#   sbatch slurm/run_caption.sh drone --flights all   # query images (test band)
+#   sbatch slurm/run_caption.sh tile  --flights all   # gallery grid (satellite db)
 
 TARGET=${1:-sat}; shift || true
 
