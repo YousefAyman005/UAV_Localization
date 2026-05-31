@@ -24,8 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
     SZ_W, SZ_H, DEG_TO_M, PRIOR_OFFSET_STD_M,
-    FLIGHTS_AVAILABLE, get_flight_paths, get_flight09_tile_paths,
-    load_flight09_tiles, load_satellite, haversine_m, TeeLogger,
+    FLIGHTS_AVAILABLE, get_flight_paths, load_satellite, haversine_m, TeeLogger,
 )
 
 torch.manual_seed(0)
@@ -204,26 +203,6 @@ def load_or_build_gallery(cpath, build_fn):
 def build_flight_gallery(flight, bundle, tile_size, stride, batch_size,
                          device, cache_dir, model_name, rebuild_cache):
     """Return (emb, tile_ids, centers, drone_dir, drone_csv, t_gallery, all_cached)."""
-    if flight == "09":
-        tile_paths, drone_dir, drone_csv, sat_csv = get_flight09_tile_paths()
-        tiles_data = load_flight09_tiles(tile_paths, sat_csv)
-        t0 = time.time()
-        emb_parts, ids_parts, ctr_parts = [], [], []
-        all_cached, id_offset = True, 0
-        for (sat, geo), tif_path in zip(tiles_data, tile_paths):
-            cpath = cache_path(cache_dir, model_name, tile_size, stride, tif_path)
-            if rebuild_cache and os.path.isfile(cpath):
-                os.remove(cpath)
-            e, ids, ctr, was_cached = load_or_build_gallery(
-                cpath, lambda s=sat, g=geo: build_gallery(
-                    s, g, bundle, tile_size, stride, batch_size, device))
-            all_cached &= was_cached
-            emb_parts.append(e); ids_parts.append(ids + id_offset); ctr_parts.append(ctr)
-            id_offset += len(ids)
-        return (np.concatenate(emb_parts), np.concatenate(ids_parts),
-                np.concatenate(ctr_parts), drone_dir, drone_csv,
-                time.time() - t0, all_cached)
-
     sat_tif, drone_dir, drone_csv, sat_csv = get_flight_paths(flight)
     sat, geo = load_satellite(sat_tif, sat_csv)
     cpath = cache_path(cache_dir, model_name, tile_size, stride, sat_tif)

@@ -34,18 +34,14 @@ DEG_TO_M           = 111_320.0  # meters per degree latitude (flat-earth approx)
 # makes the satellite patch larger than the drone view so there's room to
 # localize. PRIOR_OFFSET_STD_M is the σ of the simulated GPS prior added to the
 # patch center, so the drone is not at the trivial dead-center of the patch.
-K_PER_FLIGHT = {
-    "01": 1.00, "02": 1.00, "03": 0.95, "04": 1.10, "05": 0.50,
-    "06": 0.50, "08": 1.00, "09": 1.10, "10": 0.60, "11": 0.50,
-}
+K_PER_FLIGHT = {"01": 1.00, "02": 1.00, "03": 0.95, "08": 1.00}
 K_DEFAULT          = 1.75 * 2.0 * math.tan(math.radians(35.0))
 SEARCH_FACTOR      = 1.5
 PRIOR_OFFSET_STD_M = 80.0
 
 _HERE       = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
-# Flight 07's satellite is 3000×170 — too narrow for metric_crop; dropped.
-FLIGHTS_AVAILABLE = [f"{i:02d}" for i in range(1, 12) if i != 7]
+FLIGHTS_AVAILABLE = ["01", "02", "03", "08"]
 
 
 # stores terminal to log files
@@ -91,11 +87,6 @@ def _load_bgr(path):
         return cv2.cvtColor(np.array(im.convert("RGB")), cv2.COLOR_RGB2BGR)
 
 
-def _image_size(path):
-    with Image.open(path) as im:
-        return im.size
-
-
 def _make_geo(lt_lat, lt_lon, rb_lat, rb_lon, w, h):
     return dict(lt_lat=lt_lat, lt_lon=lt_lon, rb_lat=rb_lat, rb_lon=rb_lon,
                 w=w, h=h, pplat=h / (lt_lat - rb_lat), pplon=w / (rb_lon - lt_lon))
@@ -107,15 +98,6 @@ def get_flight_paths(flight, dataset_dir=None):
     return (os.path.join(base, f"satellite{flight}.tif"),
             os.path.join(base, "drone"),
             os.path.join(base, f"{flight}.csv"),
-            os.path.join(root, "satellite_ coordinates_range.csv"))
-
-
-def get_flight09_tile_paths(dataset_dir=None):
-    root = dataset_dir or DATASET_DIR
-    base = os.path.join(root, "09")
-    tiles = sorted(os.path.join(base, f) for f in os.listdir(base)
-                   if f.startswith("satellite09_") and f.endswith(".tif"))
-    return (tiles, os.path.join(base, "drone"), os.path.join(base, "09.csv"),
             os.path.join(root, "satellite_ coordinates_range.csv"))
 
 
@@ -133,47 +115,8 @@ def load_satellite(sat_tif, sat_csv):
                           m["RB_lat_map"], m["RB_lon_map"], w, h)
 
 
-def _parse_tile_rc(path):
-    r, c = os.path.basename(path).split("_")[1].split(".")[0].split("-")
-    return int(r), int(c)
-
-
-def load_flight09_tiles(tile_paths, sat_csv):
-    row = pd.read_csv(sat_csv)
-    row = row[row["mapname"] == "satellite09.tif"].iloc[0]
-    lt_lat, lt_lon = row["LT_lat_map"], row["LT_lon_map"]
-    rb_lat, rb_lon = row["RB_lat_map"], row["RB_lon_map"]
-
-    rc      = {_parse_tile_rc(p): p for p in tile_paths}
-    rows_i  = sorted({r for r, _ in rc})
-    cols_i  = sorted({c for _, c in rc})
-    sizes   = {k: _image_size(p) for k, p in rc.items()}
-    pplat   = sum(sizes[(r, cols_i[0])][1] for r in rows_i) / (lt_lat - rb_lat)
-    pplon   = sum(sizes[(rows_i[0], c)][0] for c in cols_i) / (rb_lon - lt_lon)
-
-    tiles, y_off = [], 0
-    for r in rows_i:
-        x_off = 0
-        for c in cols_i:
-            tw, th = sizes[(r, c)]
-            tll, tlo = lt_lat - y_off / pplat, lt_lon + x_off / pplon
-            geo = dict(lt_lat=tll, lt_lon=tlo,
-                       rb_lat=tll - th / pplat, rb_lon=tlo + tw / pplon,
-                       w=tw, h=th, pplat=pplat, pplon=pplon)
-            print(f"  Loaded {os.path.basename(rc[(r, c)])}: {tw}x{th} px  "
-                  f"lat[{tll:.6f}, {geo['rb_lat']:.6f}]  "
-                  f"lon[{tlo:.6f}, {geo['rb_lon']:.6f}]")
-            tiles.append((_load_bgr(rc[(r, c)]), geo))
-            x_off += tw
-        y_off += sizes[(r, cols_i[0])][1]
-    return tiles
-
-
 def load_flight(flight, dataset_dir=None):
     """Return (tiles, drone_dir, drone_csv, sat_csv); tiles = [(img, geo), ...]."""
-    if flight == "09":
-        tp, drone_dir, drone_csv, sat_csv = get_flight09_tile_paths(dataset_dir)
-        return load_flight09_tiles(tp, sat_csv), drone_dir, drone_csv, sat_csv
     sat_tif, drone_dir, drone_csv, sat_csv = get_flight_paths(flight, dataset_dir)
     sat, geo = load_satellite(sat_tif, sat_csv)
     return [(sat, geo)], drone_dir, drone_csv, sat_csv

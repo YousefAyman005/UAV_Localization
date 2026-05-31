@@ -63,9 +63,8 @@ per-flight GSD (`metric_m_per_px`). `gps_to_px` / `sat_px_to_gps` / `patch_px_to
 do the geo conversions. `load_flight` returns `(tiles, drone_dir, drone_csv, sat_csv)` where
 `tiles = [(bgr, geo), ...]`. Determinism is set at import (`random/np/cv2` seeded 0).
 
-**Dataset quirks:** `FLIGHTS_AVAILABLE` = `01`–`11` **except `07`** (satellite too narrow for
-cropping). **Flight `09` is special** — its satellite is split into multiple tiles; `load_flight`
-and the gallery builder handle the multi-tile case (others are single-image). Drone CSV columns:
+**Dataset quirks:** `FLIGHTS_AVAILABLE` = `["01", "02", "03", "08"]` — the four flights used
+for this benchmark. All use a single satellite image. Drone CSV columns:
 `filename, lat, lon, height, Phi1 (yaw), ...`.
 
 ## Text-conditioned CLIP experiment (in progress)

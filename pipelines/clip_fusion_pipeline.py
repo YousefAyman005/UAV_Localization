@@ -53,6 +53,14 @@ RES          = 224
 CAPTION_DIR  = "cache/captions"
 OUT_TEMPLATE = "visloc_clipfusion_a{alpha}_results.csv"
 
+TILE_SIZE    = 1024   # must match caption_crops.py
+TILE_STRIDE  = 512    # must match caption_crops.py
+TEST_FRAC    = 0.25   # must match clip_lora_train.py
+DIST_THRESH  = 25.0
+TOPK         = 5
+BATCH_SIZE   = 64
+GPS_RADII    = (1000, 5000)
+
 
 # ---------- model bundle (HF CLIP, optional merged LoRA) -------------------
 
@@ -100,8 +108,9 @@ def load_drone_captions(flight, caption_dir):
     return caps
 
 
-def load_tile_captions(flight, caption_dir, tile_size, stride):
-    path = os.path.join(caption_dir, f"{flight}_tile_ts{tile_size}_st{stride}.jsonl")
+def load_tile_captions(flight):
+    path = os.path.join(CAPTION_DIR,
+                        f"{flight}_tile_ts{TILE_SIZE}_st{TILE_STRIDE}.jsonl")
     caps = {}
     if os.path.isfile(path):
         with open(path) as f:
@@ -222,37 +231,30 @@ def retrieve_fusion(flight, bundle, clip, tokenizer, emb, tile_ids, centers, df,
 
 # ---------- per-flight / main ----------------------------------------------
 
-def run_flight(flight, bundle, clip, tokenizer, args, model_name, device):
+def run_flight(flight, bundle, clip, tokenizer, alpha, limit, model_name, device):
     emb, tile_ids, centers, drone_dir, drone_csv, t_gallery, cached = \
-        build_flight_gallery(flight, bundle, args.tile_size, args.stride,
-                             args.batch_size, device, args.cache_dir,
-                             model_name, args.rebuild_cache)
+        build_flight_gallery(flight, bundle, TILE_SIZE, TILE_STRIDE,
+                             BATCH_SIZE, device, CACHE_DIR, model_name, False)
     print(f"  Gallery: {len(tile_ids)} tiles | dim={emb.shape[1]} | "
           f"{'cached' if cached else f'built in {t_gallery:.1f}s'}")
 
-    # Optionally blend the satellite gallery with per-tile captions (symmetric
-    # fusion). Done per-alpha; the base image gallery above is built/cached once.
     gallery = emb
-    if args.sat_text and args.fuse_alpha_val < 1.0:
-        tilecaps = load_tile_captions(flight, args.caption_dir,
-                                      args.tile_size, args.stride)
-        gallery = fuse_gallery(emb, tile_ids, tilecaps, clip, tokenizer,
-                               args.fuse_alpha_val)
+    if alpha < 1.0:
+        tilecaps = load_tile_captions(flight)
+        gallery = fuse_gallery(emb, tile_ids, tilecaps, clip, tokenizer, alpha)
 
-    # Test band only — the held-out spatial portion of this flight.
     df = pd.read_csv(drone_csv)
-    df = split_flight_rows(df, which="test", test_frac=args.test_frac,
-                           axis=args.split_axis, buffer_frac=args.split_buffer)
-    if args.limit is not None:
-        df = df.iloc[:args.limit].reset_index(drop=True)
-    captions = load_drone_captions(flight, args.caption_dir)
-    if not captions and args.fuse_alpha_val < 1.0:
+    df = split_flight_rows(df, which="test", test_frac=TEST_FRAC,
+                           axis="auto", buffer_frac=0.0)
+    if limit is not None:
+        df = df.iloc[:limit].reset_index(drop=True)
+    captions = load_drone_captions(flight, CAPTION_DIR)
+    if not captions and alpha < 1.0:
         print(f"  WARN: no drone captions for flight {flight}; alpha<1 falls back "
               f"to image-only.")
     rows, floors, t_ret = retrieve_fusion(
         flight, bundle, clip, tokenizer, gallery, tile_ids, centers, df, drone_dir,
-        captions, args.fuse_alpha_val, args.dist, args.topk,
-        gps_radii=tuple(args.gps_radii), flight_tag=flight)
+        captions, alpha, DIST_THRESH, TOPK, gps_radii=GPS_RADII, flight_tag=flight)
     return rows, floors, t_gallery, t_ret, cached
 
 
@@ -263,29 +265,12 @@ def main():
                     help="LoRA adapter dir; omit for the stock-CLIP baseline.")
     ap.add_argument("--fuse-alpha", nargs="+", type=float, default=[0.0, 0.5, 0.7, 1.0],
                     help="Image weight on BOTH query and gallery; 0=text-only, 1=image-only.")
-    ap.add_argument("--no-sat-text", dest="sat_text", action="store_false",
-                    help="Disable gallery-side text (query-only fusion).")
-    ap.add_argument("--test-frac", type=float, default=0.25,
-                    help="Spatial test band fraction per flight (match training).")
-    ap.add_argument("--split-axis", choices=["auto", "lat", "lon"], default="auto")
-    ap.add_argument("--split-buffer", type=float, default=0.0)
-    ap.add_argument("--caption-dir", default=CAPTION_DIR)
-    ap.add_argument("--dist", type=float, default=25.0)
-    ap.add_argument("--tile-size", type=int, default=1024)
-    ap.add_argument("--stride", type=int, default=512)
-    ap.add_argument("--cache-dir", default=CACHE_DIR)
-    ap.add_argument("--out-dir", default=".")
-    ap.add_argument("--batch-size", type=int, default=64)
-    ap.add_argument("--topk", type=int, default=5)
-    ap.add_argument("--limit", type=int, default=None)
-    ap.add_argument("--rebuild-cache", action="store_true")
-    ap.add_argument("--gps-radii", nargs="*", type=int, default=[1000, 5000])
+    ap.add_argument("--limit", type=int, default=None,
+                    help="Cap rows per flight (smoke test).")
     args = ap.parse_args()
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # Gallery embeddings depend only on the encoder identity, not alpha -> shared
-    # across the sweep so it is built once.
     model_name = "cliphf_lora" if args.lora_ckpt else "cliphf_base"
     print(f"  Device: {device} | encoder: {model_name} | "
           f"alphas: {args.fuse_alpha} | flights: {' '.join(flights)}")
@@ -293,24 +278,22 @@ def main():
     print("  Loading CLIP ... ", end="", flush=True)
     bundle, clip, tokenizer = load_ft_clip(device, args.lora_ckpt)
     print("done")
-    os.makedirs(args.out_dir, exist_ok=True)
 
     for alpha in args.fuse_alpha:
-        args.fuse_alpha_val = alpha
-        out_csv  = os.path.join(args.out_dir, OUT_TEMPLATE.format(alpha=alpha))
+        out_csv  = OUT_TEMPLATE.format(alpha=alpha)
         log_path = out_csv.replace(".csv", ".log")
         print(f"\n=== FUSION alpha={alpha} ({model_name}) ===")
         with TeeLogger(log_path):
             all_rows, all_floors = [], []
             for flight in flights:
                 rows, floors, t_gal, t_ret, cached = run_flight(
-                    flight, bundle, clip, tokenizer, args, model_name, device)
+                    flight, bundle, clip, tokenizer, alpha, args.limit, model_name, device)
                 fdf = pd.DataFrame(rows)
                 valid = fdf[~fdf["skipped"].fillna(False)]
                 if not valid.empty:
                     print(f"\n--- Flight {flight}: {len(fdf)} images ---")
-                    print_retrieval_summary(valid, args.dist, f"flight {flight}",
-                                             t_gal, t_ret, floors, cached, args.topk)
+                    print_retrieval_summary(valid, DIST_THRESH, f"flight {flight}",
+                                             t_gal, t_ret, floors, cached, TOPK)
                 all_rows.extend(rows)
                 all_floors.append(floors)
 
@@ -321,8 +304,8 @@ def main():
                 va = va[~va["skipped"].fillna(False)]
                 if not va.empty:
                     floors_arr = np.concatenate(all_floors) if all_floors else np.array([])
-                    print_retrieval_summary(va, args.dist, out_csv, None, None,
-                                             floors_arr, True, args.topk)
+                    print_retrieval_summary(va, DIST_THRESH, out_csv, None, None,
+                                             floors_arr, True, TOPK)
 
 
 if __name__ == "__main__":

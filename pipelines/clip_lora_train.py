@@ -95,9 +95,8 @@ def build_pair_index(flights, caption_dir, pairs_dir, limit, split):
             if not os.path.isfile(sat_path):
                 if tiles is None:
                     tiles = load_flight(flight)[0]
-                yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
                 patch = crop_gt_patch(tiles, float(row["lat"]), float(row["lon"]),
-                                     float(row["height"]), yaw_deg=yaw, flight=flight)
+                                     float(row["height"]), yaw_deg=0.0, flight=flight)
                 if patch is None:
                     continue
                 cv2.imwrite(sat_path, patch)
