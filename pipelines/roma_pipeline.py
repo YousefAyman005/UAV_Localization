@@ -78,7 +78,7 @@ def add_args(p):
 
 def main():
     run_pipeline(
-        name="roma",
+        name=lambda a: f"roma_{a.pretrained}",
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
