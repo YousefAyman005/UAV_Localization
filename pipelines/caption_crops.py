@@ -29,7 +29,7 @@ SYSTEM_PROMPT = (
     "water bodies, land cover (farmland, forest, bare ground). "
     "Add cardinal direction (north, south, east, west) only for key features. "
     "Comma-separated noun phrases only. No verbs, no articles, no preamble. "
-    "Never use: north-up, view, shows, patch, image, photo, satellite, aerial, drone, "
+    "Never use: north-up, view, shows, patch, image, photo, satellite, aerial, drone, shadow, "
     "or any color/brightness word (bright, dark, light, pale, grey, green, brown, etc.)."
 )
 USER_TEXT = "Describe this ground patch."
@@ -53,7 +53,8 @@ def _strip_think(text):
 # drone<->satellite gap, so we strip any the VLM leaks despite the prompt.
 _COLOR_RE = re.compile(
     r",?\s*\b(?:dark|light|bright|pale|deep|white|black|grey|gray|green|brown|"
-    r"red|blue|yellow|orange|golden|tan|beige|silver|reddish|greenish|brownish)"
+    r"red|blue|yellow|orange|golden|tan|beige|silver|reddish|greenish|brownish|"
+    r"shadows?)"
     r"(?:er|est)?\b\s*,?",
     re.IGNORECASE)
 

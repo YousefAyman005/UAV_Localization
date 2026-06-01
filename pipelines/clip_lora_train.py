@@ -116,7 +116,7 @@ def _normalize(t):
 
 
 def _to_tensor(pil):
-    arr = np.asarray(pil.convert("RGB"), dtype=np.uint8)
+    arr = np.asarray(pil.convert("RGB"), dtype=np.uint8).copy()
     return torch.from_numpy(arr).permute(2, 0, 1).float() / 255.0
 
 
@@ -248,9 +248,11 @@ def train(args):
                 l_ds = info_nce(d, s, logit_scale)
                 loss = l_dt + l_st + l_ds
             scaler.scale(loss).backward()
+            old_scale = scaler.get_scale()
             scaler.step(opt)
             scaler.update()
-            sched.step()
+            if scaler.get_scale() >= old_scale:
+                sched.step()
             pbar.set_postfix(dt=f"{l_dt.item():.3f}", st=f"{l_st.item():.3f}",
                              ds=f"{l_ds.item():.3f}", refresh=False)
 

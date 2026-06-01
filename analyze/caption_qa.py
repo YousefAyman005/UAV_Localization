@@ -51,7 +51,7 @@ def scan_file(path, examples):
         "banned_n": len(banned_hits), "banned_ex": banned_hits[:examples],
         "len_min": min(lengths), "len_max": max(lengths),
         "len_mean": sum(lengths) / n,
-        "len_out": sum(1 for x in lengths if x < 15 or x > 55),
+        "len_out": sum(1 for x in lengths if x < 8 or x > 20),
         "dupes": dupes, "empty": empty,
     }
 
