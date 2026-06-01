@@ -53,7 +53,7 @@ for MODEL in clip geoclip satclip mobileclip dinov2; do
   run_in_container \
     /opt/uav_localization/pipelines/clip_pipeline.py \
       --model "${MODEL}" \
-      --flights all \
+      --flights 01 02 03 06 08 \
       --rebuild-cache \
       --gps-radii 1000 5000 \
       --satclip-ckpt /opt/uav_localization/weights/satclip-vit16-l40.ckpt \

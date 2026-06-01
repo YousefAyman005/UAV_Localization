@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --gpus=1
 #SBATCH --mem=32G
-#SBATCH --time=5:00:00
+#SBATCH --time=8:00:00
 
 METHOD=${1:-sift}
 case "$METHOD" in
@@ -35,7 +35,7 @@ apptainer run --nv \
     /opt/uav_localization/pipelines/Baseline_pipeline.py \
         --method "${METHOD}" \
         --workers 10 \
-        --flights all \
+        --flights 01 02 03 06 08 \
         --visualize
 APPTAINER_EXIT=$?
 

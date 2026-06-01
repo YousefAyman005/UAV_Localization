@@ -39,7 +39,7 @@ apptainer run --nv \
         --satclip-ckpt    /opt/uav_localization/weights/satclip-vit16-l40.ckpt \
         --mobileclip-ckpt /opt/uav_localization/weights/mobileclip-s2.bin \
         --cache-dir /opt/uav_localization/cache/clip_gallery \
-        --flights all
+        --flights 01 02 03 06 08
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"

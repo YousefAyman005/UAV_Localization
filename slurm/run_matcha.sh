@@ -31,7 +31,7 @@ apptainer run --nv \
     /opt/uav_localization/pipelines/matcha_pipeline.py \
         --weights /opt/uav_localization/weights/matcha_pretrained.pth \
         --amp \
-        --flights all
+        --flights 01 02 03 06 08
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"

@@ -34,7 +34,7 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/lightglue_pipeline.py \
         --method "${METHOD}" \
-        --flights all \
+        --flights 01 02 03 06 08 \
         --visualize
 APPTAINER_EXIT=$?
 
