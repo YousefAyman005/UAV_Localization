@@ -41,4 +41,8 @@ apptainer run --nv \
         --flights all
 APPTAINER_EXIT=$?
 
+# stdout-only diagnostic (results go to this job's .out log): drop the empty
+# job_results dir so the autocopy epilog doesn't fire on an empty directory.
+rm -rf "${LOCAL_JOB_DIR}/job_results"
+
 exit $APPTAINER_EXIT

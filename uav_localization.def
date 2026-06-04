@@ -80,7 +80,8 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
     diffusers==0.33.1 \
     huggingface-hub==0.30.2 \
     tokenizers==0.21.2 \
-    transformers==4.49.0
+    transformers==4.49.0 \
+    safetensors==0.7.0
 
   # peft for the text-CLIP LoRA (clip_lora_train.py + clip_fusion_pipeline.py).
   # --no-deps: peft's deps (torch, transformers, accelerate, safetensors,

@@ -172,7 +172,7 @@ def make_collate(tokenizer):
 
 # ---------- model ----------------------------------------------------------
 
-def build_model(device, rank, alpha, dropout):
+def build_model(device, rank, alpha, dropout, grad_ckpt=False):
     from peft import LoraConfig, get_peft_model
     from transformers import CLIPModel, CLIPTokenizer
     clip = CLIPModel.from_pretrained(BACKBONE)
@@ -182,6 +182,13 @@ def build_model(device, rank, alpha, dropout):
         target_modules=["q_proj", "k_proj", "v_proj", "out_proj", "fc1", "fc2"],
     )
     peft_model = get_peft_model(clip, cfg)
+    if grad_ckpt:
+        # Recompute activations in backward -> big VRAM cut (lets ViT-L/14 train at
+        # a real batch on 40GB). use_reentrant=False backprops through the in-layer
+        # LoRA params, so enable_input_require_grads is unnecessary (and CLIPModel
+        # doesn't support it — no single input-embedding across its two encoders).
+        peft_model.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs={"use_reentrant": False})
     peft_model.to(device)
     peft_model.print_trainable_parameters()
     # base_model.model is the CLIPModel with LoRA injected in place; call its
@@ -221,7 +228,7 @@ def train(args):
     print(f"  Total triples: {len(index)}")
 
     peft_model, clip, tokenizer = build_model(
-        device, args.rank, args.alpha, args.dropout)
+        device, args.rank, args.alpha, args.dropout, args.grad_ckpt)
     ds = PairDataset(index, tokenizer, train=True)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True,
                         num_workers=args.workers, drop_last=True,
@@ -267,8 +274,11 @@ def train(args):
 
 
 def main():
+    global BACKBONE
     ap = argparse.ArgumentParser()
     ap.add_argument("--flights", nargs="+", default=["all"])
+    ap.add_argument("--backbone", default=BACKBONE,
+                    help="HF CLIP model id (e.g. openai/clip-vit-base-patch32 | -large-patch14).")
     ap.add_argument("--caption-dir", default=CAPTION_DIR)
     ap.add_argument("--pairs-dir", default=PAIRS_DIR)
     ap.add_argument("--out-dir", default=OUT_DIR)
@@ -283,10 +293,14 @@ def main():
     ap.add_argument("--rank", type=int, default=8)
     ap.add_argument("--alpha", type=int, default=16)
     ap.add_argument("--dropout", type=float, default=0.05)
+    ap.add_argument("--grad-ckpt", action="store_true",
+                    help="Gradient checkpointing: big VRAM cut, ~30%% slower (for ViT-L/14 on 40GB).")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--limit", type=int, default=None,
                     help="Cap rows per flight (smoke test).")
-    train(ap.parse_args())
+    args = ap.parse_args()
+    BACKBONE = args.backbone
+    train(args)
 
 
 if __name__ == "__main__":

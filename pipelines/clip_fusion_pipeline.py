@@ -259,7 +259,7 @@ def run_flight(flight, bundle, clip, tokenizer, alpha, limit, model_name, device
 
 
 def main():
-    global CAPTION_DIR, CACHE_DIR
+    global CAPTION_DIR, CACHE_DIR, BACKBONE
     ap = argparse.ArgumentParser()
     ap.add_argument("--flights", nargs="+", default=["all"])
     ap.add_argument("--lora-ckpt", default=None,
@@ -272,6 +272,8 @@ def main():
                     help="Dir with {flight}_drone / _tile caption JSONLs.")
     ap.add_argument("--cache-dir", default=CACHE_DIR,
                     help="Gallery embedding cache dir (passed to build_flight_gallery).")
+    ap.add_argument("--backbone", default=BACKBONE,
+                    help="HF CLIP model id; must match the --lora-ckpt base model.")
     args = ap.parse_args()
 
     # Honor the absolute dirs the SLURM wrapper passes: run_flight reads these
@@ -279,10 +281,12 @@ def main():
     # build_flight_gallery), so set them once here before any flight runs.
     CAPTION_DIR = args.caption_dir
     CACHE_DIR   = args.cache_dir
+    BACKBONE    = args.backbone
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_name = "cliphf_lora" if args.lora_ckpt else "cliphf_base"
+    bb_tag = BACKBONE.split("/")[-1].replace("clip-vit-", "").replace("-patch", "p")
+    model_name = f"cliphf_{'lora' if args.lora_ckpt else 'base'}_{bb_tag}"
     print(f"  Device: {device} | encoder: {model_name} | "
           f"alphas: {args.fuse_alpha} | flights: {' '.join(flights)}")
 
