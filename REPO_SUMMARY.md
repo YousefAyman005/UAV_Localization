@@ -59,9 +59,9 @@ on a dev machine.
 ```
 pipelines/            # one thin script per method
   Baseline_pipeline.py    # SIFT/ORB baseline
-  surf_pipeline.py        # SIFT/SURF-style baseline variant
   lightglue_pipeline.py   # LightGlue (superpoint/disk/aliked extractors)
   loftr_pipeline.py       # LoFTR (kornia)
+  eloftr_pipeline.py      # Efficient LoFTR (zju3dv/EfficientLoFTR, full/fp32)
   roma_pipeline.py        # RoMa (outdoor/indoor; + "extreme"/aerialextrematch weights)
   matcha_pipeline.py      # MATCHA (DIFT/diffusion-feature matcher)
   clip_pipeline.py        # embedding retrieval: clip/geoclip/satclip/mobileclip/dinov2
@@ -242,10 +242,21 @@ search to that-meter radius around the noisy prior):
   (clip_rank, clip_sim, RoMa inliers, candidate_dist_m) — to see whether retrieval rank predicts
   RoMa matchability. Raw output in `job_results/matchability_gap_results/raw_results.csv`.
 
-### Text-CLIP experiment
-Pipelines exist and compile; captioning/training/fusion have been iterated on (recent commits:
-captioning fixes, "generate text to use with clip approach", "using qwen to generate captions").
-**No final fusion-retrieval result CSV is present yet** — this is the active frontier.
+### Text-CLIP experiment — first end-to-end results (flights 01/02/03/08, spatial test band)
+Full pipeline ran: captions (all 12 files) → tri-modal LoRA (`weights/clip_lora`, 2093 train
+triples, all 3 InfoNCE losses converged) → fusion alpha-sweep for LoRA vs stock CLIP →
+`recall_clipfusion.csv`. **Both halves of the hypothesis hold:**
+- **Text closes the drone↔sat gap.** Stock image-only CLIP (α=1.0) is ~useless on drone→sat tile
+  retrieval (R@5 ≈ 0.01, median GT-tile rank ~354); blending captions in (α=0.7) lifts it to R@5 ≈ 0.20.
+- **Tri-modal LoRA ~doubles that again.** Best config **LoRA @ α=0.7** (70% image / 30% text):
+  GPS-denied R@1/5/10 = **0.168 / 0.401 / 0.527**; with a 1 km GPS prior (r1000) = 0.214 / 0.539 / 0.692.
+  LoRA > stock at *every* α, consistent across all 3 gating modes and 4 flights. α=0.7 is the sweet
+  spot (pure-text 0.0 and pure-image 1.0 are both worse).
+
+Caveat: this is **coarse tile retrieval** — absolute R@1 ≈ 0.17–0.21, weaker in meters than the
+geometric matchers (RoMa A@25m ≈ 64%), but it's the GPS-denied/retrieval track and the text bridge
+clearly helps. Confirmatory `crossview_cosine.py` (drone↔sat cosine, stock vs LoRA) added as
+`slurm/run_crossview.sh`.
 
 ---
 
@@ -259,7 +270,7 @@ python -m py_compile pipelines/<x>_pipeline.py helpers/utils.py
 sbatch slurm/run_roma.sh outdoor          # or: extre (uses weights/roma_extre.pth)
 sbatch slurm/run_lightglue.sh disk        # superpoint|disk|aliked
 sbatch slurm/run_loftr.sh
-sbatch slurm/run_surf.sh
+sbatch slurm/run_eloftr.sh                 # Efficient LoFTR (needs eloftr_outdoor.ckpt staged)
 sbatch slurm/run_matcha.sh
 sbatch slurm/run_baseline.sh
 sbatch slurm/run_clip.sh all              # embedding retrieval, all models
@@ -305,11 +316,16 @@ torch-hub + HF caches `:ro`, writable job_results), runs the pipeline, captures 
 
 - **Done & working:** all geometric matchers (RoMa best), embedding retrieval, recall analysis,
   matchability-gap diagnostic, the whole `run_pipeline` framework + container.
-- **Active frontier:** the text-conditioned CLIP experiment — caption quality, LoRA training, and
-  fusion-retrieval sweeps. Diagnostics (`crossview_cosine.py`, `caption_qa.py`) exist to judge it
-  honestly; the headline fusion result isn't finalized.
-- **Working-tree changes** at snapshot: edits to several `slurm/run_*.sh` (lightglue, loftr, roma,
-  roma_extre, surf) — uncommitted.
+- **Text-CLIP experiment: first results in** (see §8) — LoRA + text fusion beats stock/image-only
+  retrieval (best LoRA @ α=0.7, denied R@5 0.40 vs stock 0.20 vs image-only 0.01); `recall_clipfusion.csv`
+  saved. Remaining: `crossview_cosine.py` confirmatory run (submitted via `slurm/run_crossview.sh`),
+  then hyperparameter/α refinement and writing up. The deferred `clip_lora_train.py` CLI cleanup is
+  still open.
+- **Efficient LoFTR (eLoFTR)** added as a matcher: `pipelines/eloftr_pipeline.py` +
+  `slurm/run_eloftr.sh`, with a `joblib` + `EfficientLoFTR` clone in `uav_localization.def`
+  (needs a container rebuild + `eloftr_outdoor.ckpt` staged in `$DATAPOOL3/.../weights/`).
+- **SURF removed:** `surf_pipeline.py` / `run_surf.sh` deleted — SURF is non-free and unavailable
+  in any pip OpenCV wheel; the SIFT baseline (`Baseline_pipeline.py`) covers classical features.
 - **Note:** the repo's `~/.claude/plans/` directory currently contains plans from an *unrelated*
   SAE/interpretability project and the project memory dir is empty — ignore those; the text-CLIP
   design rationale lives in `CLAUDE.md` itself.

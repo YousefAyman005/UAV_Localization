@@ -82,9 +82,25 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
     tokenizers==0.21.2 \
     transformers==4.49.0
 
+  # peft for the text-CLIP LoRA (clip_lora_train.py + clip_fusion_pipeline.py).
+  # --no-deps: peft's deps (torch, transformers, accelerate, safetensors,
+  # huggingface_hub, …) are already installed and pinned above; this avoids any
+  # resolver churn that would unpin the HF stack.
+  pip install --no-cache-dir --no-deps peft==0.13.2
+
   # ── SatCLIP ────────────────────────────────────────────────────────────────
   # No setup.py/pyproject.toml — clone and add to PYTHONPATH via %environment.
   git clone --depth 1 https://github.com/microsoft/satclip.git /opt/satclip
+
+  # ── Efficient LoFTR ────────────────────────────────────────────────────────
+  # Research repo (src/ layout), not pip-installable. Most inference deps (einops,
+  # kornia, yacs, loguru, opencv, numpy) are already installed above; src/utils
+  # additionally imports joblib, which is not — add it here. Cloned to
+  # /opt/EfficientLoFTR; eloftr_pipeline.py adds it to sys.path at runtime — kept
+  # OFF the global PYTHONPATH so its generic top-level `src` package can't shadow
+  # anything else. Pretrained weights (eloftr_outdoor.ckpt) are bind-mounted at runtime.
+  pip install --no-cache-dir joblib
+  git clone --depth 1 https://github.com/zju3dv/EfficientLoFTR.git /opt/EfficientLoFTR
 
   # ── Roma PyPI package (rotation library, MATCHA internal dep) ──────────────
   pip install --no-cache-dir roma==1.5.0

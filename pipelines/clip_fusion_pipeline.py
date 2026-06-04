@@ -259,6 +259,7 @@ def run_flight(flight, bundle, clip, tokenizer, alpha, limit, model_name, device
 
 
 def main():
+    global CAPTION_DIR, CACHE_DIR
     ap = argparse.ArgumentParser()
     ap.add_argument("--flights", nargs="+", default=["all"])
     ap.add_argument("--lora-ckpt", default=None,
@@ -267,7 +268,17 @@ def main():
                     help="Image weight on BOTH query and gallery; 0=text-only, 1=image-only.")
     ap.add_argument("--limit", type=int, default=None,
                     help="Cap rows per flight (smoke test).")
+    ap.add_argument("--caption-dir", default=CAPTION_DIR,
+                    help="Dir with {flight}_drone / _tile caption JSONLs.")
+    ap.add_argument("--cache-dir", default=CACHE_DIR,
+                    help="Gallery embedding cache dir (passed to build_flight_gallery).")
     args = ap.parse_args()
+
+    # Honor the absolute dirs the SLURM wrapper passes: run_flight reads these
+    # module globals (CAPTION_DIR via load_drone/tile_captions; CACHE_DIR via
+    # build_flight_gallery), so set them once here before any flight runs.
+    CAPTION_DIR = args.caption_dir
+    CACHE_DIR   = args.cache_dir
 
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
