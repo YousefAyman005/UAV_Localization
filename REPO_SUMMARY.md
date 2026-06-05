@@ -252,11 +252,16 @@ triples, all 3 InfoNCE losses converged) → fusion alpha-sweep for LoRA vs stoc
   GPS-denied R@1/5/10 = **0.168 / 0.401 / 0.527**; with a 1 km GPS prior (r1000) = 0.214 / 0.539 / 0.692.
   LoRA > stock at *every* α, consistent across all 3 gating modes and 4 flights. α=0.7 is the sweet
   spot (pure-text 0.0 and pure-image 1.0 are both worse).
+- **Scaling the backbone to CLIP ViT-L/14 helps a lot** (`recall_clipfusion_l14.csv`; L/14 + rank 32 +
+  batch 128 + 60 ep, gradient-checkpointed on A100 via `--backbone`/`--grad-ckpt`). Best **L/14 LoRA @
+  α=0.8**: GPS-denied R@1/5/10 = **0.287 / 0.567 / 0.687**; with a 1 km prior = 0.337 / 0.667 / **0.800**.
+  That's ~+40% R@5 over the B/32 LoRA — and despite the training loss collapsing toward 0 it did *not*
+  overfit (held-out recall rose). Sweet spot shifts to α=0.8 (L/14's image features are stronger).
 
-Caveat: this is **coarse tile retrieval** — absolute R@1 ≈ 0.17–0.21, weaker in meters than the
-geometric matchers (RoMa A@25m ≈ 64%), but it's the GPS-denied/retrieval track and the text bridge
-clearly helps. Confirmatory `crossview_cosine.py` (drone↔sat cosine, stock vs LoRA) added as
-`slurm/run_crossview.sh`.
+Caveat: still **coarse tile retrieval** — best absolute R@1 ≈ 0.29 (denied), weaker in meters than the
+geometric matchers (RoMa A@25m ≈ 64%); but with a GPS prior R@10 ≈ 0.80 it's a usable coarse localizer
+on the GPS-denied/retrieval track, and the text bridge + a strong backbone clearly help. Confirmatory
+`crossview_cosine.py` (drone↔sat cosine, stock vs LoRA) added as `slurm/run_crossview.sh`.
 
 ---
 

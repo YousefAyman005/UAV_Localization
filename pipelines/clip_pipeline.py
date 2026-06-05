@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from helpers.utils import (
     SZ_W, SZ_H, DEG_TO_M, PRIOR_OFFSET_STD_M,
     FLIGHTS_AVAILABLE, get_flight_paths, load_satellite, haversine_m, TeeLogger,
+    split_flight_rows,
 )
 
 torch.manual_seed(0)
@@ -32,9 +33,12 @@ torch.manual_seed(0)
 OUT_CSV_TEMPLATE = "visloc_{model}_results.csv"
 CACHE_DIR        = "cache/clip_gallery"
 SATCLIP_CKPT     = "weights/satclip-vit16-l40.ckpt"
+CAMP_CKPT        = "weights/camp_u1652.pth"
+CAMP_DIR         = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                "third_party", "CAMP")
 ACC_THRS         = [5, 10, 15, 20]
 
-MODELS = ("clip", "geoclip", "satclip", "mobileclip", "dinov2")
+MODELS = ("clip", "geoclip", "satclip", "mobileclip", "dinov2", "camp")
 
 
 # ---------- model loaders --------------------------------------------------
@@ -128,12 +132,61 @@ def load_dinov2(device):
     return (lambda t: model(t.to(device))), preprocess, dim
 
 
-def load_bundle(name, device, satclip_ckpt, mobileclip_ckpt=None):
+def load_camp(device, ckpt):
+    """CAMP (IEEE TGRS'24) cross-view geo-localization, zero-shot from University-1652.
+
+    Vendored at third_party/CAMP (added to sys.path here, not the global PYTHONPATH).
+    At eval the model returns (gap_feature, part_features); the retrieval descriptor is
+    the 1024-d GAP feature (`model(x)[-2]`) — the position-aware partition branch is a
+    training-only auxiliary signal. Input is 384x384 (the pos_embed is 12x12 = 384/32),
+    ImageNet normalization.
+    """
+    import types
+    from torchvision import transforms
+    if not os.path.isfile(ckpt):
+        raise FileNotFoundError(
+            f"CAMP checkpoint not found at {ckpt}. Download the University-1652 weights "
+            "(github.com/Mabel0403/CAMP Google Drive) and stage them there.")
+    if CAMP_DIR not in sys.path:
+        sys.path.insert(0, CAMP_DIR)
+    from sample4geo.hand_convnext.model import make_model
+    # Config the released University-1652 checkpoint was trained with (block=2, 701 cls).
+    opt = types.SimpleNamespace(
+        views=2, nclasses=701, block=2, triplet_loss=0.3, resnet=False,
+        pos_scale=0.6, if_learn_ECE_weights=True,
+        learn_weight_D_D=0.0, learn_weight_S_S=0.0, learn_weight_D_fine_S_fine=1.0,
+        learn_weight_D_fine_D_fine=0.5, learn_weight_S_fine_S_fine=0.0)
+    model = make_model(opt)
+    sd = torch.load(ckpt, map_location="cpu")
+    if isinstance(sd, dict) and "state_dict" in sd:
+        sd = sd["state_dict"]
+    for k in ("model_1.classifier1.classifier.0.weight",
+              "model_1.classifier1.classifier.0.bias",
+              "model_1.classifier_mcb1.classifier.0.weight",
+              "model_1.classifier_mcb1.classifier.0.bias",
+              "model_1.classifier_mcb2.classifier.0.weight",
+              "model_1.classifier_mcb2.classifier.0.bias"):
+        sd.pop(k, None)               # classifier heads are unused at inference
+    model.load_state_dict(sd, strict=False)
+    model.eval().to(device)
+    preprocess = transforms.Compose([
+        transforms.Resize((384, 384), interpolation=transforms.InterpolationMode.BILINEAR),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    encode = lambda t: model(t.to(device))[-2]   # (B, 1024) GAP descriptor
+    with torch.inference_mode():
+        dim = encode(torch.zeros(1, 3, 384, 384, device=device)).shape[-1]
+    return encode, preprocess, dim
+
+
+def load_bundle(name, device, satclip_ckpt, mobileclip_ckpt=None, camp_ckpt=None):
     if name == "clip":       return load_clip(device)
     if name == "geoclip":    return load_geoclip(device)
     if name == "satclip":    return load_satclip(device, satclip_ckpt)
     if name == "mobileclip": return load_mobileclip(device, mobileclip_ckpt)
     if name == "dinov2":     return load_dinov2(device)
+    if name == "camp":       return load_camp(device, camp_ckpt or CAMP_CKPT)
     raise ValueError(f"unknown model: {name}")
 
 
@@ -318,6 +371,8 @@ def run_flight(flight, bundle, args, model_name, device):
     print(f"  Gallery: {len(tile_ids)} tiles | dim={emb.shape[1]} | "
           f"{'cached' if cached else f'built in {t_gallery:.1f}s'}")
     df = pd.read_csv(drone_csv)
+    if getattr(args, "test_split", False):
+        df = split_flight_rows(df, which="test", test_frac=0.25, axis="auto", buffer_frac=0.0)
     if args.limit is not None:
         df = df.iloc[:args.limit].reset_index(drop=True)
     rows, floors, t_retrieval = retrieve(
@@ -371,7 +426,7 @@ def _worker(worker_args):
     flight_group, gpu_id, model_name, args = worker_args
     torch.manual_seed(0)
     device = torch.device(f"cuda:{gpu_id}")
-    bundle = load_bundle(model_name, device, args.satclip_ckpt, args.mobileclip_ckpt)
+    bundle = load_bundle(model_name, device, args.satclip_ckpt, args.mobileclip_ckpt, args.camp_ckpt)
     return [(f, *run_flight(f, bundle, args, model_name, device)) for f in flight_group]
 
 
@@ -395,6 +450,11 @@ def parse_args():
                          "(needed on offline cluster nodes). Download with: "
                          "huggingface-cli download apple/MobileCLIP-S2-OpenCLIP "
                          "open_clip_pytorch_model.bin --local-dir weights/")
+    ap.add_argument("--camp-ckpt", type=str, default=CAMP_CKPT,
+                    help="Path to the CAMP University-1652 checkpoint (camp_u1652.pth).")
+    ap.add_argument("--test-split",    action="store_true",
+                    help="Evaluate on the held-out 25%% spatial test band "
+                         "(same split as clip_fusion_pipeline.py).")
     ap.add_argument("--rebuild-cache", action="store_true")
     ap.add_argument("--flights",       nargs="+", default=["all"])
     ap.add_argument("--gps-radii",     nargs="*", type=int, default=[1000, 5000],
@@ -423,7 +483,7 @@ def main():
             if len(groups) == 1:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 print(f"  Loading {mname} ... ", end="", flush=True)
-                bundle = load_bundle(mname, device, args.satclip_ckpt, args.mobileclip_ckpt)
+                bundle = load_bundle(mname, device, args.satclip_ckpt, args.mobileclip_ckpt, args.camp_ckpt)
                 print("done")
                 results = [(f, *run_flight(f, bundle, args, mname, device)) for f in flights]
                 del bundle

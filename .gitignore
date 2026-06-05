@@ -10,6 +10,7 @@ stats/
 logs/
 tar/
 .cache/
+third_party/
 /Thesis/
 
 # ── Generated files ───────────────────────────────────────────────────────────
