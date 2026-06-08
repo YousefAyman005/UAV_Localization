@@ -80,7 +80,17 @@ def load_model(device, args):
     ckpt = torch.load(args.weights, map_location="cpu")
     sd = ckpt["state_dict"] if isinstance(ckpt, dict) and "state_dict" in ckpt else ckpt
     matcher.load_state_dict(sd)
-    matcher = reparameter(matcher)  # fuse RepVGG branches for inference
+    if getattr(args, "lora_ckpt", None):
+        # Attach the LoRA adapter to the (non-reparameterized) base, then fold the
+        # low-rank deltas into the coarse-transformer Linears. reparameter() only
+        # fuses RepVGG *conv* branches (backbone + fine_preprocess) — a disjoint set
+        # of modules from the LoRA-merged Linears — so merge-then-reparameterize is safe.
+        from peft import PeftModel  # noqa: E402
+        matcher = PeftModel.from_pretrained(matcher, args.lora_ckpt)
+        matcher = matcher.merge_and_unload()
+        print(f"  Merged LoRA adapter from {args.lora_ckpt}")
+    if not getattr(args, "no_reparam", False):
+        matcher = reparameter(matcher)  # fuse RepVGG branches for inference
     return matcher.eval().to(device)
 
 
@@ -96,15 +106,21 @@ def add_args(p):
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "weights", "eloftr_outdoor.ckpt"),
         help="Path to the EfficientLoFTR checkpoint (eloftr_outdoor.ckpt).")
+    p.add_argument("--lora-ckpt", default=None,
+        help="Path to a LoRA adapter dir (e.g. weights/eloftr_lora) to merge before "
+             "inference. Writes visloc_eloftr_lora_results.csv (separate from baseline).")
+    p.add_argument("--no-reparam", action="store_true",
+        help="Skip RepVGG reparameterization (ablation for the LoRA-vs-reparam interaction).")
 
 
 def main():
     run_pipeline(
-        name="eloftr",
+        name=lambda a: "eloftr_lora" if a.lora_ckpt else "eloftr",
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
-        banner=lambda a: (f"  Method: EfficientLoFTR (full/fp32) | RANSAC: {RANSAC_THRESH} | "
+        banner=lambda a: (f"  Method: EfficientLoFTR (full/fp32"
+                          f"{'+LoRA' if a.lora_ckpt else ''}) | RANSAC: {RANSAC_THRESH} | "
                           f"MinInl: {a.min_inliers} | Dist: {a.dist}m | "
                           f"CLAHE: {'off' if a.no_clahe else 'on'} | "
                           f"Flights: {' '.join(a.flights)}"),
