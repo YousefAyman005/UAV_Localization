@@ -8,13 +8,33 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --gpus=1
 #SBATCH --mem=32G
-#SBATCH --time=4:00:00
+#SBATCH --time=8:00:00
+# RoMa uses a DINOv2 ViT-L backbone, which OOMs on the 16GB V100s the default
+# gpu* partition can land on — restrict to the A100 partitions.
+#SBATCH -p gpu3,gpu4,gpu5
 
+# RoMa (zju3dv/RoMa). Variant = first arg: outdoor | indoor | extre.
+#   extre = AerialExtreMatch fine-tune; needs the pre-staged roma_extre.pth bound.
+# Extra args after the variant are forwarded to the pipeline, e.g.:
+#   sbatch slurm/run_roma.sh extre --flights all
 PRETRAINED=${1:-outdoor}
 case "$PRETRAINED" in
-  outdoor|indoor) ;;
-  *) echo "Usage: sbatch $0 outdoor|indoor" >&2; exit 1 ;;
+  outdoor|indoor|extre) ;;
+  *) echo "Usage: sbatch $0 outdoor|indoor|extre [pipeline args...]" >&2; exit 1 ;;
 esac
+shift || true   # drop the variant arg so "$@" holds only extra pipeline args
+
+# extre loads a .pth checkpoint into the stock outdoor model — bind it in.
+EXTRE_BIND=()
+EXTRE_ARGS=()
+if [ "$PRETRAINED" = "extre" ]; then
+  ROMA_EXTRE_HOST="$DATAPOOL3/datasets/Visloc/weights/roma_extre.pth"
+  if [ ! -f "$ROMA_EXTRE_HOST" ]; then
+    echo "ERROR: roma_extre.pth not found at $ROMA_EXTRE_HOST" >&2; exit 1
+  fi
+  EXTRE_BIND=(--bind "${ROMA_EXTRE_HOST}:/data/weights/roma_extre.pth:ro")
+  EXTRE_ARGS=(--extre-weights /data/weights/roma_extre.pth)
+fi
 
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
@@ -26,6 +46,7 @@ apptainer run --nv \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/torch_hub/checkpoints:/data/torch_home/hub/checkpoints:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/huggingface:/data/torch_home/huggingface:ro" \
+    "${EXTRE_BIND[@]}" \
     --bind "${LOCAL_JOB_DIR}/torch_home:/data/torch_home" \
     --bind "${LOCAL_JOB_DIR}/job_results:/data/job_results" \
     --env TORCH_HOME=/data/torch_home \
@@ -34,8 +55,10 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/roma_pipeline.py \
         --pretrained "${PRETRAINED}" \
+        "${EXTRE_ARGS[@]}" \
         --flights 01 02 03 06 08 \
-        --visualize
+        --visualize \
+        "$@"
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"
