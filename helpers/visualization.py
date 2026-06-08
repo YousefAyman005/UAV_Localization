@@ -15,14 +15,31 @@ import numpy as np
 from helpers.utils import JPEG_QUALITY, SZ_H, SZ_W, TOP_MATCHES
 
 
-def _draw_overlays(patch, H, m_per_px=None):
-    """Green cross+circle = GT (patch centre); yellow/red = predicted point."""
+def _draw_overlays(patch, H, m_per_px=None, gt_px=None):
+    """Markers on the satellite patch:
+      green cross+circle = TRUE GT (the UAV ground-truth location),
+      grey ring          = GPS prior (the crop centre the patch is built around),
+      yellow/red dot     = predicted location (drone centre projected through H),
+      red label          = localization error (prediction → true GT) in metres.
+
+    `gt_px` is the true-GT patch pixel. When None we fall back to the patch centre
+    (legacy behaviour) and omit the prior marker."""
     out = (patch if patch.ndim == 3 else cv2.cvtColor(patch, cv2.COLOR_GRAY2BGR)).copy()
-    gx, gy, arm = SZ_W // 2, SZ_H // 2, 18
+    px_c, py_c = SZ_W // 2, SZ_H // 2                       # crop centre = GPS prior
+    gx, gy = (px_c, py_c) if gt_px is None else (int(round(gt_px[0])),
+                                                 int(round(gt_px[1])))
+    arm = 18
+
+    # GPS prior (crop centre) — faint grey, only shown when it differs from GT.
+    if gt_px is not None:
+        cv2.circle(out, (px_c, py_c), 7, (160, 160, 160), 2, cv2.LINE_AA)
+        cv2.putText(out, "prior", (px_c + 10, py_c + 4),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 160, 160), 1, cv2.LINE_AA)
+
+    # true GT
     cv2.line(out, (gx - arm, gy), (gx + arm, gy), (0, 220, 0), 3)
     cv2.line(out, (gx, gy - arm), (gx, gy + arm), (0, 220, 0), 3)
     cv2.circle(out, (gx, gy), arm + 6, (0, 220, 0), 2)
-
     if m_per_px and m_per_px > 0:
         for metres, col in ((20, (255, 255, 0)), (25, (255, 255, 255))):
             r = max(1, int(round(metres / m_per_px)))
@@ -39,15 +56,15 @@ def _draw_overlays(patch, H, m_per_px=None):
     cv2.circle(out, pxi, 8, (0, 255, 255), 2, cv2.LINE_AA)
     cv2.circle(out, pxi, 4, (0, 0, 255), -1, cv2.LINE_AA)
     if m_per_px and m_per_px > 0:
-        err_m = math.hypot(float(px[0]) - SZ_W / 2, float(px[1]) - SZ_H / 2) * m_per_px
+        err_m = math.hypot(float(px[0]) - gx, float(px[1]) - gy) * m_per_px
         cv2.putText(out, f"{err_m:.1f}m", (pxi[0] + 10, pxi[1] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
     return out
 
 
 def draw_and_save(drone, kpd, patch, kps, matches, filename, viz_dir,
-                  H=None, m_per_px=None):
-    patch = _draw_overlays(patch, H, m_per_px=m_per_px)
+                  H=None, m_per_px=None, gt_px=None):
+    patch = _draw_overlays(patch, H, m_per_px=m_per_px, gt_px=gt_px)
     viz = cv2.drawMatches(drone, kpd, patch, kps, matches, None,
                           flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     sep = drone.shape[1]
@@ -71,7 +88,8 @@ def save_dense_viz(drone, patch, best, filename, viz_dir):
         top  = sorted([cv2.DMatch(i, i, 1.0 - c) for i, c in enumerate(conf[mask])],
                       key=lambda m: m.distance)[:TOP_MATCHES]
     draw_and_save(drone, kpd, patch, kps, top, filename, viz_dir,
-                  H=best.get("H"), m_per_px=best.get("_m_per_px"))
+                  H=best.get("H"), m_per_px=best.get("_m_per_px"),
+                  gt_px=best.get("_gt_px"))
 
 
 def setup_viz_dir(viz_dir):

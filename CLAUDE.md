@@ -51,7 +51,10 @@ inlier counts (`helpers/results.py` builds rows and prints the A@Xm summary).
 ### 2. Embedding retrieval (`pipelines/clip_pipeline.py`)
 Tiles the satellite into a gallery (`iter_tiles`, cached `.npz` per tile-size/stride/mtime),
 embeds every tile + the drone image, ranks tiles by cosine similarity (no homography). Models:
-`clip, geoclip, satclip, mobileclip, dinov2`. Output `visloc_<model>_results.csv` adds
+`clip, geoclip, satclip, mobileclip, dinov2`, plus the zero-shot University-1652 cross-view
+geo-localization models `camp` and `sample4geo` (run via their own `slurm/run_camp.sh` /
+`slurm/run_sample4geo.sh`, since they need pre-staged checkpoints). Output
+`visloc_<model>_results.csv` adds
 `gt_tile_rank`, `top{k}_hit`, and GPS-degraded `gt_rank_r<R>` columns. `analyze/retrieval_recall.py`
 turns those rank columns into Recall@1/5/10 tables.
 

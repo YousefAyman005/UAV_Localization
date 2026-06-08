@@ -19,6 +19,12 @@ def _round(x, n):
 
 def _build_row(filename, lat, lon, height, flight, match,
                raw_pred_px, raw_err_px, raw_err_m, plat, plon, off_m, m_per_px):
+    # Intrinsic scale of the estimated homography (drone→patch). For a similarity
+    # H this is exactly the drone↔patch scale ratio; used by the H-scale K
+    # calibration in pipelines/calibrate_k.py (K = h_scale · SEARCH_FACTOR · K_used).
+    _H = match.get("H")
+    h_scale = (math.sqrt(abs(float(np.linalg.det(np.asarray(_H, float)[:2, :2]))))
+               if _H is not None else None)
     row = dict(filename=filename, lat=lat, lon=lon, height=height, skipped=False,
                crop_w=SZ_W, crop_h=SZ_H,
                sat_kp=match["sat_kp"], drone_kp=match["drone_kp"],
@@ -31,7 +37,7 @@ def _build_row(filename, lat, lon, height, flight, match,
                raw_err_m=_round(raw_err_m, 2),
                m_per_px=_round(m_per_px, 4),
                pred_lat=_round(plat, 7), pred_lon=_round(plon, 7),
-               offset_m=_round(off_m, 2))
+               offset_m=_round(off_m, 2), h_scale=_round(h_scale, 5))
     for t in ACC_THRESHOLDS:
         row[f"success_{t}"] = off_m is not None and off_m <= t
     if flight:

@@ -36,9 +36,11 @@ SATCLIP_CKPT     = "weights/satclip-vit16-l40.ckpt"
 CAMP_CKPT        = "weights/camp_u1652.pth"
 CAMP_DIR         = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                 "third_party", "CAMP")
+SAMPLE4GEO_CKPT     = "weights/sample4geo_u1652.pth"
+SAMPLE4GEO_BACKBONE = "convnext_base.fb_in22k_ft_in1k_384"
 ACC_THRS         = [5, 10, 15, 20]
 
-MODELS = ("clip", "geoclip", "satclip", "mobileclip", "dinov2", "camp")
+MODELS = ("clip", "geoclip", "satclip", "mobileclip", "dinov2", "camp", "sample4geo")
 
 
 # ---------- model loaders --------------------------------------------------
@@ -180,13 +182,56 @@ def load_camp(device, ckpt):
     return encode, preprocess, dim
 
 
-def load_bundle(name, device, satclip_ckpt, mobileclip_ckpt=None, camp_ckpt=None):
+def load_sample4geo(device, ckpt, backbone=SAMPLE4GEO_BACKBONE):
+    """Sample4Geo (ICCV'24) cross-view geo-localization, zero-shot from University-1652.
+
+    Sample4Geo's network (`sample4geo/model.py::TimmModel`) is just a timm ConvNeXt with
+    num_classes=0 returning the global-pooled descriptor, plus a training-only `logit_scale`
+    scalar. We rebuild it directly with timm (already in the container) rather than vendoring
+    the repo — its package is also named `sample4geo`, which would collide with the vendored
+    CAMP fork (third_party/CAMP). pretrained=False so nothing is fetched on offline nodes; the
+    released checkpoint already carries the backbone weights. Shared encoder for drone and
+    satellite, 384x384 input, ImageNet normalization, L2-normalized descriptors.
+    """
+    import timm
+    from torchvision import transforms
+    if not os.path.isfile(ckpt):
+        raise FileNotFoundError(
+            f"Sample4Geo checkpoint not found at {ckpt}. Download the University-1652 "
+            "weights from github.com/Skyy93/Sample4Geo (Google Drive, e.g. "
+            "weights_e1_0.9515.pth) and stage them there.")
+    model = timm.create_model(backbone, pretrained=False, num_classes=0)
+    sd = torch.load(ckpt, map_location="cpu")
+    if isinstance(sd, dict) and "state_dict" in sd:
+        sd = sd["state_dict"]
+    # TimmModel keeps the backbone under self.model -> keys are "model.*"; strip the prefix
+    # and drop the unused logit_scale so the weights load into the bare timm model.
+    sd = {k[len("model."):]: v for k, v in sd.items() if k.startswith("model.")}
+    missing, unexpected = model.load_state_dict(sd, strict=False)
+    if len(missing) > 5:   # only a tiny tail (ideally none) is expected
+        print(f"  [sample4geo] WARNING {len(missing)} missing / {len(unexpected)} unexpected "
+              f"keys — check the backbone string ({backbone}) against the checkpoint")
+    model.eval().to(device)
+    preprocess = transforms.Compose([
+        transforms.Resize((384, 384), interpolation=transforms.InterpolationMode.BILINEAR),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    encode = lambda t: model(t.to(device))   # (B, D) global descriptor
+    with torch.inference_mode():
+        dim = encode(torch.zeros(1, 3, 384, 384, device=device)).shape[-1]   # ~1024 (ConvNeXt-B)
+    return encode, preprocess, dim
+
+
+def load_bundle(name, device, satclip_ckpt, mobileclip_ckpt=None, camp_ckpt=None,
+                sample4geo_ckpt=None):
     if name == "clip":       return load_clip(device)
     if name == "geoclip":    return load_geoclip(device)
     if name == "satclip":    return load_satclip(device, satclip_ckpt)
     if name == "mobileclip": return load_mobileclip(device, mobileclip_ckpt)
     if name == "dinov2":     return load_dinov2(device)
     if name == "camp":       return load_camp(device, camp_ckpt or CAMP_CKPT)
+    if name == "sample4geo": return load_sample4geo(device, sample4geo_ckpt or SAMPLE4GEO_CKPT)
     raise ValueError(f"unknown model: {name}")
 
 
@@ -426,7 +471,8 @@ def _worker(worker_args):
     flight_group, gpu_id, model_name, args = worker_args
     torch.manual_seed(0)
     device = torch.device(f"cuda:{gpu_id}")
-    bundle = load_bundle(model_name, device, args.satclip_ckpt, args.mobileclip_ckpt, args.camp_ckpt)
+    bundle = load_bundle(model_name, device, args.satclip_ckpt, args.mobileclip_ckpt,
+                         args.camp_ckpt, args.sample4geo_ckpt)
     return [(f, *run_flight(f, bundle, args, model_name, device)) for f in flight_group]
 
 
@@ -452,6 +498,9 @@ def parse_args():
                          "open_clip_pytorch_model.bin --local-dir weights/")
     ap.add_argument("--camp-ckpt", type=str, default=CAMP_CKPT,
                     help="Path to the CAMP University-1652 checkpoint (camp_u1652.pth).")
+    ap.add_argument("--sample4geo-ckpt", type=str, default=SAMPLE4GEO_CKPT,
+                    help="Path to the Sample4Geo University-1652 checkpoint "
+                         "(sample4geo_u1652.pth).")
     ap.add_argument("--test-split",    action="store_true",
                     help="Evaluate on the held-out 25%% spatial test band "
                          "(same split as clip_fusion_pipeline.py).")
@@ -483,7 +532,8 @@ def main():
             if len(groups) == 1:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 print(f"  Loading {mname} ... ", end="", flush=True)
-                bundle = load_bundle(mname, device, args.satclip_ckpt, args.mobileclip_ckpt, args.camp_ckpt)
+                bundle = load_bundle(mname, device, args.satclip_ckpt, args.mobileclip_ckpt,
+                                     args.camp_ckpt, args.sample4geo_ckpt)
                 print("done")
                 results = [(f, *run_flight(f, bundle, args, mname, device)) for f in flights]
                 del bundle

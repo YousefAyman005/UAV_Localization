@@ -150,7 +150,8 @@ def lg_viz(drone, patch, best, filename, viz_dir):
                       for i, j, c in zip(d_idx, s_idx, conf)],
                      key=lambda m: m.distance)[:TOP_MATCHES]
     draw_and_save(drone, kpd_cv, patch, kps_cv, top, filename, viz_dir,
-                  H=best.get("H"), m_per_px=best.get("_m_per_px"))
+                  H=best.get("H"), m_per_px=best.get("_m_per_px"),
+                  gt_px=best.get("_gt_px"))
 
 
 def main():

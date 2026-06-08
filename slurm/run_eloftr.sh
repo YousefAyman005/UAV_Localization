@@ -38,6 +38,8 @@ if [ -d "$LORA_HOST" ]; then
   LORA_BIND=(--bind "${LORA_HOST}:/opt/uav_localization/weights/eloftr_lora:ro")
 fi
 
+echo "SEARCH_FACTOR override: UAV_SEARCH_FACTOR=${UAV_SEARCH_FACTOR:-1.75}"
+
 apptainer run --nv \
     --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
@@ -49,6 +51,7 @@ apptainer run --nv \
     --bind "${LOCAL_JOB_DIR}/job_results:/data/job_results" \
     --env TORCH_HOME=/data/torch_home \
     --env HF_HOME=/data/torch_home/huggingface \
+    --env UAV_SEARCH_FACTOR=${UAV_SEARCH_FACTOR:-1.75} \
     --pwd /data/job_results \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/eloftr_pipeline.py \

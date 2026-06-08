@@ -34,14 +34,27 @@ DEG_TO_M           = 111_320.0  # meters per degree latitude (flat-earth approx)
 # makes the satellite patch larger than the drone view so there's room to
 # localize. PRIOR_OFFSET_STD_M is the σ of the simulated GPS prior added to the
 # patch center, so the drone is not at the trivial dead-center of the patch.
-K_PER_FLIGHT = {"01": 1.00, "02": 1.00, "03": 0.95, "08": 1.00}
+# 01/02/03/08 are the established hand-tuned anchors (H-scale calibration recovers
+# them within ~5%); 04/05/06/10/11 are from the H-scale calibration (job 371932,
+# pipelines/calibrate_k.py --mode hscale) — see [[project-k-calibration]].
+K_PER_FLIGHT = {
+    "01": 1.00, "02": 1.00, "03": 0.95, "04": 0.99, "05": 0.167,
+    "06": 0.352, "08": 1.00, "10": 0.361, "11": 0.297,
+}
 K_DEFAULT          = 1.75 * 2.0 * math.tan(math.radians(35.0))
-SEARCH_FACTOR      = 1.5
+# patch_span = SEARCH_FACTOR * K * alt; margin/side = 0.5*(SEARCH_FACTOR-1)*K*alt.
+# 1.75 = sweep-chosen sweet spot: lifts the coverage-starved flights (06/10/01) at
+# no overall cost (A@25 60.0, same as 1.5), while 1.8–2.0 bleed inliers and hurt the
+# scale-sensitive flights (05/08). Overridable per-run via env UAV_SEARCH_FACTOR.
+# K is invariant to SEARCH_FACTOR (true footprint ratio). See [[project-k-calibration]].
+SEARCH_FACTOR      = float(os.environ.get("UAV_SEARCH_FACTOR", "1.75"))
 PRIOR_OFFSET_STD_M = 80.0
 
 _HERE       = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
-FLIGHTS_AVAILABLE = ["01", "02", "03", "08"]
+# 07 has no flight folder (its satellite is 3000×170 — too narrow for metric_crop).
+# 09's satellite is split into 4 tiles, unsupported by the single-tile loader.
+FLIGHTS_AVAILABLE = ["01", "02", "03", "04", "05", "06", "08", "10", "11"]
 
 
 # stores terminal to log files
@@ -73,10 +86,12 @@ def sat_px_to_gps(sx, sy, g):
     return g["lt_lat"] - sy / g["pplat"], g["lt_lon"] + sx / g["pplon"]
 
 
-def metric_m_per_px(height_m, flight=None, sz_w=SZ_W):
+def metric_m_per_px(height_m, flight=None, sz_w=SZ_W, k_override=None):
     """Target ground-sampling distance (m/px) for the output patch.
-    patch_span_m = SEARCH_FACTOR * K * height_m; m_per_px = patch_span_m / sz_w."""
-    k = K_PER_FLIGHT.get(str(flight), K_DEFAULT)
+    patch_span_m = SEARCH_FACTOR * K * height_m; m_per_px = patch_span_m / sz_w.
+    k_override (if not None) bypasses the per-flight K lookup — used by the
+    K-calibration sweep (pipelines/calibrate_k.py)."""
+    k = k_override if k_override is not None else K_PER_FLIGHT.get(str(flight), K_DEFAULT)
     return SEARCH_FACTOR * k * height_m / sz_w
 
 
@@ -139,10 +154,10 @@ def tile_for_gps(tiles, lat, lon):
             min(max(cy, 0), geo["h"] - 1), False)
 
 
-def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, flight):
+def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, flight, k_override=None):
     """Build the 2×3 affine M mapping output-patch px → satellite px.
     The output patch is metric-isotropic with `m_per_px` GSD."""
-    m_per_px   = metric_m_per_px(height_m, flight=flight, sz_w=sz_w)
+    m_per_px   = metric_m_per_px(height_m, flight=flight, sz_w=sz_w, k_override=k_override)
     mid_lat    = (geo["lt_lat"] + geo["rb_lat"]) / 2
     sx_per_m   = geo["pplon"] / (math.cos(math.radians(mid_lat)) * DEG_TO_M)
     sy_per_m   = geo["pplat"] / DEG_TO_M
@@ -156,15 +171,16 @@ def _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, flight):
 
 
 def metric_crop(sat, geo, cx, cy, height_m, yaw_deg=0.0,
-                sz_w=SZ_W, sz_h=SZ_H, flight=None):
+                sz_w=SZ_W, sz_h=SZ_H, flight=None, k_override=None):
     """Sample a metric-isotropic, optionally heading-rotated patch around (cx,cy).
 
     yaw_deg is compass-convention (CW from north); pass `Phi1` directly.
-    `flight` selects the calibrated K (patch-span-per-altitude) from K_PER_FLIGHT.
+    `flight` selects the calibrated K (patch-span-per-altitude) from K_PER_FLIGHT;
+    `k_override` (if not None) forces K directly (K-calibration sweep).
     Returns (patch, M) where M is the 2×3 affine output_px → satellite_px,
     or (None, None) when the source rectangle barely overlaps the tile.
     """
-    M, _ = _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, flight)
+    M, _ = _metric_affine(geo, cx, cy, height_m, yaw_deg, sz_w, sz_h, flight, k_override)
     a, b, tx = M[0]; c, d, ty = M[1]
 
     # Reject crops where most of the source rectangle is outside the tile.
@@ -270,7 +286,8 @@ def _predict_from_H(H, m_per_px):
 
 def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
                                     flight=None, min_inl=MIN_INL, clahe=True,
-                                    viz_fn=None, viz_dir=None, progress=True):
+                                    viz_fn=None, viz_dir=None, progress=True,
+                                    k_override=None):
     """Iterate `df`: load drone → pick tile → metric_crop → match → record row."""
     if drone_dir is None:
         raise ValueError("drone_dir is required")
@@ -315,7 +332,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         cy        += dy_m * sy_per_m
 
         patch, M = metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw,
-                               flight=flight)
+                               flight=flight, k_override=k_override)
         if patch is None:
             rows.append(_skip_row(f, flight)); continue
         if clahe_fn:
@@ -325,7 +342,14 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         if best is None:
             rows.append(_skip_row(f, flight)); continue
 
-        m_per_px = metric_m_per_px(height, flight=flight)
+        # True GT location in patch px (for viz only): GT gps → satellite px →
+        # patch px via M⁻¹. The patch is centred on the *prior* (GT + offset), so
+        # the true GT is off-centre — drawing it here keeps the green pin honest.
+        gt_sat = gps_to_px(lat, lon, geo)
+        gt_patch = cv2.invertAffineTransform(M) @ np.array([gt_sat[0], gt_sat[1], 1.0])
+        best["_gt_px"] = (float(gt_patch[0]), float(gt_patch[1]))
+
+        m_per_px = metric_m_per_px(height, flight=flight, k_override=k_override)
         best["_m_per_px"] = m_per_px
 
         raw_pred_px = raw_err_px = raw_err_m = None

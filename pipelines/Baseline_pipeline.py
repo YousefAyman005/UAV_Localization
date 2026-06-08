@@ -76,7 +76,7 @@ def baseline_viz(drone, patch, best, filename, viz_dir):
     top = sorted(matches, key=lambda m: m.distance)[:TOP_MATCHES]
     draw_and_save(drone, best.get("_kpd", []), patch, best.get("_kps", []),
                   top, filename, viz_dir, H=best.get("H"),
-                  m_per_px=best.get("_m_per_px"))
+                  m_per_px=best.get("_m_per_px"), gt_px=best.get("_gt_px"))
 
 
 def banner(a):
