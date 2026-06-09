@@ -1,0 +1,108 @@
+{"flight": "10", "tile_id": 0, "caption": "water body, small boat, faint shoreline, no visible roads or buildings"}
+{"flight": "10", "tile_id": 1, "caption": "straight road, low building density, water body, bare ground, forest edge"}
+{"flight": "10", "tile_id": 2, "caption": "T-junction road, low building density, water body, bare ground, forest edge, curved shoreline."}
+{"flight": "10", "tile_id": 3, "caption": "T-junction road, low building density, water body west, bare ground, forested areas, straight road segments."}
+{"flight": "10", "tile_id": 4, "caption": "T-junction road, sparse buildings, wetland, farmland, forest, bare ground, east-west water body."}
+{"flight": "10", "tile_id": 5, "caption": "T-junction road, sparse buildings, forested area west, farmland east, bare ground south."}
+{"flight": "10", "tile_id": 6, "caption": "Straight road, sparse trees, farmland, water body northwest, bare ground."}
+{"flight": "10", "tile_id": 7, "caption": "Straight road, sparse trees, wind turbine, farmland, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 8, "caption": "straight road, sparse trees, farmland, wind turbine, scattered vegetation"}
+{"flight": "10", "tile_id": 9, "caption": "straight road, low building density, scattered forest patches, bare ground, east-west alignment"}
+{"flight": "10", "tile_id": 10, "caption": "Straight road, low building density, scattered water bodies, farmland, forest, bare ground."}
+{"flight": "10", "tile_id": 11, "caption": "Straight road, low building density, farmland, forest patches, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 12, "caption": "Large water body, rocky shoreline, straight road edge, sparse vegetation, no buildings."}
+{"flight": "10", "tile_id": 13, "caption": "straight road, bare ground, forest, water body, T-junction, north"}
+{"flight": "10", "tile_id": 14, "caption": "straight road, wind turbine, forested land, bare ground, winding path, rural terrain"}
+{"flight": "10", "tile_id": 15, "caption": "Straight road, low building density, bare ground, farmland, wind turbine, north-west."}
+{"flight": "10", "tile_id": 16, "caption": "T-junction road, low building density, bare ground farmland, no water bodies, east-west field alignment."}
+{"flight": "10", "tile_id": 17, "caption": "Straight road, low building density, farmland, forest, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 18, "caption": "Straight road, low building density, farmland, forest, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 19, "caption": "Straight road, low building density, no water bodies, farmland, forest, bare ground."}
+{"flight": "10", "tile_id": 20, "caption": "T-junction road, low building density, no water bodies, farmland, forest patches, bare ground."}
+{"flight": "10", "tile_id": 21, "caption": "Straight road, sparse forest, bare ground, scattered vegetation, agricultural field, linear patterns, open terrain, minimal water bodies, uniform land cover, rural landscape, flat topography, low building density"}
+{"flight": "10", "tile_id": 22, "caption": "Straight road, low building density, farmland, forest, bare ground, east-facing field edge."}
+{"flight": "10", "tile_id": 23, "caption": "Straight road, T-junction, farmland, orchards, bare ground, scattered vegetation, rectangular fields, agricultural rows, dirt paths, open terrain."}
+{"flight": "10", "tile_id": 24, "caption": "straight road, forested land cover, water body, bare ground, T-junction"}
+{"flight": "10", "tile_id": 25, "caption": "T-junction road, low building density, forested areas, farmland fields, bare ground sections, winding paths."}
+{"flight": "10", "tile_id": 26, "caption": "Straight road, sparse buildings, farmland, forest, bare ground, water bodies, east-west orientation."}
+{"flight": "10", "tile_id": 27, "caption": "Straight road, low building density, bare ground, farmland, forest, east-west alignment."}
+{"flight": "10", "tile_id": 28, "caption": "T-junction road, farmland, forest strip, bare ground, agricultural fields, rural landscape."}
+{"flight": "10", "tile_id": 29, "caption": "Straight road, low building density, no water bodies, farmland, forest, bare ground."}
+{"flight": "10", "tile_id": 30, "caption": "Straight road, low building density, farmland, forest, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 31, "caption": "Straight road, low building density, no water bodies, farmland, forest, bare ground."}
+{"flight": "10", "tile_id": 32, "caption": "T-junction road, low building density, farmland, forested patches, bare ground, rectangular field divisions."}
+{"flight": "10", "tile_id": 33, "caption": "Straight road, low building density, farmland, bare ground, scattered vegetation patches."}
+{"flight": "10", "tile_id": 34, "caption": "curved road, farmland, bare ground, forest, small water body, scattered vegetation"}
+{"flight": "10", "tile_id": 35, "caption": "T-junction road, low building density, no water bodies, farmland, forest, bare ground, east-facing circular field."}
+{"flight": "10", "tile_id": 36, "caption": "Straight road, low building density, farmland, forest, wind turbine, small water body, east."}
+{"flight": "10", "tile_id": 37, "caption": "T-junction road, low building density, farmland, forest, bare ground, scattered trees, wind turbine."}
+{"flight": "10", "tile_id": 38, "caption": "Straight road, low building density, orchard farmland, bare ground, forested area."}
+{"flight": "10", "tile_id": 39, "caption": "T-junction road, low building density, orchard rows, bare ground, scattered patches, east-facing slope."}
+{"flight": "10", "tile_id": 40, "caption": "T-junction road, low building density, orchards, forested areas, bare ground, straight road segments."}
+{"flight": "10", "tile_id": 41, "caption": "T-junction road, low building density, forested areas, farmland, bare ground, curved road segments."}
+{"flight": "10", "tile_id": 42, "caption": "Straight road, low building density, farmland, scattered trees, no water bodies."}
+{"flight": "10", "tile_id": 43, "caption": "Straight road, sparse farmland, scattered trees, bare ground, no water bodies, no buildings."}
+{"flight": "10", "tile_id": 44, "caption": "Straight road, low building density, farmland, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 45, "caption": "Straight roads, low building density, farmland, bare ground, scattered trees, no water bodies."}
+{"flight": "10", "tile_id": 46, "caption": "Straight road, T-junction, farmland, bare ground, forest, no water bodies, no buildings."}
+{"flight": "10", "tile_id": 47, "caption": "Straight road, low building density, farmland, forest, bare ground, east-facing fields."}
+{"flight": "10", "tile_id": 48, "caption": "Straight road, T-junction, farmland, bare ground, wind turbine, small forest patch, east."}
+{"flight": "10", "tile_id": 49, "caption": "Straight road, low building density, no water bodies, farmland, scattered trees."}
+{"flight": "10", "tile_id": 50, "caption": "T-junction road, low building density, farmland, scattered trees, bare ground, east-west field alignment."}
+{"flight": "10", "tile_id": 51, "caption": "Straight road, low building density, scattered trees, bare ground, farmland, east-west alignment."}
+{"flight": "10", "tile_id": 52, "caption": "Straight road, low building density, forested area, farmland, bare ground, T-junction."}
+{"flight": "10", "tile_id": 53, "caption": "T-junction road, low building density, forested area, farmland, bare ground, east-west road alignment."}
+{"flight": "10", "tile_id": 54, "caption": "T-junction road, low building density, farmland, bare ground, scattered trees, no water bodies."}
+{"flight": "10", "tile_id": 55, "caption": "T-junction road, low building density, farmland, bare ground, scattered trees, no water bodies."}
+{"flight": "10", "tile_id": 56, "caption": "T-junction road, low building density, farmland, forest, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 57, "caption": "T-junction road, low building density, farmland, scattered trees, straight paths, rectangular fields."}
+{"flight": "10", "tile_id": 58, "caption": "Straight road, farmland, scattered trees, bare ground, rectangular fields, linear patterns."}
+{"flight": "10", "tile_id": 59, "caption": "Straight road, T-junction, farmland, forest, bare ground, scattered trees, small structures."}
+{"flight": "10", "tile_id": 60, "caption": "Straight roads, low building density, farmland, small water bodies, bare ground."}
+{"flight": "10", "tile_id": 61, "caption": "T-junction road, low building density, bare ground farmland, scattered crop rows, small water body."}
+{"flight": "10", "tile_id": 62, "caption": "Straight road, T-junction, farmland, scattered trees, bare ground, rectangular fields, east-west alignment."}
+{"flight": "10", "tile_id": 63, "caption": "Rectangular farmland plots, linear tree rows, bare ground patches, no water bodies, no roads."}
+{"flight": "10", "tile_id": 64, "caption": "T-junction road, sparse farmland, scattered trees, bare ground, wind turbine, grid-patterned fields."}
+{"flight": "10", "tile_id": 65, "caption": "Straight road, sparse farmland, bare ground, wind turbine, rectangular field divisions."}
+{"flight": "10", "tile_id": 66, "caption": "Straight road, sparse farmland, scattered trees, rectangular fields, no water bodies, no buildings."}
+{"flight": "10", "tile_id": 67, "caption": "Straight road, T-junction, farmland, scattered trees, bare ground, forested area, east-west alignment."}
+{"flight": "10", "tile_id": 68, "caption": "T-junction road, farmland, forest patches, bare ground, scattered trees, agricultural rows, no water bodies."}
+{"flight": "10", "tile_id": 69, "caption": "T-junction road, low building density, no water bodies, farmland, forest, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 70, "caption": "Straight road, low building density, farmland, scattered trees, rectangular fields, east-west orientation."}
+{"flight": "10", "tile_id": 71, "caption": "Curved road, T-junction, farmland, forest, bare ground, railway tracks, scattered trees, small structures."}
+{"flight": "10", "tile_id": 72, "caption": "T-junction road, sparse trees, rectangular farmland plots, straight field boundaries, small water body."}
+{"flight": "10", "tile_id": 73, "caption": "T-junction road, low building density, farmland, forested area, curved road, bare ground patches."}
+{"flight": "10", "tile_id": 74, "caption": "T-junction road, low building density, farmland, forested area, bare ground, rectangular field, curved road segment."}
+{"flight": "10", "tile_id": 75, "caption": "Straight road, low building density, scattered water bodies, farmland, forest, bare ground, north-facing fields."}
+{"flight": "10", "tile_id": 76, "caption": "Straight road, sparse buildings, bare ground, farmland, wind turbine, east-facing fields."}
+{"flight": "10", "tile_id": 77, "caption": "T-junction road, low building density, farmland, bare ground, wind turbine, rectangular field divisions."}
+{"flight": "10", "tile_id": 78, "caption": "Straight road, T-junction, farmland, bare ground, forest patches, scattered vegetation, rectangular fields."}
+{"flight": "10", "tile_id": 79, "caption": "Straight road, low building density, farmland, scattered trees, bare ground patches."}
+{"flight": "10", "tile_id": 80, "caption": "Straight road, sparse buildings, farmland, forest patches, bare ground, east-west orientation."}
+{"flight": "10", "tile_id": 81, "caption": "T-junction road, low building density, scattered trees, farmland, bare ground, railway line, north-east orientation."}
+{"flight": "10", "tile_id": 82, "caption": "Straight road, low building density, orchards, bare ground, forested areas, agricultural fields."}
+{"flight": "10", "tile_id": 83, "caption": "T-junction road, low building density, orchards, forest strips, bare ground, railway tracks, scattered trees."}
+{"flight": "10", "tile_id": 84, "caption": "Straight road, sparse trees, farmland, orchards, bare ground, low building density."}
+{"flight": "10", "tile_id": 85, "caption": "Curved road, farmland, forest patches, scattered trees, bare ground, agricultural fields, winding path, rural landscape, open terrain, mixed land use."}
+{"flight": "10", "tile_id": 86, "caption": "Curved road, farmland, forest patches, bare ground, scattered trees, agricultural fields, linear patterns, rural landscape, no water bodies, no buildings."}
+{"flight": "10", "tile_id": 87, "caption": "Straight road, T-junction, farmland, forest patches, bare ground, rectangular fields, scattered trees, agricultural plots, linear patterns, fragmented land use."}
+{"flight": "10", "tile_id": 88, "caption": "Straight road, low building density, farmland, forest patches, bare ground, scattered trees."}
+{"flight": "10", "tile_id": 89, "caption": "T-junction road, low building density, bare ground, farmland, forest, east-west road, north-south road."}
+{"flight": "10", "tile_id": 90, "caption": "T-junction road, scattered trees, bare ground, farmland, forest, straight road, east-west alignment."}
+{"flight": "10", "tile_id": 91, "caption": "Straight road, sparse farmland, scattered trees, bare ground, linear vegetation strips, rectangular field boundaries."}
+{"flight": "10", "tile_id": 92, "caption": "Straight road, sparse buildings, farmland, forest strips, bare ground, east-west alignment."}
+{"flight": "10", "tile_id": 93, "caption": "Straight road, railway tracks, farmland, forest patches, scattered buildings, bare ground, T-junction."}
+{"flight": "10", "tile_id": 94, "caption": "Straight road, dense buildings south, farmland north, forest patches, bare ground, railway tracks."}
+{"flight": "10", "tile_id": 95, "caption": "T-junction road, moderate building density, scattered trees, bare ground, farmland, railway tracks."}
+{"flight": "10", "tile_id": 96, "caption": "curved road, farmland, forest, orchards, bare ground, scattered trees, agricultural fields, rural landscape"}
+{"flight": "10", "tile_id": 97, "caption": "T-junction road, scattered farmland, forested areas, bare ground, no water bodies, no buildings."}
+{"flight": "10", "tile_id": 98, "caption": "Straight road, sparse buildings, farmland, forest patches, bare ground, railway line, scattered trees."}
+{"flight": "10", "tile_id": 99, "caption": "Farmland fields, scattered trees, dirt roads, forested patches, agricultural plots, rural landscape."}
+{"flight": "10", "tile_id": 100, "caption": "Straight road, low building density, farmland, forest, bare ground, east-facing fields."}
+{"flight": "10", "tile_id": 101, "caption": "Straight road, low building density, farmland, forest patches, bare ground, no water bodies."}
+{"flight": "10", "tile_id": 102, "caption": "Straight road, T-junction, farmland, bare ground, scattered trees, no water bodies, no buildings."}
+{"flight": "10", "tile_id": 103, "caption": "Straight road, sparse buildings, farmland, forest strips, bare ground, no water bodies."}
+{"flight": "10", "tile_id": 104, "caption": "Straight road, T-junction, sparse buildings, farmland, bare ground, forest patches, curved access road."}
+{"flight": "10", "tile_id": 105, "caption": "Straight road, low building density, no water bodies, farmland and bare ground, east-west orientation."}
+{"flight": "10", "tile_id": 106, "caption": "Straight road, dense buildings, bare ground, scattered trees, railway tracks, north-east orientation."}
+{"flight": "10", "tile_id": 107, "caption": "T-junction road, medium building density, scattered trees, mixed land cover, straight roads, residential structures, agricultural plots, railway tracks, solar panels, bare ground patches."}

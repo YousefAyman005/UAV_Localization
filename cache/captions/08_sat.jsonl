@@ -1,554 +1,554 @@
-{"flight": "08", "filename": "08_0331.JPG", "caption": "T-junction road, dense residential buildings, farmland fields, river bend, forested areas, bare ground patches."}
-{"flight": "08", "filename": "08_0332.JPG", "caption": "T-junction road, dense buildings south, river west, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0333.JPG", "caption": "T-junction highway, dense farmland, meandering river, clustered residential buildings, forested edges."}
-{"flight": "08", "filename": "08_0334.JPG", "caption": "T-junction road, dense farmland, winding waterway, forested north edge, clustered buildings south."}
-{"flight": "08", "filename": "08_0335.JPG", "caption": "curved road, T-junction, dense farmland, forested area, river, residential clusters, bare ground patches, straight road segments"}
-{"flight": "08", "filename": "08_0336.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_0337.JPG", "caption": "T-junction road, dense forest, farmland plots, river bend, scattered buildings, bare ground patches, straight highway, agricultural fields, winding waterway, linear infrastructure."}
-{"flight": "08", "filename": "08_0338.JPG", "caption": "Straight road, T-junction, dense forest, farmland, bare ground, river, scattered buildings, north-facing fields."}
-{"flight": "08", "filename": "08_0339.JPG", "caption": "Straight road, T-junction, dense forest, farmland, bare ground, water body, south-facing fields, north-aligned structures."}
-{"flight": "08", "filename": "08_0340.JPG", "caption": "T-junction highway, dense forest, rectangular farmland plots, water bodies west, bare ground patches."}
-{"flight": "08", "filename": "08_0341.JPG", "caption": "T-junction road, dense farmland, forested areas, water bodies, bare ground patches, low building density."}
+{"flight": "08", "filename": "08_0331.JPG", "caption": "Straight highway, T-junction, dense housing, farmland, river, bare ground, forested areas."}
+{"flight": "08", "filename": "08_0332.JPG", "caption": "T-junction road, low building density, meandering water body, farmland, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0333.JPG", "caption": "T-junction road, dense residential clusters, farmland fields, winding river, forested areas, straight highway, north-facing water body."}
+{"flight": "08", "filename": "08_0334.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_0335.JPG", "caption": "T-junction road, dense farmland, forested areas, river, residential clusters, straight road segments."}
+{"flight": "08", "filename": "08_0336.JPG", "caption": "T-junction road, dense forest, farmland, river, scattered buildings, bare ground, straight road, curved waterway, north-facing fields."}
+{"flight": "08", "filename": "08_0337.JPG", "caption": "T-junction road, dense forest, farmland, river, bare ground, low building density, east-west river bend."}
+{"flight": "08", "filename": "08_0338.JPG", "caption": "T-junction road, dense forest, farmland plots, curved river, bare ground, residential clusters, straight highway."}
+{"flight": "08", "filename": "08_0339.JPG", "caption": "T-junction road, low building density, forested center, farmland east and west, river south."}
+{"flight": "08", "filename": "08_0340.JPG", "caption": "T-junction road, dense forest, farmland plots, water bodies, bare ground, scattered buildings, straight and curved roads."}
+{"flight": "08", "filename": "08_0341.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
 {"flight": "08", "filename": "08_0342.JPG", "caption": "T-junction road, dense farmland, forested areas, water bodies, bare ground patches, scattered buildings."}
-{"flight": "08", "filename": "08_0343.JPG", "caption": "T-junction road, dense farmland, rectangular ponds, forested strips, scattered buildings, straight highway, east-west waterway."}
-{"flight": "08", "filename": "08_0344.JPG", "caption": "T-junction road, dense building cluster west, rectangular farmland plots, water bodies, forested strips, bare ground patches."}
-{"flight": "08", "filename": "08_0345.JPG", "caption": "T-junction road, dense building cluster west, farmland, forest, water bodies, highway east."}
-{"flight": "08", "filename": "08_0346.JPG", "caption": "T-junction road, dense buildings south, farmland, forest, water bodies, bare ground."}
-{"flight": "08", "filename": "08_0347.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, winding paths, agricultural fields, rural settlement."}
-{"flight": "08", "filename": "08_0348.JPG", "caption": "dense buildings, straight road, farmland, forest, water bodies, winding paths, rectangular fields, clustered structures, agricultural plots, rural settlement"}
-{"flight": "08", "filename": "08_0349.JPG", "caption": "dense housing, rectangular ponds, farmland, winding road, forested areas, T-junction, east-west highway"}
-{"flight": "08", "filename": "08_0350.JPG", "caption": "dense housing south, rectangular ponds west, farmland north, winding road east, forested edges"}
-{"flight": "08", "filename": "08_0351.JPG", "caption": "curved road, dense buildings south, rectangular ponds, farmland, forested areas, small water bodies"}
-{"flight": "08", "filename": "08_0352.JPG", "caption": "curved road, dense buildings south, farmland, ponds, forested areas, bare ground"}
-{"flight": "08", "filename": "08_0353.JPG", "caption": "curved road, dense buildings south, farmland, forest, water bodies, bare ground"}
-{"flight": "08", "filename": "08_0354.JPG", "caption": "curved road, dense forest, farmland, pond, clustered buildings, bare ground, water body, rural settlement, agricultural fields, linear water channel"}
-{"flight": "08", "filename": "08_0355.JPG", "caption": "curved road, dense forest, farmland, water bodies, scattered buildings, east-west river"}
-{"flight": "08", "filename": "08_0356.JPG", "caption": "curved road, dense forest, farmland, water bodies, scattered buildings, wetlands, agricultural fields, rural landscape"}
-{"flight": "08", "filename": "08_0357.JPG", "caption": "curved road, dense forest, farmland, water bodies, construction site, scattered buildings, wetlands, agricultural fields, river bend, drainage ditches"}
-{"flight": "08", "filename": "08_0358.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, small pond, construction site."}
-{"flight": "08", "filename": "08_0359.JPG", "caption": "T-junction road, dense buildings, water bodies, farmland, forest, bare ground, curved highway."}
-{"flight": "08", "filename": "08_0360.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_0361.JPG", "caption": "straight road, T-junction, river, farmland, forest, bare ground, buildings, water bodies, south"}
-{"flight": "08", "filename": "08_0362.JPG", "caption": "T-junction road, dense buildings, forested areas, farmland, water bodies, bare ground, curved river."}
-{"flight": "08", "filename": "08_0363.JPG", "caption": "Straight road, dense forest, farmland, water bodies, construction site, scattered buildings."}
-{"flight": "08", "filename": "08_0364.JPG", "caption": "Straight road, dense forest, farmland, water bodies, construction site, scattered buildings."}
-{"flight": "08", "filename": "08_0365.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, industrial buildings, bare ground patches."}
-{"flight": "08", "filename": "08_0366.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east river, south road."}
-{"flight": "08", "filename": "08_0367.JPG", "caption": "Straight road, dense forest, farmland, water bodies, scattered buildings, east-west orientation."}
-{"flight": "08", "filename": "08_0368.JPG", "caption": "rectangular farmland plots, dense forest, river along east edge, T-junction road, scattered buildings"}
-{"flight": "08", "filename": "08_0369.JPG", "caption": "Straight road, dense forest, farmland, water bodies, scattered buildings, bare ground patches."}
-{"flight": "08", "filename": "08_0370.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, clustered buildings, bare ground patches."}
-{"flight": "08", "filename": "08_0371.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest, bare ground, east riverbank."}
-{"flight": "08", "filename": "08_0372.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest, bare ground, east river."}
-{"flight": "08", "filename": "08_0373.JPG", "caption": "Straight road, dense forest, farmland, water bodies, clustered buildings, east-west orientation."}
-{"flight": "08", "filename": "08_0374.JPG", "caption": "Straight highway, dense forest, rectangular ponds, clustered buildings, farmland plots, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0375.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east."}
-{"flight": "08", "filename": "08_0376.JPG", "caption": "Straight road, low building density, rectangular ponds, farmland, forest, bare ground, east."}
-{"flight": "08", "filename": "08_0377.JPG", "caption": "Straight road, dense forest, farmland, ponds, residential clusters, east-west orientation."}
-{"flight": "08", "filename": "08_0378.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, south-facing fields."}
-{"flight": "08", "filename": "08_0379.JPG", "caption": "Straight road, low building density, rectangular ponds, farmland, forest, bare ground patches."}
-{"flight": "08", "filename": "08_0380.JPG", "caption": "T-junction road, dense buildings, rectangular ponds, farmland, forest, bare ground, river, east."}
-{"flight": "08", "filename": "08_0381.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, adjacent water bodies, forested edges."}
-{"flight": "08", "filename": "08_0382.JPG", "caption": "T-junction road, low building density, river north, farmland, forest, bare ground, aquaculture ponds."}
-{"flight": "08", "filename": "08_0383.JPG", "caption": "Straight road, dense farmland, forested areas, rectangular ponds, scattered buildings, winding paths."}
-{"flight": "08", "filename": "08_0384.JPG", "caption": "Straight road, dense farmland, forested areas, water bodies, scattered buildings, east-west orientation."}
-{"flight": "08", "filename": "08_0385.JPG", "caption": "Straight road, low building density, farmland, forest, water body, east."}
-{"flight": "08", "filename": "08_0386.JPG", "caption": "Straight highway, dense farmland, forested areas, small water bodies, scattered buildings."}
-{"flight": "08", "filename": "08_0387.JPG", "caption": "Straight road, low building density, river north, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0388.JPG", "caption": "T-junction road, low building density, water body north, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0389.JPG", "caption": "T-junction road, low building density, water body west, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0390.JPG", "caption": "T-junction road, low building density, water body west, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0391.JPG", "caption": "T-junction road, dense buildings, forested land, water bodies, farmland plots, construction site."}
-{"flight": "08", "filename": "08_0392.JPG", "caption": "T-junction road, dense buildings, forested land, water bodies, construction site, farmland."}
+{"flight": "08", "filename": "08_0343.JPG", "caption": "T-junction road, dense farmland, rectangular ponds, forested strips, bare ground patches, east-west river."}
+{"flight": "08", "filename": "08_0344.JPG", "caption": "T-junction road, dense building cluster west, farmland, forest, water bodies, straight highway north."}
+{"flight": "08", "filename": "08_0345.JPG", "caption": "T-junction road, dense building cluster west, farmland, forest, water bodies, straight highway east."}
+{"flight": "08", "filename": "08_0346.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, bare ground, east-facing riverbank."}
+{"flight": "08", "filename": "08_0347.JPG", "caption": "T-junction road, dense residential cluster, farmland, forested areas, water bodies, straight highway, east-west orientation."}
+{"flight": "08", "filename": "08_0348.JPG", "caption": "T-junction road, dense residential cluster, farmland, forest, water bodies, straight highway, east-west orientation."}
+{"flight": "08", "filename": "08_0349.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, straight road, east-west orientation."}
+{"flight": "08", "filename": "08_0350.JPG", "caption": "T-junction road, dense residential buildings, farmland, ponds, forested areas, straight road, north-facing water bodies."}
+{"flight": "08", "filename": "08_0351.JPG", "caption": "curved road, dense buildings, farmland, ponds, forest, bare ground, T-junction, east"}
+{"flight": "08", "filename": "08_0352.JPG", "caption": "curved road, dense buildings south, farmland, forest, water bodies, bare ground"}
+{"flight": "08", "filename": "08_0353.JPG", "caption": "Curved road, dense buildings south, farmland, ponds, forested riverbank north."}
+{"flight": "08", "filename": "08_0354.JPG", "caption": "curved road, dense farmland, small pond, clustered buildings, forested riverbank, bare ground"}
+{"flight": "08", "filename": "08_0355.JPG", "caption": "curved road, dense forest, farmland, water bodies, clustered buildings, straight road segment, east-west orientation"}
+{"flight": "08", "filename": "08_0356.JPG", "caption": "curved road, dense forest, farmland, water bodies, scattered buildings, east-west orientation"}
+{"flight": "08", "filename": "08_0357.JPG", "caption": "T-junction road, low building density, river, forest, farmland, ponds, bare ground, east-facing water body."}
+{"flight": "08", "filename": "08_0358.JPG", "caption": "curved road, dense forest, farmland, water bodies, scattered buildings, straight road, bare ground"}
+{"flight": "08", "filename": "08_0359.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, small pond, construction site."}
+{"flight": "08", "filename": "08_0360.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, small pond, construction site."}
+{"flight": "08", "filename": "08_0361.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-facing water body."}
+{"flight": "08", "filename": "08_0362.JPG", "caption": "Straight road, river, canal, farmland, forest, buildings, bare ground, water bodies, T-junction, dense vegetation, agricultural fields, construction site, industrial structures."}
+{"flight": "08", "filename": "08_0363.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, construction site, bare ground, industrial buildings."}
+{"flight": "08", "filename": "08_0364.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, canal, bridge, construction site, rectangular ponds."}
+{"flight": "08", "filename": "08_0365.JPG", "caption": "T-junction road, dense forest, farmland ponds, river bend, construction site, residential cluster, bare ground, water bodies."}
+{"flight": "08", "filename": "08_0366.JPG", "caption": "Straight road, dense forest, farmland, water bodies, scattered buildings, east-west orientation."}
+{"flight": "08", "filename": "08_0367.JPG", "caption": "Straight road, dense forest, farmland, water bodies, clustered buildings, winding river."}
+{"flight": "08", "filename": "08_0368.JPG", "caption": "straight road, dense forest, farmland, water bodies, residential clusters, east-west orientation"}
+{"flight": "08", "filename": "08_0369.JPG", "caption": "Straight road, dense forest, farmland, water bodies, clustered buildings, bare ground patches."}
+{"flight": "08", "filename": "08_0370.JPG", "caption": "Straight road, dense forest, scattered farmland, water bodies, clustered buildings, east-west orientation."}
+{"flight": "08", "filename": "08_0371.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, clustered buildings, bare ground patches."}
+{"flight": "08", "filename": "08_0372.JPG", "caption": "Straight road, dense buildings, rectangular ponds, forested areas, farmland plots, river along northern edge."}
+{"flight": "08", "filename": "08_0373.JPG", "caption": "Straight road, low building density, forest, farmland, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0374.JPG", "caption": "straight road, dense forest, farmland, water bodies, clustered buildings, east-facing fields"}
+{"flight": "08", "filename": "08_0375.JPG", "caption": "Straight road, dense forest, farmland, water bodies, scattered buildings, east-west orientation."}
+{"flight": "08", "filename": "08_0376.JPG", "caption": "Straight road, dense forest, farmland, water bodies, residential structures, east-west orientation."}
+{"flight": "08", "filename": "08_0377.JPG", "caption": "Straight road, dense forest, farmland, water bodies, residential clusters, east-west orientation."}
+{"flight": "08", "filename": "08_0378.JPG", "caption": "T-junction road, dense building cluster south, rectangular ponds, farmland, forest, river north."}
+{"flight": "08", "filename": "08_0379.JPG", "caption": "T-junction road, dense building cluster, rectangular ponds, forested areas, farmland plots, river along northern edge."}
+{"flight": "08", "filename": "08_0380.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east."}
+{"flight": "08", "filename": "08_0381.JPG", "caption": "Straight road, T-junction, low building density, farmland, forest, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0382.JPG", "caption": "Straight road, low building density, rectangular ponds, farmland, forest, north-facing water body."}
+{"flight": "08", "filename": "08_0383.JPG", "caption": "straight road, dense farmland, forested areas, rectangular ponds, clustered buildings, river edge"}
+{"flight": "08", "filename": "08_0384.JPG", "caption": "T-junction road, dense farmland, forested areas, water bodies, scattered buildings, straight and curved paths."}
+{"flight": "08", "filename": "08_0385.JPG", "caption": "Straight road, dense farmland, forested areas, water bodies, clustered buildings, winding paths."}
+{"flight": "08", "filename": "08_0386.JPG", "caption": "Straight road, dense farmland, forested areas, small water bodies, scattered buildings."}
+{"flight": "08", "filename": "08_0387.JPG", "caption": "T-junction road, dense farmland, adjacent water body, scattered buildings, forested areas."}
+{"flight": "08", "filename": "08_0388.JPG", "caption": "T-junction road, low building density, river north, farmland, forest, bare ground, small ponds."}
+{"flight": "08", "filename": "08_0389.JPG", "caption": "T-junction road, dense buildings west, farmland, forest, water body north."}
+{"flight": "08", "filename": "08_0390.JPG", "caption": "T-junction road, dense buildings west, forested land south, water bodies north, farmland east."}
+{"flight": "08", "filename": "08_0391.JPG", "caption": "T-junction road, dense buildings, forested land, water body, farmland, construction site."}
+{"flight": "08", "filename": "08_0392.JPG", "caption": "T-junction road, dense buildings, water bodies, farmland, forest, bare ground, construction site."}
 {"flight": "08", "filename": "08_0393.JPG", "caption": "T-junction road, dense buildings, water bodies, farmland, forest, bare ground, construction site."}
 {"flight": "08", "filename": "08_0394.JPG", "caption": "T-junction road, dense buildings, water bodies, farmland, forest, bare ground, east."}
-{"flight": "08", "filename": "08_0395.JPG", "caption": "T-junction road, dense building cluster, rectangular water bodies, farmland, forested edges, curved shoreline."}
-{"flight": "08", "filename": "08_0396.JPG", "caption": "straight road, construction site, farmland, water bodies, bare ground, forest"}
-{"flight": "08", "filename": "08_0397.JPG", "caption": "Straight road, low building density, water bodies, farmland, construction site, curved shoreline."}
-{"flight": "08", "filename": "08_0398.JPG", "caption": "Straight highway, dense forest, farmland, construction site, water bodies, bare ground."}
-{"flight": "08", "filename": "08_0399.JPG", "caption": "Straight road, dense forest, farmland, construction site, water bodies, bare ground, curved boundary."}
-{"flight": "08", "filename": "08_0400.JPG", "caption": "straight road, dense forest, farmland, bare ground, water body, curved shoreline, construction site"}
-{"flight": "08", "filename": "08_0401.JPG", "caption": "Straight highway, dense forest, farmland, water bodies, construction site, curved road, bare ground, rectangular ponds."}
-{"flight": "08", "filename": "08_0402.JPG", "caption": "Straight road, dense forest, farmland, water bodies, bare ground, T-junction, south-facing slope."}
-{"flight": "08", "filename": "08_0403.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, bare ground, winding river, rectangular ponds, linear road, irregular fields."}
-{"flight": "08", "filename": "08_0404.JPG", "caption": "T-junction road, low building density, forest, farmland, water bodies, bare ground, east-west road alignment."}
-{"flight": "08", "filename": "08_0405.JPG", "caption": "T-junction road, low building density, water bodies, forest, farmland, bare ground, east-west river, north-south road."}
-{"flight": "08", "filename": "08_0406.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, bare ground, construction site, buildings, winding river, straight path, agricultural fields."}
+{"flight": "08", "filename": "08_0395.JPG", "caption": "T-junction road, dense buildings, water bodies, farmland, forest, bare ground, east."}
+{"flight": "08", "filename": "08_0396.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, curved road segment."}
+{"flight": "08", "filename": "08_0397.JPG", "caption": "Straight road, dense buildings, water bodies, farmland, forest, bare ground, east."}
+{"flight": "08", "filename": "08_0398.JPG", "caption": "T-junction road, dense forest, farmland, bare ground, water bodies, construction site, curved shoreline."}
+{"flight": "08", "filename": "08_0399.JPG", "caption": "Straight road, dense forest, farmland, construction site, water body, bare ground, curved shoreline."}
+{"flight": "08", "filename": "08_0400.JPG", "caption": "straight road, dense forest, farmland, water bodies, construction site, bare ground"}
+{"flight": "08", "filename": "08_0401.JPG", "caption": "Straight road, dense forest, farmland, water bodies, construction site, curved waterway, urban development."}
+{"flight": "08", "filename": "08_0402.JPG", "caption": "Straight road, dense forest, farmland, water bodies, low building density, curved water channel, rectangular aquaculture ponds."}
+{"flight": "08", "filename": "08_0403.JPG", "caption": "straight road, dense forest, farmland, water bodies, bare ground, T-junction, rectangular ponds"}
+{"flight": "08", "filename": "08_0404.JPG", "caption": "T-junction road, low building density, water bodies, forest, farmland, bare ground, east-facing water edge."}
+{"flight": "08", "filename": "08_0405.JPG", "caption": "Straight road, low building density, forest, farmland, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0406.JPG", "caption": "Straight road, low building density, forest, farmland, water bodies, construction site, T-junction."}
 {"flight": "08", "filename": "08_0407.JPG", "caption": "T-junction road, low building density, forest, farmland, water bodies, bare ground, construction site."}
-{"flight": "08", "filename": "08_0408.JPG", "caption": "T-junction road, low building density, forest, farmland, water bodies, construction site, bare ground, curved road segment, rectangular building cluster, linear water channel."}
-{"flight": "08", "filename": "08_0409.JPG", "caption": "T-junction road, medium building density, forested land cover, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0410.JPG", "caption": "T-junction road, medium building density, forested land cover, small water bodies, straight and curved roads."}
-{"flight": "08", "filename": "08_0411.JPG", "caption": "T-junction road, medium building density, forested land cover, winding water body, bare ground patches, straight road segments."}
-{"flight": "08", "filename": "08_0412.JPG", "caption": "T-junction road, low building density, forested areas, water bodies, bare ground patches, curved road segments."}
-{"flight": "08", "filename": "08_0413.JPG", "caption": "T-junction road, moderate building density, forested areas, farmland, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0414.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0415.JPG", "caption": "T-junction road, dense forest, rectangular farmland plots, winding water bodies, urban development clusters."}
-{"flight": "08", "filename": "08_0416.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_0417.JPG", "caption": "T-junction road, dense urban buildings, forested areas, water bodies, farmland, bare ground, curved waterway, rectangular ponds."}
-{"flight": "08", "filename": "08_0418.JPG", "caption": "T-junction road, high building density, water bodies, forest, bare ground, farmland."}
-{"flight": "08", "filename": "08_0419.JPG", "caption": "T-junction road, high building density, water bodies, mixed land cover, forested areas, construction zones."}
-{"flight": "08", "filename": "08_0420.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, east."}
-{"flight": "08", "filename": "08_0421.JPG", "caption": "curved road, dense buildings, water bodies, farmland, forest, bare ground, east, south"}
-{"flight": "08", "filename": "08_0422.JPG", "caption": "T-junction road, medium building density, water bodies west, mixed land cover, construction site."}
-{"flight": "08", "filename": "08_0423.JPG", "caption": "Construction site, straight road, water bodies, bare ground, forest, building density, T-junction."}
-{"flight": "08", "filename": "08_0424.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, bare ground construction sites."}
-{"flight": "08", "filename": "08_0425.JPG", "caption": "T-junction road, medium building density, water body north, forest east, bare ground south."}
-{"flight": "08", "filename": "08_0426.JPG", "caption": "straight road, dense buildings, construction site, forest, farmland, water body, bare ground"}
-{"flight": "08", "filename": "08_0427.JPG", "caption": "T-junction road, medium building density, forested land cover, water bodies, construction site."}
-{"flight": "08", "filename": "08_0428.JPG", "caption": "Straight road, dense forest, farmland, water bodies, construction site, bare ground, T-junction."}
-{"flight": "08", "filename": "08_0429.JPG", "caption": "straight road, T-junction, dense forest, farmland, bare ground, water bodies, construction site, north"}
-{"flight": "08", "filename": "08_0430.JPG", "caption": "Straight road, dense forest, scattered ponds, clustered buildings, rectangular farmland plots, irregular water bodies."}
-{"flight": "08", "filename": "08_0431.JPG", "caption": "rectangular ponds, dense forest, scattered buildings, straight roads, farmland, bare ground"}
-{"flight": "08", "filename": "08_0432.JPG", "caption": "dense forest, rectangular ponds, clustered buildings, straight road, east-west orientation"}
-{"flight": "08", "filename": "08_0433.JPG", "caption": "dense forest, rectangular ponds, clustered buildings, straight roads, east-west alignment"}
-{"flight": "08", "filename": "08_0434.JPG", "caption": "dense forest, clustered buildings, rectangular ponds, straight roads, east-west alignment, bare ground patches, agricultural fields"}
-{"flight": "08", "filename": "08_0435.JPG", "caption": "T-junction road, clustered buildings, rectangular ponds, forested areas, farmland plots, bare ground sections."}
-{"flight": "08", "filename": "08_0436.JPG", "caption": "T-junction road, dense building cluster, rectangular water bodies, forested edges, farmland plots, bare ground patches."}
-{"flight": "08", "filename": "08_0437.JPG", "caption": "T-junction road, dense buildings, rectangular ponds, forested areas, farmland plots, bare ground sections."}
-{"flight": "08", "filename": "08_0438.JPG", "caption": "T-junction road, dense residential buildings, rectangular water bodies, forested areas, farmland plots, bare ground sections."}
-{"flight": "08", "filename": "08_0439.JPG", "caption": "T-junction road, dense residential buildings, rectangular ponds, forested areas, farmland plots, bare ground patches."}
-{"flight": "08", "filename": "08_0440.JPG", "caption": "rectangular ponds, dense housing clusters, forested patches, straight roads, agricultural fields, scattered water bodies"}
+{"flight": "08", "filename": "08_0408.JPG", "caption": "T-junction road, low building density, forest, farmland, water bodies, bare ground, construction site."}
+{"flight": "08", "filename": "08_0409.JPG", "caption": "T-junction roads, low building density, forested areas, bare ground, small water bodies, east-west road alignment."}
+{"flight": "08", "filename": "08_0410.JPG", "caption": "T-junction road, medium building density, forested areas, water bodies, bare ground patches, curved road segments."}
+{"flight": "08", "filename": "08_0411.JPG", "caption": "T-junction road, dense forest, farmland, bare ground, water bodies, construction sites, urban development."}
+{"flight": "08", "filename": "08_0412.JPG", "caption": "T-junction road, mixed building density, forest, farmland, water bodies, bare ground, straight road segments."}
+{"flight": "08", "filename": "08_0413.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, bare ground, urban development."}
+{"flight": "08", "filename": "08_0414.JPG", "caption": "T-junction road, mixed building density, forest, farmland, water bodies, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_0415.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, scattered buildings, construction sites, bare ground patches."}
+{"flight": "08", "filename": "08_0416.JPG", "caption": "T-junction road, medium building density, forested areas, farmland, water bodies, bare ground, curved river, rectangular ponds."}
+{"flight": "08", "filename": "08_0417.JPG", "caption": "T-junction road, high building density, river, forest, farmland, bare ground, construction site."}
+{"flight": "08", "filename": "08_0418.JPG", "caption": "T-junction road, dense urban buildings, forested areas, farmland, water bodies, construction site."}
+{"flight": "08", "filename": "08_0419.JPG", "caption": "T-junction road, high building density, water bodies, mixed farmland and forest, curved coastline."}
+{"flight": "08", "filename": "08_0420.JPG", "caption": "T-junction road, high building density, water bodies, mixed land cover, urban development zone."}
+{"flight": "08", "filename": "08_0421.JPG", "caption": "T-junction road, high building density, water bodies, farmland, forest, bare ground, east-west road alignment."}
+{"flight": "08", "filename": "08_0422.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0423.JPG", "caption": "Construction site, T-junction road, dense buildings, water bodies, forested areas, bare ground, farmland."}
+{"flight": "08", "filename": "08_0424.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, east."}
+{"flight": "08", "filename": "08_0425.JPG", "caption": "Construction site, T-junction road, dense buildings, forested area, water bodies, farmland fields."}
+{"flight": "08", "filename": "08_0426.JPG", "caption": "T-junction road, medium building density, water body west, mixed farmland and forest land cover."}
+{"flight": "08", "filename": "08_0427.JPG", "caption": "T-junction road, high building density, forested land cover, rectangular water bodies, straight road alignment."}
+{"flight": "08", "filename": "08_0428.JPG", "caption": "Straight road, T-junction, dense buildings, forest, farmland, water bodies, bare ground, construction site."}
+{"flight": "08", "filename": "08_0429.JPG", "caption": "Straight road, T-junction, dense forest, farmland, water bodies, construction site, bare ground, residential buildings."}
+{"flight": "08", "filename": "08_0430.JPG", "caption": "Straight road, T-junction, dense forest, farmland, water bodies, bare ground, buildings, east-west orientation."}
+{"flight": "08", "filename": "08_0431.JPG", "caption": "Straight road, dense forest, scattered farmland, clustered buildings, multiple water bodies, irregular land cover."}
+{"flight": "08", "filename": "08_0432.JPG", "caption": "rectangular ponds, dense forest, clustered buildings, straight roads, farmland, bare ground"}
+{"flight": "08", "filename": "08_0433.JPG", "caption": "dense forest, clustered buildings, rectangular ponds, straight roads, farmland plots, T-junctions"}
+{"flight": "08", "filename": "08_0434.JPG", "caption": "dense forest, clustered buildings, rectangular ponds, straight roads, T-junctions, farmland plots, bare ground patches"}
+{"flight": "08", "filename": "08_0435.JPG", "caption": "T-junction road, dense buildings, rectangular ponds, forested areas, farmland plots, bare ground sections."}
+{"flight": "08", "filename": "08_0436.JPG", "caption": "T-junction road, dense building cluster, rectangular water bodies, forested areas, farmland plots, bare ground sections."}
+{"flight": "08", "filename": "08_0437.JPG", "caption": "T-junction road, dense building cluster, rectangular water bodies, forested land cover, farmland plots, bare ground areas."}
+{"flight": "08", "filename": "08_0438.JPG", "caption": "T-junction road, dense residential buildings, rectangular ponds, forested areas, farmland plots, bare ground sections."}
+{"flight": "08", "filename": "08_0439.JPG", "caption": "T-junction road, dense building cluster, rectangular ponds, forested areas, farmland plots, bare ground sections."}
+{"flight": "08", "filename": "08_0440.JPG", "caption": "T-junction road, dense building clusters, forested areas, rectangular water bodies, farmland plots, bare ground sections."}
 {"flight": "08", "filename": "08_0441.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0442.JPG", "caption": "T-junction road, dense residential buildings, scattered ponds, mixed farmland and forest, irregular field boundaries."}
-{"flight": "08", "filename": "08_0443.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0444.JPG", "caption": "dense buildings, farmland, forest, water bodies, straight roads, T-junctions, bare ground"}
-{"flight": "08", "filename": "08_0445.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, mixed farmland and forest, east-west alignment."}
-{"flight": "08", "filename": "08_0446.JPG", "caption": "T-junction road, medium building density, multiple water bodies, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0447.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and forest, east-west river."}
-{"flight": "08", "filename": "08_0448.JPG", "caption": "T-junction road, dense buildings, rectangular ponds, farmland, forest, river, bare ground, scattered trees, agricultural fields, rural settlement."}
-{"flight": "08", "filename": "08_0449.JPG", "caption": "Rectangular farmland plots, dense residential buildings, forested areas, river along eastern edge, T-junction road layout."}
-{"flight": "08", "filename": "08_0450.JPG", "caption": "T-junction road, dense residential buildings, rectangular fish ponds, river, forested areas, farmland fields."}
-{"flight": "08", "filename": "08_0451.JPG", "caption": "T-junction road, dense buildings west, forested areas, rectangular ponds, river east, farmland south."}
-{"flight": "08", "filename": "08_0452.JPG", "caption": "T-junction road, dense building cluster, river, farmland, forest, bare ground, east-west river flow."}
-{"flight": "08", "filename": "08_0453.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, east-facing water body."}
-{"flight": "08", "filename": "08_0454.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, east-facing water body."}
-{"flight": "08", "filename": "08_0455.JPG", "caption": "river, T-junction, forest, farmland, bare ground, buildings, water body, straight road, dense vegetation, agricultural fields, construction site, small pond, rural settlement, infrastructure"}
-{"flight": "08", "filename": "08_0456.JPG", "caption": "curved road, dense buildings, river, farmland, forest, bare ground, east, south"}
-{"flight": "08", "filename": "08_0457.JPG", "caption": "T-junction road, low building density, river west, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0458.JPG", "caption": "straight road, low building density, river, farmland, forest, bare ground, T-junction"}
-{"flight": "08", "filename": "08_0459.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground, north-up orientation."}
-{"flight": "08", "filename": "08_0460.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0461.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest, bare ground, east-west road alignment."}
-{"flight": "08", "filename": "08_0462.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, east-west alignment."}
-{"flight": "08", "filename": "08_0463.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, east-west alignment."}
-{"flight": "08", "filename": "08_0464.JPG", "caption": "Straight road, dense buildings east, farmland, forest, water bodies, bare ground."}
+{"flight": "08", "filename": "08_0442.JPG", "caption": "dense buildings, straight roads, rectangular ponds, forested areas, farmland, bare ground, winding paths, clustered structures, irregular fields, mixed land use"}
+{"flight": "08", "filename": "08_0443.JPG", "caption": "dense buildings, straight roads, rectangular farmland, forested areas, water bodies, irregular shapes, scattered structures, mixed land use, winding paths, clustered housing, open fields, dense vegetation, small"}
+{"flight": "08", "filename": "08_0444.JPG", "caption": "dense buildings, straight roads, rectangular farmland, forested areas, water bodies, irregular boundaries"}
+{"flight": "08", "filename": "08_0445.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0446.JPG", "caption": "Rectangular farmland plots, dense residential clusters, forested patches, winding water bodies, straight roads, T-junctions."}
+{"flight": "08", "filename": "08_0447.JPG", "caption": "T-junction road, dense residential clusters, rectangular farmland plots, forested edges, river along southern boundary."}
+{"flight": "08", "filename": "08_0448.JPG", "caption": "rectangular ponds, clustered buildings, forested areas, farmland, winding river, dense vegetation, bare ground, agricultural fields, rural settlement, mixed land use, irregular road network, small water bodies"}
+{"flight": "08", "filename": "08_0449.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, forested areas, river running east-west."}
+{"flight": "08", "filename": "08_0450.JPG", "caption": "T-junction road, dense buildings, farmland, forest, river, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0451.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, east bank structures."}
+{"flight": "08", "filename": "08_0452.JPG", "caption": "River, farmland, forest, buildings, bare ground, T-junction road, east-west river flow."}
+{"flight": "08", "filename": "08_0453.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, east-west river flow."}
+{"flight": "08", "filename": "08_0454.JPG", "caption": "straight road, T-junction, dense buildings, river, farmland, forest, bare ground, water bodies"}
+{"flight": "08", "filename": "08_0455.JPG", "caption": "curved road, dense forest, farmland, water body, scattered buildings, straight road segment"}
+{"flight": "08", "filename": "08_0456.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0457.JPG", "caption": "T-junction road, mixed farmland and forest, river, scattered buildings, construction site, small pond."}
+{"flight": "08", "filename": "08_0458.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, east-west river, north-south road."}
+{"flight": "08", "filename": "08_0459.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, east-west alignment."}
+{"flight": "08", "filename": "08_0460.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, east-west alignment."}
+{"flight": "08", "filename": "08_0461.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0462.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, scattered buildings, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0463.JPG", "caption": "T-junction road, dense residential buildings, farmland fields, forested areas, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0464.JPG", "caption": "T-junction road, dense village cluster, rectangular farmland plots, forested zones, water bodies, bare ground, north-facing fields."}
 {"flight": "08", "filename": "08_0465.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, bare ground, east-west alignment."}
 {"flight": "08", "filename": "08_0466.JPG", "caption": "T-junction road, high building density, rectangular water bodies, mixed farmland and forest, east-west alignment."}
-{"flight": "08", "filename": "08_0467.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, bare ground, south-facing fields."}
-{"flight": "08", "filename": "08_0468.JPG", "caption": "T-junction road, dense building cluster, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0469.JPG", "caption": "T-junction road, dense building cluster, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0470.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, forested areas, water bodies, bare ground, east-west road alignment."}
-{"flight": "08", "filename": "08_0471.JPG", "caption": "T-junction road, dense building cluster, rectangular farmland plots, forested areas, water bodies, bare ground patches, north-south alignment."}
-{"flight": "08", "filename": "08_0472.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, forested areas, small water bodies, straight highway on east side."}
-{"flight": "08", "filename": "08_0473.JPG", "caption": "T-junction road, dense residential clusters, rectangular farmland plots, forested zones, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0474.JPG", "caption": "T-junction road, moderate building density, rectangular water bodies, farmland, forest, bare ground, east-west road alignment."}
-{"flight": "08", "filename": "08_0475.JPG", "caption": "T-junction road, mixed farmland, forested areas, scattered buildings, small water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0476.JPG", "caption": "T-junction road, mixed farmland, scattered buildings, small water bodies, forested areas, bare ground patches."}
-{"flight": "08", "filename": "08_0477.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, east-west alignment."}
+{"flight": "08", "filename": "08_0467.JPG", "caption": "T-junction road, dense building cluster, rectangular farmland, forested areas, water bodies, bare ground, north-up orientation."}
+{"flight": "08", "filename": "08_0468.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0469.JPG", "caption": "dense housing cluster, straight road, rectangular ponds, farmland, forested areas, T-junction, bare ground"}
+{"flight": "08", "filename": "08_0470.JPG", "caption": "T-junction road, dense building cluster, rectangular farmland plots, winding water bodies, forested patches, bare ground sections."}
+{"flight": "08", "filename": "08_0471.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, farmland, forest, bare ground, east-west road alignment."}
+{"flight": "08", "filename": "08_0472.JPG", "caption": "T-junction road, dense building clusters, rectangular ponds, farmland, forested areas, straight highway, bare ground patches."}
+{"flight": "08", "filename": "08_0473.JPG", "caption": "T-junction road, dense residential clusters, rectangular farmland plots, forested patches, small water bodies, straight highway alignment."}
+{"flight": "08", "filename": "08_0474.JPG", "caption": "T-junction road, moderate building density, rectangular ponds, farmland, forested areas, straight highway, east-west alignment."}
+{"flight": "08", "filename": "08_0475.JPG", "caption": "T-junction road, mixed building density, rectangular farmland plots, scattered water bodies, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0476.JPG", "caption": "T-junction road, dense residential clusters, rectangular farmland plots, scattered water bodies, forested patches, bare ground areas."}
+{"flight": "08", "filename": "08_0477.JPG", "caption": "T-junction road, mixed building density, water bodies, farmland, forest, bare ground, north-east orientation."}
 {"flight": "08", "filename": "08_0478.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0479.JPG", "caption": "T-junction road, moderate building density, scattered water bodies, mixed farmland and forest, east-west river."}
-{"flight": "08", "filename": "08_0480.JPG", "caption": "T-junction road, medium building density, river east, farmland, forest, bare ground, ponds."}
+{"flight": "08", "filename": "08_0479.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, straight road, river, bare ground."}
+{"flight": "08", "filename": "08_0480.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, pond, river, bare ground, east-west alignment."}
 {"flight": "08", "filename": "08_0481.JPG", "caption": "T-junction road, medium building density, river east, farmland, forest, bare ground, ponds."}
-{"flight": "08", "filename": "08_0482.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, rectangular ponds."}
-{"flight": "08", "filename": "08_0483.JPG", "caption": "T-junction road, dense residential buildings, river running north-south, farmland, forested areas, rectangular water bodies."}
-{"flight": "08", "filename": "08_0484.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, rectangular ponds."}
+{"flight": "08", "filename": "08_0482.JPG", "caption": "T-junction road, dense residential buildings, river, farmland, ponds, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0483.JPG", "caption": "T-junction road, dense building clusters, meandering river, farmland, forest, bare ground, rectangular ponds."}
+{"flight": "08", "filename": "08_0484.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, rectangular ponds."}
 {"flight": "08", "filename": "08_0485.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, rectangular ponds."}
-{"flight": "08", "filename": "08_0486.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, river on west side, scattered vegetation."}
-{"flight": "08", "filename": "08_0531.JPG", "caption": "T-junction road, moderate building density, river west, farmland, forest, bare ground, ponds, winding waterway."}
-{"flight": "08", "filename": "08_0532.JPG", "caption": "T-junction road, moderate building density, river west, rectangular ponds, farmland, forest patches, bare ground areas."}
-{"flight": "08", "filename": "08_0533.JPG", "caption": "T-junction road, medium building density, river east, rectangular ponds, farmland, bare ground, scattered trees."}
-{"flight": "08", "filename": "08_0534.JPG", "caption": "T-junction road, medium building density, river, rectangular ponds, farmland, forest, bare ground, east-west river alignment."}
-{"flight": "08", "filename": "08_0535.JPG", "caption": "T-junction road, dense residential buildings, rectangular water bodies, farmland, forested areas, bare ground patches."}
-{"flight": "08", "filename": "08_0536.JPG", "caption": "dense buildings, straight roads, east-west river, rectangular ponds, farmland, forest patches, bare ground areas"}
-{"flight": "08", "filename": "08_0537.JPG", "caption": "dense buildings, straight roads, T-junctions, farmland, forest, ponds, river, bare ground, east river, north ponds"}
-{"flight": "08", "filename": "08_0538.JPG", "caption": "Straight highway, dense residential buildings, two ponds, forested areas, farmland patches, winding roads."}
-{"flight": "08", "filename": "08_0539.JPG", "caption": "Straight highway, dense residential buildings, rectangular farmland plots, two ponds, winding waterway, forested areas, east-west orientation."}
-{"flight": "08", "filename": "08_0540.JPG", "caption": "Straight highway, dense residential clusters, rectangular farmland plots, small ponds, winding waterways, forested buffers."}
-{"flight": "08", "filename": "08_0541.JPG", "caption": "Straight road, medium building density, scattered water bodies, mixed farmland and forest cover."}
-{"flight": "08", "filename": "08_0542.JPG", "caption": "T-junction road, medium building density, multiple water bodies, mixed farmland and forest land cover."}
-{"flight": "08", "filename": "08_0543.JPG", "caption": "Straight highway, T-junction, dense residential clusters, farmland, forested patches, water bodies, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0544.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, farmland, forest, bare ground, east-west highway."}
-{"flight": "08", "filename": "08_0545.JPG", "caption": "T-junction road, dense building cluster, rectangular farmland fields, winding water channels, forested patches, straight highway corridor."}
-{"flight": "08", "filename": "08_0546.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and forest, east-west orientation."}
-{"flight": "08", "filename": "08_0547.JPG", "caption": "curved road, dense building cluster, rectangular farmland plots, water bodies, forested areas, straight road segments"}
-{"flight": "08", "filename": "08_0548.JPG", "caption": "T-junction road, dense buildings west, farmland, forest, water bodies, bare ground."}
-{"flight": "08", "filename": "08_0549.JPG", "caption": "T-junction road, moderate building density, multiple water bodies, mixed farmland and forest, east-west orientation."}
-{"flight": "08", "filename": "08_0550.JPG", "caption": "rectangular ponds, straight roads, farmland, forest, residential clusters, winding waterway, east-west alignment"}
-{"flight": "08", "filename": "08_0551.JPG", "caption": "T-junction road, dense buildings, forested areas, farmland, water bodies, bare ground, winding river."}
-{"flight": "08", "filename": "08_0552.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest, bare ground, east river bend."}
-{"flight": "08", "filename": "08_0553.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0554.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forested areas, bare ground."}
-{"flight": "08", "filename": "08_0555.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, forested areas, water bodies, winding waterways."}
-{"flight": "08", "filename": "08_0556.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, winding water channels, forested edges, rectangular ponds."}
-{"flight": "08", "filename": "08_0557.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, east-west orientation."}
-{"flight": "08", "filename": "08_0558.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest patches, bare ground."}
-{"flight": "08", "filename": "08_0559.JPG", "caption": "T-junction road, scattered buildings, farmland, forest, water bodies, bare ground, north-western fields."}
-{"flight": "08", "filename": "08_0560.JPG", "caption": "T-junction road, scattered buildings, farmland, forest, water bodies, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0561.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, east-west orientation."}
-{"flight": "08", "filename": "08_0562.JPG", "caption": "T-junction road, low building density, forested areas, farmland, small water bodies, straight and curved roads."}
-{"flight": "08", "filename": "08_0563.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, small ponds."}
-{"flight": "08", "filename": "08_0564.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, small ponds."}
-{"flight": "08", "filename": "08_0565.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, small ponds, straight road, bare ground."}
-{"flight": "08", "filename": "08_0566.JPG", "caption": "curved river, dense farmland, forested strips, clustered buildings, T-junction road, small ponds, bare ground patches"}
-{"flight": "08", "filename": "08_0567.JPG", "caption": "T-shaped road junction, dense residential buildings, river, farmland, forested areas, bare ground."}
+{"flight": "08", "filename": "08_0486.JPG", "caption": "T-junction road, medium building density, river west, rectangular ponds, farmland, forest patches, bare ground."}
+{"flight": "08", "filename": "08_0531.JPG", "caption": "T-junction road, medium building density, river west, farmland, ponds, bare ground, forest patches."}
+{"flight": "08", "filename": "08_0532.JPG", "caption": "T-junction road, medium building density, river east, farmland, forest, bare ground, ponds."}
+{"flight": "08", "filename": "08_0533.JPG", "caption": "T-junction road, dense buildings, river, rectangular ponds, farmland, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0534.JPG", "caption": "T-junction road, dense residential buildings, river, rectangular ponds, farmland, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0535.JPG", "caption": "dense housing, straight road, river, farmland, ponds, forested areas, T-junctions, bare ground"}
+{"flight": "08", "filename": "08_0536.JPG", "caption": "T-junction road, high building density, river east, rectangular ponds, farmland, forest patches, bare ground areas."}
+{"flight": "08", "filename": "08_0537.JPG", "caption": "Highway, T-junction, dense buildings, ponds, forest, farmland, river, east, south"}
+{"flight": "08", "filename": "08_0538.JPG", "caption": "straight road, dense buildings, water bodies, farmland, forest, bare ground, east river"}
+{"flight": "08", "filename": "08_0539.JPG", "caption": "Straight highway, dense residential clusters, scattered ponds, farmland fields, forested zones, T-junctions, bare ground patches."}
+{"flight": "08", "filename": "08_0540.JPG", "caption": "Straight road, dense buildings, farmland, forest, ponds, bare ground, north-up orientation."}
+{"flight": "08", "filename": "08_0541.JPG", "caption": "Straight highway, dense residential clusters, scattered farmland, two ponds, forested buffers, T-junctions, bare ground strips."}
+{"flight": "08", "filename": "08_0542.JPG", "caption": "straight road, medium building density, scattered water bodies, mixed farmland and forest cover"}
+{"flight": "08", "filename": "08_0543.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0544.JPG", "caption": "T-junction road, dense building cluster, rectangular farmland, winding water bodies, forested edges, scattered bare ground patches."}
+{"flight": "08", "filename": "08_0545.JPG", "caption": "T-junction road, dense building cluster, farmland, forest, water bodies, straight highway, east-west alignment."}
+{"flight": "08", "filename": "08_0546.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, mixed farmland and forest, east-west alignment."}
+{"flight": "08", "filename": "08_0547.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, mixed farmland and forest, east-west alignment."}
+{"flight": "08", "filename": "08_0548.JPG", "caption": "Rectangular farmland plots, clustered buildings, winding waterways, forested areas, straight roads, T-junctions, bare ground patches."}
+{"flight": "08", "filename": "08_0549.JPG", "caption": "T-junction road, dense buildings, forest, farmland, water bodies, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0550.JPG", "caption": "T-junction road, clustered buildings, rectangular ponds, farmland, forested strips, bare ground, winding waterway."}
+{"flight": "08", "filename": "08_0551.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0552.JPG", "caption": "T-junction road, dense farmland, forested areas, rectangular water bodies, scattered buildings."}
+{"flight": "08", "filename": "08_0553.JPG", "caption": "T-junction road, dense farmland, forested strips, rectangular water bodies, clustered buildings east."}
+{"flight": "08", "filename": "08_0554.JPG", "caption": "T-junction road, low building density, rectangular water bodies, farmland, forested areas, east-west alignment."}
+{"flight": "08", "filename": "08_0555.JPG", "caption": "T-junction road, scattered buildings, farmland, forested areas, water bodies, bare ground, winding paths."}
+{"flight": "08", "filename": "08_0556.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, winding stream, rectangular fields."}
+{"flight": "08", "filename": "08_0557.JPG", "caption": "T-junction road, scattered buildings, farmland, forested edges, water bodies south and west."}
+{"flight": "08", "filename": "08_0558.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, greenhouse structures, winding watercourse."}
+{"flight": "08", "filename": "08_0559.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, straight road, east-west alignment."}
+{"flight": "08", "filename": "08_0560.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, east-west alignment."}
+{"flight": "08", "filename": "08_0561.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, rectangular fields, scattered structures."}
+{"flight": "08", "filename": "08_0562.JPG", "caption": "T-junction road, mixed farmland, forest patches, small water bodies, scattered buildings, east-west orientation."}
+{"flight": "08", "filename": "08_0563.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0564.JPG", "caption": "Straight road, low building density, river, farmland, forest, small water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0565.JPG", "caption": "river, farmland, forest, T-junction, dense buildings, north, east, south, west"}
+{"flight": "08", "filename": "08_0566.JPG", "caption": "curved river, dense farmland, forested areas, T-junction road, scattered buildings, small ponds"}
+{"flight": "08", "filename": "08_0567.JPG", "caption": "T-junction road, dense residential buildings, river, farmland, forested areas, bare ground, agricultural fields, water bodies, rural settlement cluster."}
 {"flight": "08", "filename": "08_0568.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0569.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0570.JPG", "caption": "T-junction road, medium building density, river, farmland, bare ground, forested areas."}
-{"flight": "08", "filename": "08_0571.JPG", "caption": "T-junction road, dense residential buildings, rectangular ponds, forested areas, farmland fields, river along eastern edge."}
-{"flight": "08", "filename": "08_0572.JPG", "caption": "T-junction road, medium building density, multiple water bodies, mixed farmland and forest, river along eastern edge."}
-{"flight": "08", "filename": "08_0573.JPG", "caption": "T-junction roads, dense residential clusters, rectangular farmland plots, forested patches, water bodies, bare ground areas."}
-{"flight": "08", "filename": "08_0574.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and forest, east-west orientation."}
-{"flight": "08", "filename": "08_0575.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0576.JPG", "caption": "T-junction roads, medium building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0577.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland ponds, forested areas, bare ground patches, east-west oriented fields."}
-{"flight": "08", "filename": "08_0578.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, mixed farmland and forest, east-west oriented fields."}
-{"flight": "08", "filename": "08_0579.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0580.JPG", "caption": "rectangular ponds, dense forest, scattered buildings, straight roads, farmland, T-junctions, east-west alignment"}
-{"flight": "08", "filename": "08_0581.JPG", "caption": "T-junction road, clustered buildings, forested areas, farmland, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0582.JPG", "caption": "T-junction road, dense buildings, forest, farmland, water bodies, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0583.JPG", "caption": "T-junction road, dense buildings, forest, farmland, water bodies, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0584.JPG", "caption": "rectangular ponds, dense forest, clustered buildings, winding dirt paths, agricultural fields, small water bodies, irregular road network"}
-{"flight": "08", "filename": "08_0585.JPG", "caption": "rectangular ponds, dense forest, scattered buildings, straight roads, east-west alignment, bare ground, water bodies, farmland, forest, residential clusters"}
-{"flight": "08", "filename": "08_0586.JPG", "caption": "T-junction road, low building density, forest, farmland, water bodies, bare ground, east."}
-{"flight": "08", "filename": "08_0587.JPG", "caption": "Straight road, low building density, forest, bare ground, water bodies, east-west orientation."}
-{"flight": "08", "filename": "08_0588.JPG", "caption": "Straight road, low building density, forest, farmland, water bodies, bare ground."}
-{"flight": "08", "filename": "08_0589.JPG", "caption": "Straight road, T-junction, low building density, forest, farmland, bare ground, water bodies."}
-{"flight": "08", "filename": "08_0590.JPG", "caption": "T-junction road, dense buildings west, forested land, water bodies, bare ground, farmland."}
-{"flight": "08", "filename": "08_0591.JPG", "caption": "T-junction road, high building density, forested areas, bare ground, water bodies, industrial structures."}
-{"flight": "08", "filename": "08_0592.JPG", "caption": "Straight road, construction site, forest, farmland, water bodies, industrial buildings, bare ground."}
-{"flight": "08", "filename": "08_0593.JPG", "caption": "T-junction road, high building density, forested land cover, small water bodies, bare ground, industrial structures."}
-{"flight": "08", "filename": "08_0594.JPG", "caption": "Construction site, straight road, forest, bare ground, water body, dense buildings, T-junction, south-facing slope."}
-{"flight": "08", "filename": "08_0595.JPG", "caption": "Construction site, straight road, forest, bare ground, water bodies, building density, T-junction."}
-{"flight": "08", "filename": "08_0596.JPG", "caption": "Construction site, T-junction road, dense buildings, water bodies, forested land, bare ground, south-facing slope."}
-{"flight": "08", "filename": "08_0597.JPG", "caption": "Construction site, straight road, dense buildings, bare ground, water bodies, forested areas."}
-{"flight": "08", "filename": "08_0598.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, north-up orientation."}
-{"flight": "08", "filename": "08_0599.JPG", "caption": "Construction site, straight road, dense buildings, water bodies, bare ground, forested areas, T-junction, south-facing structures."}
-{"flight": "08", "filename": "08_0600.JPG", "caption": "T-junction road, high building density, water bodies, farmland, forest, bare ground, south-facing structures."}
-{"flight": "08", "filename": "08_0601.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, north-up orientation."}
-{"flight": "08", "filename": "08_0602.JPG", "caption": "T-junction road, high building density, forested areas, bare ground, water bodies, east-west alignment."}
-{"flight": "08", "filename": "08_0603.JPG", "caption": "T-junction road, medium building density, water bodies, forest, bare ground, south-facing structures."}
+{"flight": "08", "filename": "08_0569.JPG", "caption": "T-junction road, dense buildings, rectangular ponds, forested riverbank, farmland fields, north-south river alignment."}
+{"flight": "08", "filename": "08_0570.JPG", "caption": "T-junction road, dense residential buildings, rectangular fish ponds, river, farmland, forested areas, bare ground."}
+{"flight": "08", "filename": "08_0571.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, winding river, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0572.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, farmland, forest, bare ground, east river bend."}
+{"flight": "08", "filename": "08_0573.JPG", "caption": "T-junction road, dense residential clusters, rectangular farmland plots, forested areas, river along eastern edge."}
+{"flight": "08", "filename": "08_0574.JPG", "caption": "T-junction roads, dense residential clusters, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0575.JPG", "caption": "T-junction road, dense residential clusters, rectangular farmland plots, forested patches, water bodies, bare ground areas."}
+{"flight": "08", "filename": "08_0576.JPG", "caption": "T-junction road, medium building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0577.JPG", "caption": "T-junction road, dense residential clusters, rectangular farmland ponds, forested patches, bare ground areas, winding rural paths."}
+{"flight": "08", "filename": "08_0578.JPG", "caption": "rectilinear road network, clustered residential buildings, rectangular farmland plots, forested areas, small water bodies, bare ground patches"}
+{"flight": "08", "filename": "08_0579.JPG", "caption": "T-junction road, dense building clusters, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0580.JPG", "caption": "T-junction road, clustered buildings, rectangular farmland plots, forested areas, small water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0581.JPG", "caption": "Rectangular farmland plots, dense forest patches, clustered buildings, winding roads, small water bodies, bare ground sections."}
+{"flight": "08", "filename": "08_0582.JPG", "caption": "dense buildings, forested areas, farmland, water bodies, straight roads, T-junctions, bare ground"}
+{"flight": "08", "filename": "08_0583.JPG", "caption": "T-junction road, dense buildings, forested areas, farmland, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0584.JPG", "caption": "rectangular ponds, dense forest, clustered buildings, winding paths, bare ground, water bodies, irregular shapes, scattered vegetation"}
+{"flight": "08", "filename": "08_0585.JPG", "caption": "rectangular ponds, dense forest, clustered buildings, straight road, bare ground, water bodies, farmland"}
+{"flight": "08", "filename": "08_0586.JPG", "caption": "Straight road, low building density, forest, farmland, water bodies, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0587.JPG", "caption": "Straight road, low building density, scattered water bodies, mixed farmland and forest cover."}
+{"flight": "08", "filename": "08_0588.JPG", "caption": "T-junction road, low building density, forested land cover, scattered water bodies, east-west oriented structures."}
+{"flight": "08", "filename": "08_0589.JPG", "caption": "T-junction road, low building density, forest, farmland, bare ground, water bodies, east-west alignment."}
+{"flight": "08", "filename": "08_0590.JPG", "caption": "straight road, T-junction, dense buildings, forest, farmland, bare ground, water bodies, construction site"}
+{"flight": "08", "filename": "08_0591.JPG", "caption": "T-junction road, mixed building density, forested areas, bare ground, water bodies, construction sites."}
+{"flight": "08", "filename": "08_0592.JPG", "caption": "straight road, T-junction, dense buildings, forest, farmland, bare ground, water bodies"}
+{"flight": "08", "filename": "08_0593.JPG", "caption": "Construction site, straight road, forest, bare ground, water body, industrial buildings, farmland, dense vegetation, T-junction, mixed land cover."}
+{"flight": "08", "filename": "08_0594.JPG", "caption": "Construction site, T-junction road, dense buildings, water bodies, forest, bare ground, farmland."}
+{"flight": "08", "filename": "08_0595.JPG", "caption": "T-junction road, high building density, water bodies, forest, bare ground, farmland, east-west road alignment."}
+{"flight": "08", "filename": "08_0596.JPG", "caption": "curved road, high building density, forested areas, water bodies, bare ground, construction sites"}
+{"flight": "08", "filename": "08_0597.JPG", "caption": "T-junction road, high building density, bare ground, forest, water bodies, east-west alignment."}
+{"flight": "08", "filename": "08_0598.JPG", "caption": "curved road, high-density construction, forested areas, water bodies, bare ground, straight road segments"}
+{"flight": "08", "filename": "08_0599.JPG", "caption": "T-junction road, high building density, water bodies, mixed farmland and forest, bare ground construction zones."}
+{"flight": "08", "filename": "08_0600.JPG", "caption": "Straight road, medium building density, forested areas, water bodies, bare ground, construction zones."}
+{"flight": "08", "filename": "08_0601.JPG", "caption": "curved road, dense buildings, forested areas, water bodies, bare ground, construction zones"}
+{"flight": "08", "filename": "08_0602.JPG", "caption": "T-junction road, medium building density, forested areas, water bodies, bare ground, construction zones."}
+{"flight": "08", "filename": "08_0603.JPG", "caption": "T-junction road, high building density, forested areas, water bodies, bare ground, construction zones."}
 {"flight": "08", "filename": "08_0604.JPG", "caption": "T-junction road, high building density, forested areas, water bodies, bare ground, construction zones."}
-{"flight": "08", "filename": "08_0605.JPG", "caption": "T-junction road, high building density, forested areas, water bodies, bare ground, construction zones."}
-{"flight": "08", "filename": "08_0606.JPG", "caption": "T-junction, moderate building density, forested areas, bare ground, water bodies, curved roads."}
-{"flight": "08", "filename": "08_0607.JPG", "caption": "T-junction road, mixed building density, forested areas, water bodies, bare ground, construction zones."}
-{"flight": "08", "filename": "08_0608.JPG", "caption": "T-junction, straight roads, low building density, forested areas, water bodies, bare ground, farmland patches."}
-{"flight": "08", "filename": "08_0609.JPG", "caption": "T-junction road, high building density, forested land cover, curved road, water bodies, bare ground, construction sites."}
-{"flight": "08", "filename": "08_0610.JPG", "caption": "T-junction road, high building density, forested areas, water bodies, bare ground, curved road segments."}
-{"flight": "08", "filename": "08_0611.JPG", "caption": "T-junction road, dense building clusters, forested areas, water bodies, bare ground, construction zones."}
-{"flight": "08", "filename": "08_0612.JPG", "caption": "T-junction road, dense building clusters, forested areas, water bodies, bare ground patches, straight and curved roads."}
-{"flight": "08", "filename": "08_0613.JPG", "caption": "T-junction road, mixed building density, water bodies, forest, bare ground, farmland, construction sites."}
-{"flight": "08", "filename": "08_0614.JPG", "caption": "T-junction road, high building density, water bodies, forest, bare ground, south-facing slope."}
-{"flight": "08", "filename": "08_0615.JPG", "caption": "T-junction road, medium building density, water bodies, mixed land cover, east-west orientation."}
-{"flight": "08", "filename": "08_0616.JPG", "caption": "T-junction road, medium building density, water bodies, forest, bare ground, east-facing water body."}
-{"flight": "08", "filename": "08_0617.JPG", "caption": "curved road, dense buildings, water bodies, forest, bare ground, east"}
-{"flight": "08", "filename": "08_0618.JPG", "caption": "curved road, medium building density, forest, bare ground, water bodies, east"}
-{"flight": "08", "filename": "08_0619.JPG", "caption": "T-junction road, high building density, forested areas, bare ground, water bodies, construction sites."}
-{"flight": "08", "filename": "08_0620.JPG", "caption": "T-junction road, low building density, forested areas, bare ground, small water bodies."}
-{"flight": "08", "filename": "08_0621.JPG", "caption": "T-junction road, medium building density, forested areas, bare ground, water bodies, construction zones."}
-{"flight": "08", "filename": "08_0622.JPG", "caption": "Construction site, forested areas, water bodies, curved road, dense buildings, bare ground, stadium, straight road."}
-{"flight": "08", "filename": "08_0623.JPG", "caption": "T-junction road, mixed building density, water bodies, farmland, forest, bare ground, curved road, rectangular buildings, oval track."}
-{"flight": "08", "filename": "08_0624.JPG", "caption": "T-junction road, low building density, water bodies, mixed farmland and forest, curved road east."}
-{"flight": "08", "filename": "08_0625.JPG", "caption": "T-junction road, mixed building density, water bodies, forest, farmland, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0626.JPG", "caption": "Straight road, T-junction, dense buildings, forest, farmland, water bodies, bare ground, construction site, sports field."}
-{"flight": "08", "filename": "08_0627.JPG", "caption": "Straight road, dense buildings, forested areas, farmland, water bodies, construction site, curved track."}
-{"flight": "08", "filename": "08_0628.JPG", "caption": "Straight road, medium building density, forest, farmland, water bodies, construction site, stadium."}
-{"flight": "08", "filename": "08_0629.JPG", "caption": "straight road, T-junction, dense buildings, forest, farmland, water bodies, bare ground"}
-{"flight": "08", "filename": "08_0630.JPG", "caption": "Straight road, industrial buildings, forested areas, farmland, water bodies, bare ground."}
-{"flight": "08", "filename": "08_0631.JPG", "caption": "Straight road, industrial complex, farmland, forest, water bodies, bare ground, T-junction."}
-{"flight": "08", "filename": "08_0632.JPG", "caption": "rectangular ponds, forested areas, farmland plots, winding dirt paths, scattered buildings, irregular water bodies, dense vegetation patches"}
-{"flight": "08", "filename": "08_0633.JPG", "caption": "rectangular aquaculture ponds, forested areas, scattered buildings, winding dirt roads, small water bodies, agricultural fields"}
-{"flight": "08", "filename": "08_0634.JPG", "caption": "rectangular ponds, forested areas, scattered buildings, winding roads, bare ground patches, agricultural fields"}
-{"flight": "08", "filename": "08_0635.JPG", "caption": "rectangular ponds, forested areas, scattered buildings, straight roads, east-west orientation"}
-{"flight": "08", "filename": "08_0636.JPG", "caption": "Rectilinear road network, low building density, water bodies, farmland, forest patches, bare ground."}
-{"flight": "08", "filename": "08_0637.JPG", "caption": "Rectangular farmland plots, scattered buildings, winding water channels, dense tree clusters, straight road grid."}
-{"flight": "08", "filename": "08_0638.JPG", "caption": "rectangular ponds, forested areas, residential buildings, straight roads, agricultural fields, scattered structures"}
-{"flight": "08", "filename": "08_0639.JPG", "caption": "rectangular ponds, dense housing clusters, forested areas, straight roads, east-west orientation"}
-{"flight": "08", "filename": "08_0640.JPG", "caption": "rectangular ponds, dense housing cluster, forested areas, straight roads, T-junctions, farmland plots, bare ground sections"}
-{"flight": "08", "filename": "08_0641.JPG", "caption": "rectangular ponds, dense housing cluster, forested areas, straight roads, T-junctions, bare ground, farmland"}
-{"flight": "08", "filename": "08_0642.JPG", "caption": "dense buildings, straight roads, rectangular ponds, forested areas, farmland, bare ground"}
-{"flight": "08", "filename": "08_0643.JPG", "caption": "dense buildings, winding roads, forested areas, farmland, water bodies, straight and curved roads, east-west alignment"}
-{"flight": "08", "filename": "08_0644.JPG", "caption": "dense buildings, straight roads, forest patches, farmland fields, river along east edge"}
-{"flight": "08", "filename": "08_0645.JPG", "caption": "T-junction road, high building density, river east, farmland, forest, bare ground, ponds."}
-{"flight": "08", "filename": "08_0646.JPG", "caption": "dense buildings, winding road, river, farmland, forest, ponds, T-junction, south"}
-{"flight": "08", "filename": "08_0647.JPG", "caption": "T-junction road, dense buildings west, river east, farmland south, forested banks, ponds, bare ground."}
-{"flight": "08", "filename": "08_0648.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, east."}
-{"flight": "08", "filename": "08_0649.JPG", "caption": "curved river, dense farmland, scattered buildings, forested patches, straight roads, T-junctions, bare ground, water bodies, east-west orientation"}
-{"flight": "08", "filename": "08_0650.JPG", "caption": "curved river, farmland fields, scattered buildings, forested areas, T-junction road, bare ground patches"}
-{"flight": "08", "filename": "08_0651.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_0652.JPG", "caption": "T-junction road, low building density, river west, farmland, forest patches, greenhouse structures."}
-{"flight": "08", "filename": "08_0653.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest patches, bare ground."}
-{"flight": "08", "filename": "08_0654.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, east-west orientation."}
-{"flight": "08", "filename": "08_0655.JPG", "caption": "Straight road, low building density, scattered water bodies, mixed farmland and forest cover."}
-{"flight": "08", "filename": "08_0656.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0657.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, east-west alignment."}
-{"flight": "08", "filename": "08_0658.JPG", "caption": "T-junction road, low building density, small water bodies, farmland, forested strips, bare ground patches."}
-{"flight": "08", "filename": "08_0659.JPG", "caption": "T-junction road, low building density, farmland, forest strips, small water bodies, straight and curved paths."}
-{"flight": "08", "filename": "08_0660.JPG", "caption": "Straight road, low building density, farmland, water bodies, forested edges, east-west orientation."}
-{"flight": "08", "filename": "08_0661.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, linear water bodies, forested edges, north-south oriented fields."}
-{"flight": "08", "filename": "08_0662.JPG", "caption": "Rectangular farmland fields, straight roads, rectangular water bodies, scattered buildings, tree-lined boundaries."}
-{"flight": "08", "filename": "08_0663.JPG", "caption": "Rectangular farmland fields, rectangular aquaculture ponds, linear tree rows, low building density, straight road network, east-west orientation."}
-{"flight": "08", "filename": "08_0664.JPG", "caption": "Rectangular farmland plots, rectangular water bodies, linear roads, scattered trees, small buildings, forested areas."}
-{"flight": "08", "filename": "08_0665.JPG", "caption": "Rectangular ponds, farmland, forested strips, T-junction road, scattered buildings, water bodies, bare ground."}
-{"flight": "08", "filename": "08_0666.JPG", "caption": "rectangular ponds, farmland, forested areas, T-junction road, scattered buildings, bare ground"}
-{"flight": "08", "filename": "08_0667.JPG", "caption": "rectangular water bodies, straight roads, farmland, forested areas, scattered buildings, T-junctions, bare ground"}
-{"flight": "08", "filename": "08_0668.JPG", "caption": "rectangular ponds, straight roads, farmland, forest, T-junction, east, south"}
-{"flight": "08", "filename": "08_0669.JPG", "caption": "Rectangular ponds, straight roads, farmland, forest, bare ground, T-junction, dense buildings east."}
-{"flight": "08", "filename": "08_0670.JPG", "caption": "T-junction road, dense buildings east, water bodies west, farmland and forest patches."}
-{"flight": "08", "filename": "08_0671.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, winding water channels, scattered forest patches, bare ground fields."}
-{"flight": "08", "filename": "08_0672.JPG", "caption": "T-junction road, dense buildings, farmland, forest, water bodies, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0673.JPG", "caption": "T-junction road, dense building cluster, farmland, forest patches, water bodies, straight highway, east-west alignment."}
-{"flight": "08", "filename": "08_0674.JPG", "caption": "T-junction road, medium building density, farmland, forest, water bodies, east-west highway."}
-{"flight": "08", "filename": "08_0675.JPG", "caption": "Straight road, dense buildings, farmland, forest, water bodies, T-junction, bare ground."}
-{"flight": "08", "filename": "08_0676.JPG", "caption": "Straight highway, dense residential clusters, farmland plots, scattered water bodies, forested edges."}
-{"flight": "08", "filename": "08_0677.JPG", "caption": "straight road, dense buildings, farmland, forest, water bodies, bare ground, north, south, east, west"}
-{"flight": "08", "filename": "08_0678.JPG", "caption": "Straight road, dense buildings, farmland, forest, water bodies, T-junction, bare ground, north, south, east, west."}
-{"flight": "08", "filename": "08_0679.JPG", "caption": "Straight highway, T-junction, dense residential buildings, farmland, forested areas, water bodies, bare ground, north-facing fields."}
-{"flight": "08", "filename": "08_0680.JPG", "caption": "T-junction road, dense building cluster, farmland, forest, water body east, bare ground patches."}
-{"flight": "08", "filename": "08_0681.JPG", "caption": "dense buildings, straight roads, farmland, forest, water bodies, east-west river, north-south road, bare ground patches"}
-{"flight": "08", "filename": "08_0682.JPG", "caption": "dense buildings, straight roads, river, farmland, forest, bare ground, T-junction, east, south"}
-{"flight": "08", "filename": "08_0683.JPG", "caption": "dense urban settlement, straight road, river, rectangular ponds, farmland, forested areas, bare ground"}
-{"flight": "08", "filename": "08_0684.JPG", "caption": "T-junction road, dense buildings west, straight river north, rectangular ponds east, farmland south, bare ground patches."}
-{"flight": "08", "filename": "08_0685.JPG", "caption": "T-junction road, dense buildings west, rectangular ponds, farmland east, river north, forested areas."}
-{"flight": "08", "filename": "08_0686.JPG", "caption": "T-junction road, moderate building density, multiple water bodies, farmland, forest, bare ground, east-west orientation."}
-{"flight": "08", "filename": "08_0687.JPG", "caption": "T-junction road, medium building density, multiple water bodies, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0738.JPG", "caption": "rectangular ponds, rectangular fields, dense housing cluster, winding waterways, straight roads, east-west alignment"}
-{"flight": "08", "filename": "08_0739.JPG", "caption": "T-junction road, dense buildings east, farmland, forest, water bodies, bare ground, straight road."}
-{"flight": "08", "filename": "08_0740.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest patches, bare ground."}
-{"flight": "08", "filename": "08_0741.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest, bare ground, north-west river bend."}
-{"flight": "08", "filename": "08_0742.JPG", "caption": "T-junction road, low building density, rectangular water bodies, farmland, bare ground, north-western settlement cluster."}
-{"flight": "08", "filename": "08_0743.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, east-west river, north-south road."}
-{"flight": "08", "filename": "08_0744.JPG", "caption": "T-junction road, dense buildings west, river east, farmland south, forested patches, bare ground north."}
-{"flight": "08", "filename": "08_0745.JPG", "caption": "T-junction road, dense buildings, farmland, forest, river, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0746.JPG", "caption": "T-junction road, medium building density, river east, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0747.JPG", "caption": "Straight highway, dense residential cluster, farmland fields, river bend, east-west orientation."}
-{"flight": "08", "filename": "08_0748.JPG", "caption": "Straight highway, dense residential cluster, farmland fields, forested patches, water channel east."}
-{"flight": "08", "filename": "08_0749.JPG", "caption": "Straight highway, dense residential buildings, farmland fields, forested areas, irrigation canals, T-junctions, bare ground patches."}
-{"flight": "08", "filename": "08_0750.JPG", "caption": "straight road, T-junction, dense buildings, farmland, forest, bare ground, water bodies"}
-{"flight": "08", "filename": "08_0751.JPG", "caption": "straight road, T-junction, farmland, forest, bare ground, water bodies, scattered buildings"}
-{"flight": "08", "filename": "08_0752.JPG", "caption": "T-junction road, dense buildings north, farmland, forest, bare ground, water bodies."}
-{"flight": "08", "filename": "08_0753.JPG", "caption": "T-junction road, low building density, small water bodies, mixed farmland and forest, straight roads, east-west alignment."}
-{"flight": "08", "filename": "08_0754.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, winding water channels, forested areas, bare ground patches."}
-{"flight": "08", "filename": "08_0755.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west river, north-south road."}
-{"flight": "08", "filename": "08_0756.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0757.JPG", "caption": "T-junction road, mixed farmland, forested areas, rectangular water bodies, bare ground patches, winding waterway."}
-{"flight": "08", "filename": "08_0758.JPG", "caption": "Straight road, rectangular farmland, forested edges, water bodies, scattered buildings, dense vegetation."}
-{"flight": "08", "filename": "08_0759.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, low building density, east-west orientation."}
-{"flight": "08", "filename": "08_0760.JPG", "caption": "Straight road, low building density, rectangular water bodies, farmland, forest strips, east-west orientation."}
-{"flight": "08", "filename": "08_0761.JPG", "caption": "Rectangular farmland plots, winding forested corridors, rectangular water bodies, straight roads, sparse buildings."}
-{"flight": "08", "filename": "08_0762.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, linear water bodies, scattered forest patches, bare ground sections."}
-{"flight": "08", "filename": "08_0763.JPG", "caption": "Rectangular farmland fields, winding water channels, dense tree lines, industrial facility west, straight road grid."}
-{"flight": "08", "filename": "08_0764.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, winding water bodies, scattered forest patches, bare ground sections."}
-{"flight": "08", "filename": "08_0765.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forested strips, bare ground patches."}
-{"flight": "08", "filename": "08_0766.JPG", "caption": "T-junction road, low building density, farmland, forest patches, winding water bodies, bare ground sections."}
-{"flight": "08", "filename": "08_0767.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, straight and curved roads."}
-{"flight": "08", "filename": "08_0768.JPG", "caption": "T-junction road, low building density, river, farmland, forest patches, bare ground."}
-{"flight": "08", "filename": "08_0769.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, east-west orientation."}
-{"flight": "08", "filename": "08_0770.JPG", "caption": "T-junction road, dense greenhouse structures, bare ground farmland, winding water channels, scattered trees, rectangular fields."}
-{"flight": "08", "filename": "08_0771.JPG", "caption": "T-junction road, dense greenhouse structures, farmland, forested areas, small water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0772.JPG", "caption": "T-junction road, scattered buildings, farmland, forest, water bodies, greenhouse structures, curved river."}
-{"flight": "08", "filename": "08_0773.JPG", "caption": "T-junction road, low building density, meandering water bodies, mixed farmland and forest cover."}
-{"flight": "08", "filename": "08_0774.JPG", "caption": "T-junction road, scattered buildings, farmland, forest, water bodies, greenhouse structures, bare ground."}
+{"flight": "08", "filename": "08_0605.JPG", "caption": "T-junction road, dense building construction, forested areas, bare ground, water bodies, farmland patches."}
+{"flight": "08", "filename": "08_0606.JPG", "caption": "T-junction roads, mixed building density, forested areas, water bodies, bare ground, construction sites."}
+{"flight": "08", "filename": "08_0607.JPG", "caption": "T-junction roads, mixed building density, forested areas, bare ground, water bodies, construction zones."}
+{"flight": "08", "filename": "08_0608.JPG", "caption": "T-junction roads, mixed building density, forested areas, water bodies, bare ground, construction zones."}
+{"flight": "08", "filename": "08_0609.JPG", "caption": "T-junction roads, high building density, forested areas, water bodies, bare ground, straight and curved road segments."}
+{"flight": "08", "filename": "08_0610.JPG", "caption": "T-junction roads, high building density, forested areas, water bodies, bare ground, residential complexes."}
+{"flight": "08", "filename": "08_0611.JPG", "caption": "T-junction road, dense building clusters, forested areas, water bodies, bare ground, straight roads."}
+{"flight": "08", "filename": "08_0612.JPG", "caption": "T-junction roads, dense buildings, forested areas, water bodies, bare ground, farmland patches."}
+{"flight": "08", "filename": "08_0613.JPG", "caption": "T-junction road, high building density, water bodies, forest, bare ground, farmland, east-west road alignment."}
+{"flight": "08", "filename": "08_0614.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0615.JPG", "caption": "T-junction road, high building density, water bodies, forested land cover, east-west orientation."}
+{"flight": "08", "filename": "08_0616.JPG", "caption": "curved road, high building density, water bodies, forested land cover, east-west orientation"}
+{"flight": "08", "filename": "08_0617.JPG", "caption": "curved road, dense buildings, water body west, forested land, bare ground, construction sites"}
+{"flight": "08", "filename": "08_0618.JPG", "caption": "curved road, dense buildings, forested land, bare ground, water bodies, construction sites, winding paths, urban sprawl patches, dirt areas, small ponds, paved roads, building"}
+{"flight": "08", "filename": "08_0619.JPG", "caption": "T-junction road, high building density, wetland water bodies, mixed farmland and forest land cover."}
+{"flight": "08", "filename": "08_0620.JPG", "caption": "T-junction road, medium building density, forested areas, water bodies, bare ground, construction zones."}
+{"flight": "08", "filename": "08_0621.JPG", "caption": "T-junction road, medium building density, forested areas, bare ground, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0622.JPG", "caption": "T-junction road, mixed building density, forested areas, water bodies, bare ground, farmland, curved road, rectangular water body, sports field, construction site."}
+{"flight": "08", "filename": "08_0623.JPG", "caption": "T-junction road, low building density, forested areas, bare ground, water bodies, farmland, east-west road alignment."}
+{"flight": "08", "filename": "08_0624.JPG", "caption": "T-junction road, mixed building density, water bodies, forest, bare ground, farmland, curved road."}
+{"flight": "08", "filename": "08_0625.JPG", "caption": "T-junction road, mixed building density, water bodies, forest, farmland, bare ground, curved road, rectangular buildings, sports field."}
+{"flight": "08", "filename": "08_0626.JPG", "caption": "T-junction road, mixed building density, forested areas, farmland, water bodies, bare ground, curved road segment."}
+{"flight": "08", "filename": "08_0627.JPG", "caption": "Straight road, T-junction, dense buildings, farmland, forest, water bodies, bare ground, construction site, sports field, railway line."}
+{"flight": "08", "filename": "08_0628.JPG", "caption": "straight road, T-junction, industrial buildings, farmland, forest, water bodies, bare ground"}
+{"flight": "08", "filename": "08_0629.JPG", "caption": "Straight road, low building density, forest, farmland, water bodies, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0630.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0631.JPG", "caption": "Straight road, industrial buildings, dense forest, farmland, water bodies, bare ground, T-junction."}
+{"flight": "08", "filename": "08_0632.JPG", "caption": "rectangular farmland plots, forested areas, water bodies, scattered buildings, winding roads, dense vegetation, agricultural fields, small structures, irregular terrain, mixed land use, rural landscape, fragmented development"}
+{"flight": "08", "filename": "08_0633.JPG", "caption": "rectangular ponds, forested areas, scattered buildings, straight roads, farmland plots, winding paths, dense vegetation, small water bodies, industrial structures, residential clusters, agricultural fields, irregular boundaries"}
+{"flight": "08", "filename": "08_0634.JPG", "caption": "rectangular ponds, forested areas, scattered buildings, winding paths, agricultural fields, irregular boundaries"}
+{"flight": "08", "filename": "08_0635.JPG", "caption": "Rectangular farmland plots, forested areas, scattered buildings, winding roads, small water bodies, dense vegetation patches."}
+{"flight": "08", "filename": "08_0636.JPG", "caption": "rectangular farmland ponds, forested areas, scattered buildings, winding roads, small water bodies, mixed land cover"}
+{"flight": "08", "filename": "08_0637.JPG", "caption": "rectangular farmland plots, dense forest patches, clustered residential buildings, winding dirt roads, small water bodies, irregular field boundaries"}
+{"flight": "08", "filename": "08_0638.JPG", "caption": "rectangular ponds, dense forest, clustered buildings, straight roads, east-west orientation"}
+{"flight": "08", "filename": "08_0639.JPG", "caption": "rectangular farmland ponds, dense residential buildings, winding roads, forested areas, straight road edges, clustered housing"}
+{"flight": "08", "filename": "08_0640.JPG", "caption": "rectangular ponds, dense housing cluster, forested areas, straight roads, T-junctions, bare ground, farmland"}
+{"flight": "08", "filename": "08_0641.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, forested areas, small water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0642.JPG", "caption": "dense buildings, straight roads, farmland, forest, water bodies, T-junctions, bare ground"}
+{"flight": "08", "filename": "08_0643.JPG", "caption": "dense housing cluster, T-junction road, rectangular farmland plots, river along east edge, scattered ponds, forested patches"}
+{"flight": "08", "filename": "08_0644.JPG", "caption": "dense buildings, winding roads, farmland, forest, river, T-junction, bare ground"}
+{"flight": "08", "filename": "08_0645.JPG", "caption": "dense buildings, winding roads, river, farmland, forest, ponds, T-junction, east riverbank"}
+{"flight": "08", "filename": "08_0646.JPG", "caption": "dense buildings, winding river, farmland fields, forested areas, T-junction roads, bare ground patches"}
+{"flight": "08", "filename": "08_0647.JPG", "caption": "T-junction road, dense buildings west, river east, farmland south, forested banks, bare ground patches."}
+{"flight": "08", "filename": "08_0648.JPG", "caption": "T-junction road, dense buildings west, river east, farmland south, forested banks, bare ground patches."}
+{"flight": "08", "filename": "08_0649.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_0650.JPG", "caption": "curved river, scattered buildings, farmland, forested areas, T-junction road, bare ground"}
+{"flight": "08", "filename": "08_0651.JPG", "caption": "Curved river, straight road, scattered buildings, farmland, forested areas, greenhouse structures."}
+{"flight": "08", "filename": "08_0652.JPG", "caption": "T-junction road, low building density, river west, farmland, forest patches, greenhouse structures"}
+{"flight": "08", "filename": "08_0653.JPG", "caption": "T-junction road, low building density, river west, farmland, forest patches, greenhouse structures."}
+{"flight": "08", "filename": "08_0654.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest, bare ground."}
+{"flight": "08", "filename": "08_0655.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, T-junction."}
+{"flight": "08", "filename": "08_0656.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, east-west oriented fields."}
+{"flight": "08", "filename": "08_0657.JPG", "caption": "Straight road, low building density, scattered water bodies, farmland, forest, bare ground."}
+{"flight": "08", "filename": "08_0658.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, T-junction, bare ground."}
+{"flight": "08", "filename": "08_0659.JPG", "caption": "rectangular farmland fields, greenhouse structures, scattered buildings, winding water channels, forested edges, straight road grid"}
+{"flight": "08", "filename": "08_0660.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, small ponds, linear tree belts, north-south alignment."}
+{"flight": "08", "filename": "08_0661.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, linear water bodies, forested edges."}
+{"flight": "08", "filename": "08_0662.JPG", "caption": "Straight roads, low building density, rectangular farmland fields, adjacent water bodies, linear tree buffers."}
+{"flight": "08", "filename": "08_0663.JPG", "caption": "rectangular farmland fields, rectangular water bodies, linear tree-lined boundaries, low-density buildings, straight road network"}
+{"flight": "08", "filename": "08_0664.JPG", "caption": "Straight roads, low building density, rectangular water bodies, farmland, forest strips, bare ground."}
+{"flight": "08", "filename": "08_0665.JPG", "caption": "Rectangular farmland plots, rectangular aquaculture ponds, winding roads, forested strips, scattered buildings, straight and curved road segments."}
+{"flight": "08", "filename": "08_0666.JPG", "caption": "Rectangular ponds, farmland, forested areas, winding road, T-junction, scattered buildings, bare ground, water bodies, straight and curved roads."}
+{"flight": "08", "filename": "08_0667.JPG", "caption": "rectangular ponds, farmland, forest, T-junction road, scattered buildings, winding waterway"}
+{"flight": "08", "filename": "08_0668.JPG", "caption": "rectangular ponds, straight roads, farmland, forest, bare ground, T-junction, east, south"}
+{"flight": "08", "filename": "08_0669.JPG", "caption": "rectangular aquaculture ponds, straight road, T-junction, farmland, forest, bare ground, water bodies, residential buildings, east-west orientation"}
+{"flight": "08", "filename": "08_0670.JPG", "caption": "rectangular ponds, straight roads, dense housing, farmland, forested areas, winding waterways, bare ground, T-junctions, east-west alignment"}
+{"flight": "08", "filename": "08_0671.JPG", "caption": "T-junction road, dense buildings east, rectangular ponds west, bare ground, farmland, winding waterways."}
+{"flight": "08", "filename": "08_0672.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, water bodies west, forested patches, bare ground fields."}
+{"flight": "08", "filename": "08_0673.JPG", "caption": "T-junction road, dense building cluster, farmland, water bodies, forested areas, straight highway, east-west orientation."}
+{"flight": "08", "filename": "08_0674.JPG", "caption": "T-junction road, medium building density, farmland, forest, water bodies, east-west alignment."}
+{"flight": "08", "filename": "08_0675.JPG", "caption": "T-junction road, dense building clusters, farmland, forest patches, water bodies, bare ground, north-up orientation."}
+{"flight": "08", "filename": "08_0676.JPG", "caption": "straight road, T-junction, dense buildings, farmland, forest, water bodies, bare ground"}
+{"flight": "08", "filename": "08_0677.JPG", "caption": "T-junction road, dense residential buildings, farmland, forested areas, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0678.JPG", "caption": "Straight road, dense buildings, farmland, forest, water bodies, bare ground, north, south, east, west."}
+{"flight": "08", "filename": "08_0679.JPG", "caption": "T-junction road, dense buildings, farmland, forest, water bodies, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0680.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0681.JPG", "caption": "dense urban cluster, straight road, river, farmland, forest, bare ground, T-junction"}
+{"flight": "08", "filename": "08_0682.JPG", "caption": "dense buildings, straight road, east-west river, rectangular ponds, farmland, forested areas, bare ground"}
+{"flight": "08", "filename": "08_0683.JPG", "caption": "dense buildings west, straight road, river east, rectangular ponds, farmland, forested areas."}
+{"flight": "08", "filename": "08_0684.JPG", "caption": "T-junction road, dense buildings west, rectangular ponds east, farmland south, forested areas north."}
+{"flight": "08", "filename": "08_0685.JPG", "caption": "T-junction road, moderate building density, rectangular water bodies, farmland, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0686.JPG", "caption": "T-junction road, medium building density, multiple water bodies, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0687.JPG", "caption": "T-junction road, medium building density, rectangular water bodies, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0738.JPG", "caption": "T-junction road, dense buildings east, rectangular ponds, farmland, bare ground, winding waterways."}
+{"flight": "08", "filename": "08_0739.JPG", "caption": "rectangular farmland, water bodies, dense housing, straight roads, forested edges, T-junctions, bare ground"}
+{"flight": "08", "filename": "08_0740.JPG", "caption": "T-junction road, moderate building density, multiple water bodies, mixed farmland and forest cover, east-west river alignment."}
+{"flight": "08", "filename": "08_0741.JPG", "caption": "T-junction road, dense buildings west, farmland, forest, water bodies, bare ground, straight river."}
+{"flight": "08", "filename": "08_0742.JPG", "caption": "T-junction road, dense buildings west, farmland, forest, water bodies, bare ground, straight river."}
+{"flight": "08", "filename": "08_0743.JPG", "caption": "dense buildings west, straight road, river, farmland, forest, bare ground, water bodies"}
+{"flight": "08", "filename": "08_0744.JPG", "caption": "T-junction road, dense building cluster, farmland, forest, water bodies, straight river, rectangular fields, bare ground patches."}
+{"flight": "08", "filename": "08_0745.JPG", "caption": "T-junction road, dense buildings, farmland, forest, river, bare ground, north-west highway."}
+{"flight": "08", "filename": "08_0746.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, river, bare ground, agricultural fields, winding waterway, rectangular plots, clustered housing, linear highway, vegetated patches, open"}
+{"flight": "08", "filename": "08_0747.JPG", "caption": "T-junction road, dense buildings, farmland, forest, river, bare ground, north-east."}
+{"flight": "08", "filename": "08_0748.JPG", "caption": "Straight highway, dense residential buildings, farmland fields, river channel, forested areas, T-junctions, bare ground patches."}
+{"flight": "08", "filename": "08_0749.JPG", "caption": "Straight highway, dense residential buildings east, farmland west, forested patches, T-junctions, bare ground, water bodies."}
+{"flight": "08", "filename": "08_0750.JPG", "caption": "Straight highway, dense residential buildings east, farmland west, small water bodies, forested patches."}
+{"flight": "08", "filename": "08_0751.JPG", "caption": "Straight highway, T-junction, dense buildings east, farmland, forest, bare ground, water bodies."}
+{"flight": "08", "filename": "08_0752.JPG", "caption": "Straight road, dense buildings, farmland, forest, bare ground, water bodies, east-west alignment."}
+{"flight": "08", "filename": "08_0753.JPG", "caption": "straight road, T-junction, dense buildings, farmland, forest, water bodies, bare ground, east, south"}
+{"flight": "08", "filename": "08_0754.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0755.JPG", "caption": "Straight roads, low building density, water bodies, farmland, forest, bare ground, T-junctions, east-west alignment."}
+{"flight": "08", "filename": "08_0756.JPG", "caption": "Straight roads, low building density, water bodies, farmland, forest, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0757.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, bare ground, scattered buildings."}
+{"flight": "08", "filename": "08_0758.JPG", "caption": "T-junction road, low building density, rectangular water bodies, farmland, forested strips, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0759.JPG", "caption": "Straight road, low building density, rectangular water bodies, farmland, forest strips, east-west orientation."}
+{"flight": "08", "filename": "08_0760.JPG", "caption": "Straight road, T-junction, rectangular farmland plots, forested strips, water bodies, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0761.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, linear water bodies, forested strips, bare ground patches."}
+{"flight": "08", "filename": "08_0762.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, winding water channels, scattered forested areas."}
+{"flight": "08", "filename": "08_0763.JPG", "caption": "Rectangular farmland fields, linear water bodies, scattered forest strips, T-junction road, low building density."}
+{"flight": "08", "filename": "08_0764.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, scattered water bodies, linear tree belts, bare ground patches."}
+{"flight": "08", "filename": "08_0765.JPG", "caption": "T-junction road, low building density, farmland, forest strips, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0766.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forested strips, bare ground patches."}
+{"flight": "08", "filename": "08_0767.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0768.JPG", "caption": "T-junction road, low building density, meandering water bodies, farmland, forested patches, bare ground."}
+{"flight": "08", "filename": "08_0769.JPG", "caption": "T-junction road, low building density, winding water bodies, farmland, forested strips, bare ground patches."}
+{"flight": "08", "filename": "08_0770.JPG", "caption": "Straight road, dense farmland, forested patches, winding water channels, rectangular greenhouses, industrial buildings."}
+{"flight": "08", "filename": "08_0771.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west canal."}
+{"flight": "08", "filename": "08_0772.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0773.JPG", "caption": "T-junction road, low building density, meandering water bodies, farmland, forested strips, greenhouse arrays."}
+{"flight": "08", "filename": "08_0774.JPG", "caption": "T-junction road, low building density, river, farmland, greenhouse structures, forested areas, bare ground."}
 {"flight": "08", "filename": "08_0775.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, greenhouse structures."}
-{"flight": "08", "filename": "08_0776.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river, north-south road."}
-{"flight": "08", "filename": "08_0777.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river, north-south road."}
-{"flight": "08", "filename": "08_0778.JPG", "caption": "T-junction road, dense buildings west, river north, farmland south, forested edges, bare ground patches."}
-{"flight": "08", "filename": "08_0779.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, ponds, bridges."}
-{"flight": "08", "filename": "08_0780.JPG", "caption": "dense buildings, winding river, farmland fields, forested areas, T-junction road, rectangular ponds, straight roads, agricultural plots"}
-{"flight": "08", "filename": "08_0781.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, ponds, bridge."}
-{"flight": "08", "filename": "08_0782.JPG", "caption": "T-junction road, high building density, river east, farmland, forest, bare ground, ponds."}
-{"flight": "08", "filename": "08_0783.JPG", "caption": "T-junction road, dense building cluster, forested areas, farmland, river, ponds, bare ground patches."}
-{"flight": "08", "filename": "08_0784.JPG", "caption": "T-junction road, high building density, water bodies, farmland, forest, bare ground, river, east."}
-{"flight": "08", "filename": "08_0785.JPG", "caption": "T-junction road, dense residential buildings, rectangular ponds, forested areas, bare ground, agricultural fields."}
-{"flight": "08", "filename": "08_0786.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland ponds, forested areas, bare ground patches, east-west oriented fields."}
-{"flight": "08", "filename": "08_0787.JPG", "caption": "T-junction road, moderate building density, rectangular ponds, farmland, forested areas, east-west alignment."}
-{"flight": "08", "filename": "08_0788.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0789.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, T-junction, bare ground."}
-{"flight": "08", "filename": "08_0790.JPG", "caption": "Straight road, T-junction, dense farmland, forested patches, water bodies, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0791.JPG", "caption": "T-junction road, mixed farmland, forested areas, water bodies, scattered buildings, bare ground patches."}
-{"flight": "08", "filename": "08_0792.JPG", "caption": "Rectangular farmland plots, forested areas, water bodies, T-junction road, scattered buildings, bare ground patches."}
+{"flight": "08", "filename": "08_0776.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_0777.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, north-west river bend."}
+{"flight": "08", "filename": "08_0778.JPG", "caption": "T-junction road, dense buildings west, river east, farmland south, forested patches, bare ground fields."}
+{"flight": "08", "filename": "08_0779.JPG", "caption": "dense buildings, winding river, farmland fields, forested areas, T-junction roads, scattered water bodies"}
+{"flight": "08", "filename": "08_0780.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_0781.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_0782.JPG", "caption": "T-junction road, dense buildings, river east, farmland south, forested patches, bare ground areas."}
+{"flight": "08", "filename": "08_0783.JPG", "caption": "T-junction road, dense residential buildings, river east, farmland west, forested patches, bare ground areas."}
+{"flight": "08", "filename": "08_0784.JPG", "caption": "T-junction road, high building density, water bodies, farmland, forest, bare ground, east river."}
+{"flight": "08", "filename": "08_0785.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland plots, forested areas, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0786.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, bare ground."}
+{"flight": "08", "filename": "08_0787.JPG", "caption": "T-junction road, dense residential buildings, farmland, forest, water bodies, bare ground."}
+{"flight": "08", "filename": "08_0788.JPG", "caption": "T-junction road, dense buildings, farmland, forest, water bodies, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_0789.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, east-west alignment."}
+{"flight": "08", "filename": "08_0790.JPG", "caption": "Straight road, dense farmland, scattered water bodies, forested edges, bare ground patches."}
+{"flight": "08", "filename": "08_0791.JPG", "caption": "T-junction road, low building density, scattered water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0792.JPG", "caption": "Straight road, dense farmland, scattered water bodies, forested areas, bare ground patches."}
 {"flight": "08", "filename": "08_0793.JPG", "caption": "Straight road, dense farmland, scattered water bodies, forested areas, bare ground patches."}
-{"flight": "08", "filename": "08_0794.JPG", "caption": "T-junction road, mixed farmland, forested areas, water bodies, scattered structures, bare ground patches."}
-{"flight": "08", "filename": "08_0795.JPG", "caption": "T-junction road, mixed farmland, forested areas, water bodies, scattered buildings, straight and curved paths."}
-{"flight": "08", "filename": "08_0796.JPG", "caption": "T-junction road, mixed farmland and forest, scattered water bodies, dense building cluster west."}
-{"flight": "08", "filename": "08_0797.JPG", "caption": "T-junction road, moderate building density, farmland, forest, water bodies, east-west alignment."}
-{"flight": "08", "filename": "08_0798.JPG", "caption": "T-junction road, moderate building density, forested areas, farmland plots, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0799.JPG", "caption": "T-junction road, medium building density, forest, farmland, water bodies, bare ground, east-west road alignment."}
-{"flight": "08", "filename": "08_0800.JPG", "caption": "T-junction road, moderate building density, forested areas, farmland, water bodies, construction site."}
-{"flight": "08", "filename": "08_0801.JPG", "caption": "T-junction road, moderate building density, forested areas, farmland, water bodies, straight and curved roads."}
-{"flight": "08", "filename": "08_0802.JPG", "caption": "T-junction road, dense building cluster, forested areas, water bodies, farmland, bare ground, east-west highway."}
-{"flight": "08", "filename": "08_0803.JPG", "caption": "T-junction road, medium building density, multiple water bodies, mixed forest and bare ground, east-west oriented."}
-{"flight": "08", "filename": "08_0804.JPG", "caption": "T-junction road, mixed building density, water bodies, forested areas, bare ground, farmland patches."}
-{"flight": "08", "filename": "08_0805.JPG", "caption": "T-junction road, dense construction, water bodies, forested areas, bare ground, farmland patches."}
-{"flight": "08", "filename": "08_0806.JPG", "caption": "T-junction road, medium building density, water bodies, mixed land cover, east-west highway."}
-{"flight": "08", "filename": "08_0807.JPG", "caption": "T-junction road, medium building density, river, forest, bare ground, east-facing construction site."}
-{"flight": "08", "filename": "08_0808.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, bare ground, east-west highway."}
-{"flight": "08", "filename": "08_0809.JPG", "caption": "T-junction road, dense building cluster, forested area, water bodies, farmland, bare ground, curved river, straight highway."}
-{"flight": "08", "filename": "08_0810.JPG", "caption": "T-junction road, dense building cluster, forested hills, winding water channel, rectangular industrial complex, adjacent wetlands."}
-{"flight": "08", "filename": "08_0811.JPG", "caption": "T-junction road, dense building cluster, forested land, water bodies, bare ground, straight road, east-facing water body."}
-{"flight": "08", "filename": "08_0812.JPG", "caption": "T-junction road, dense buildings, forested areas, water bodies, farmland, bare ground, curved river, straight highway."}
-{"flight": "08", "filename": "08_0813.JPG", "caption": "T-junction road, medium building density, forested areas, water bodies, bare ground, farmland."}
-{"flight": "08", "filename": "08_0814.JPG", "caption": "T-junction road, dense residential buildings, forested areas, water bodies, bare ground, industrial complex."}
-{"flight": "08", "filename": "08_0815.JPG", "caption": "T-junction road, high building density, forested areas, water bodies, bare ground, industrial zone."}
-{"flight": "08", "filename": "08_0816.JPG", "caption": "T-junction road, medium building density, forested land cover, small water bodies, straight roads, east-west alignment."}
-{"flight": "08", "filename": "08_0817.JPG", "caption": "T-junction road, medium building density, forested land cover, small water bodies, straight roads, bare ground patches."}
-{"flight": "08", "filename": "08_0818.JPG", "caption": "dense urban buildings, straight road, forested area, water bodies, bare ground patches, T-junction, farmland"}
-{"flight": "08", "filename": "08_0819.JPG", "caption": "T-junction road, dense building cluster, forested area, water bodies, bare ground patches, straight road alignment."}
-{"flight": "08", "filename": "08_0820.JPG", "caption": "T-junction road, dense building cluster, forested areas, water bodies, farmland, bare ground patches."}
-{"flight": "08", "filename": "08_0821.JPG", "caption": "T-junction road, dense urban buildings, forested areas, water bodies, farmland, bare ground, industrial complex."}
-{"flight": "08", "filename": "08_0822.JPG", "caption": "T-junction road, dense buildings west, forested areas, water bodies, farmland, bare ground patches."}
+{"flight": "08", "filename": "08_0794.JPG", "caption": "Straight road, dense farmland, scattered water bodies, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0795.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0796.JPG", "caption": "T-junction road, mixed farmland, forest patches, water bodies, bare ground, dense building cluster west."}
+{"flight": "08", "filename": "08_0797.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0798.JPG", "caption": "T-junction road, moderate building density, rectangular farmland plots, forested areas, small water bodies, bare ground patches."}
+{"flight": "08", "filename": "08_0799.JPG", "caption": "T-junction road, medium building density, forest, farmland, water bodies, industrial structures."}
+{"flight": "08", "filename": "08_0800.JPG", "caption": "T-junction road, dense buildings, forested areas, farmland plots, small water bodies, construction zones."}
+{"flight": "08", "filename": "08_0801.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, east-west highway, north-south arterial road."}
+{"flight": "08", "filename": "08_0802.JPG", "caption": "T-junction road, medium building density, water bodies, forest, farmland, bare ground, east-west highway, north-south arterial road."}
+{"flight": "08", "filename": "08_0803.JPG", "caption": "T-junction road, medium building density, water bodies, forest, farmland, bare ground, east-west highway."}
+{"flight": "08", "filename": "08_0804.JPG", "caption": "T-junction road, mixed building density, water bodies, forest, farmland, bare ground, east-west highway."}
+{"flight": "08", "filename": "08_0805.JPG", "caption": "T-junction road, dense buildings, water bodies, forest, bare ground, farmland, sports fields, industrial zones."}
+{"flight": "08", "filename": "08_0806.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0807.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, bare ground, sports field, wetlands."}
+{"flight": "08", "filename": "08_0808.JPG", "caption": "T-junction road, dense buildings, forested areas, water bodies, farmland, bare ground, curved road, straight road, rectangular structures, irregular shapes."}
+{"flight": "08", "filename": "08_0809.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, east-west highway."}
+{"flight": "08", "filename": "08_0810.JPG", "caption": "T-junction road, mixed building density, water bodies, farmland, forest, bare ground, south-facing structures."}
+{"flight": "08", "filename": "08_0811.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, curved river, dense urban structures."}
+{"flight": "08", "filename": "08_0812.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0813.JPG", "caption": "T-junction road, medium building density, forested areas, water bodies, bare ground, residential zones, industrial structures."}
+{"flight": "08", "filename": "08_0814.JPG", "caption": "T-junction road, medium building density, forested areas, water bodies, bare ground, farmland patches."}
+{"flight": "08", "filename": "08_0815.JPG", "caption": "T-junction road, medium building density, forested land cover, water bodies, straight roads, east-west alignment."}
+{"flight": "08", "filename": "08_0816.JPG", "caption": "T-junction road, medium building density, forested areas, water bodies, bare ground, straight roads, east-west alignment."}
+{"flight": "08", "filename": "08_0817.JPG", "caption": "T-junction road, medium building density, forested land cover, east-west river, north-south road."}
+{"flight": "08", "filename": "08_0818.JPG", "caption": "T-junction road, dense buildings, forested area, water bodies, farmland, bare ground, curved river."}
+{"flight": "08", "filename": "08_0819.JPG", "caption": "T-junction road, dense building cluster, forested area, water bodies, farmland, bare ground, straight road, east-west orientation."}
+{"flight": "08", "filename": "08_0820.JPG", "caption": "T-junction road, dense buildings south, forested areas north, water bodies, farmland, bare ground."}
+{"flight": "08", "filename": "08_0821.JPG", "caption": "T-junction road, dense building cluster, rectangular water body, forested areas, bare ground patches, industrial structures, agricultural fields."}
+{"flight": "08", "filename": "08_0822.JPG", "caption": "T-junction road, dense buildings, forested areas, water bodies, farmland, bare ground, curved river, rectangular fields."}
 {"flight": "08", "filename": "08_0823.JPG", "caption": "T-junction road, mixed building density, water bodies, forest, farmland, bare ground, canal south."}
-{"flight": "08", "filename": "08_0824.JPG", "caption": "T-junction road, dense buildings, water bodies, forest, farmland, bare ground, south-facing fields."}
-{"flight": "08", "filename": "08_0825.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, east-west canal."}
-{"flight": "08", "filename": "08_0826.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, railway tracks, rectangular ponds."}
-{"flight": "08", "filename": "08_0827.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, railway line, canal, industrial structures."}
+{"flight": "08", "filename": "08_0824.JPG", "caption": "T-junction road, mixed building density, water bodies, forest, farmland, bare ground, canal, sports field, industrial complex."}
+{"flight": "08", "filename": "08_0825.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, east-west canal."}
+{"flight": "08", "filename": "08_0826.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0827.JPG", "caption": "T-junction road, medium building density, water bodies, mixed farmland and forest, bare ground patches."}
 {"flight": "08", "filename": "08_0828.JPG", "caption": "T-junction road, moderate building density, water bodies, mixed farmland and forest, bare ground patches."}
-{"flight": "08", "filename": "08_0829.JPG", "caption": "T-junction road, mixed building density, water bodies, farmland, forest, bare ground, railway line, industrial structures."}
-{"flight": "08", "filename": "08_0830.JPG", "caption": "T-junction road, mixed building density, water bodies, farmland, forest, bare ground, railway line."}
-{"flight": "08", "filename": "08_0831.JPG", "caption": "T-junction road, industrial buildings, forested areas, water bodies, farmland, bare ground, railway tracks."}
-{"flight": "08", "filename": "08_0832.JPG", "caption": "T-junction roads, moderate building density, water bodies, forested areas, bare ground, farmland."}
-{"flight": "08", "filename": "08_0833.JPG", "caption": "T-junction road, moderate building density, forested areas, water bodies, farmland, bare ground."}
-{"flight": "08", "filename": "08_0834.JPG", "caption": "T-junction road, low building density, meandering water bodies, mixed farmland and forest cover."}
-{"flight": "08", "filename": "08_0835.JPG", "caption": "T-junction road, moderate building density, forested areas, farmland, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0836.JPG", "caption": "T-junction road, low building density, forested areas, farmland fields, small water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0837.JPG", "caption": "T-junction road, industrial buildings west, farmland south, forested areas east, water bodies scattered."}
-{"flight": "08", "filename": "08_0838.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, winding waterway."}
-{"flight": "08", "filename": "08_0839.JPG", "caption": "T-junction road, low building density, forested area, farmland, irrigation canal, bare ground, east-west road alignment."}
-{"flight": "08", "filename": "08_0840.JPG", "caption": "T-junction road, low building density, forested area, farmland fields, winding water channels, bare ground sections."}
-{"flight": "08", "filename": "08_0841.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, winding waterway, rectangular fields."}
-{"flight": "08", "filename": "08_0842.JPG", "caption": "T-junction road, dense forest, farmland fields, small water bodies, bare ground patches, east-west alignment."}
-{"flight": "08", "filename": "08_0843.JPG", "caption": "T-junction road, dense forest north, rectangular farmland plots, small water bodies east, bare ground patches."}
-{"flight": "08", "filename": "08_0844.JPG", "caption": "T-junction road, low building density, forested north edge, farmland, bare ground, water bodies east."}
-{"flight": "08", "filename": "08_0845.JPG", "caption": "Straight road, T-junction, farmland, forest, bare ground, water bodies, building density"}
-{"flight": "08", "filename": "08_0846.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, scattered water bodies, forested edges."}
-{"flight": "08", "filename": "08_0847.JPG", "caption": "Rectangular farmland plots, rectangular aquaculture ponds, dense residential buildings, winding water channels, straight access roads, forested buffers."}
-{"flight": "08", "filename": "08_0848.JPG", "caption": "Straight road, dense buildings, water bodies, farmland, forest, bare ground, river, east."}
-{"flight": "08", "filename": "08_0849.JPG", "caption": "Rectangular ponds, dense housing cluster, winding river, forested edges, straight road, east-west orientation."}
-{"flight": "08", "filename": "08_0850.JPG", "caption": "T-junction road, dense residential buildings, rectangular farmland ponds, winding river, forested areas, bare ground patches."}
-{"flight": "08", "filename": "08_0851.JPG", "caption": "Rectangular farmland ponds, dense village cluster, winding river, forested banks, T-junction road, east-west river flow."}
-{"flight": "08", "filename": "08_0852.JPG", "caption": "T-junction road, dense residential buildings, river, farmland, forest, bare ground, east-west river flow."}
+{"flight": "08", "filename": "08_0829.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, railway line, industrial structures."}
+{"flight": "08", "filename": "08_0830.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, industrial structures."}
+{"flight": "08", "filename": "08_0831.JPG", "caption": "T-junction road, dense industrial buildings, winding water bodies, mixed farmland and forest, bare ground patches."}
+{"flight": "08", "filename": "08_0832.JPG", "caption": "T-junction, straight road, medium building density, water bodies, farmland, forest, bare ground."}
+{"flight": "08", "filename": "08_0833.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, east-west highway."}
+{"flight": "08", "filename": "08_0834.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, east-west highway."}
+{"flight": "08", "filename": "08_0835.JPG", "caption": "T-junction road, industrial buildings, farmland, forest, water bodies, bare ground, south-facing fields."}
+{"flight": "08", "filename": "08_0836.JPG", "caption": "T-junction road, industrial buildings, farmland, forest, water bodies, bare ground, south-facing fields."}
+{"flight": "08", "filename": "08_0837.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground, winding river."}
+{"flight": "08", "filename": "08_0838.JPG", "caption": "T-junction road, low building density, forested areas, farmland, winding water channels, bare ground sections."}
+{"flight": "08", "filename": "08_0839.JPG", "caption": "T-junction road, low building density, forested area, farmland, irrigation canals, bare ground, rectangular fields."}
+{"flight": "08", "filename": "08_0840.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, bare ground, building density low."}
+{"flight": "08", "filename": "08_0841.JPG", "caption": "T-junction road, low building density, small pond, farmland, forest, irrigation canals, bare ground."}
+{"flight": "08", "filename": "08_0842.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, winding water channel, forested northern edge."}
+{"flight": "08", "filename": "08_0843.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, winding waterway, rectangular fields."}
+{"flight": "08", "filename": "08_0844.JPG", "caption": "T-junction road, dense farmland, forested north edge, water bodies, bare ground, winding canal."}
+{"flight": "08", "filename": "08_0845.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0846.JPG", "caption": "T-junction road, dense buildings, farmland, forest, water bodies, bare ground, winding river, rectangular fields, clustered structures, linear drainage."}
+{"flight": "08", "filename": "08_0847.JPG", "caption": "Straight road, dense buildings, farmland, forest, water bodies, east river."}
+{"flight": "08", "filename": "08_0848.JPG", "caption": "Straight road, dense buildings, farmland, forest, water bodies, T-junction, bare ground."}
+{"flight": "08", "filename": "08_0849.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, east riverbank."}
+{"flight": "08", "filename": "08_0850.JPG", "caption": "T-junction road, dense buildings, rectangular ponds, river, forested areas, bare ground."}
+{"flight": "08", "filename": "08_0851.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, north-up orientation."}
+{"flight": "08", "filename": "08_0852.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, east-west river flow."}
 {"flight": "08", "filename": "08_0853.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0854.JPG", "caption": "T-junction road, dense buildings west, river east, farmland south, forested areas, bare ground fields."}
-{"flight": "08", "filename": "08_0855.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river, north-south fields."}
-{"flight": "08", "filename": "08_0856.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, east-west river, north-south road."}
-{"flight": "08", "filename": "08_0857.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0858.JPG", "caption": "T-junction road, low building density, river, forested banks, farmland, bare ground, greenhouse structures."}
-{"flight": "08", "filename": "08_0859.JPG", "caption": "T-junction road, low building density, meandering water bodies, farmland, forested strips, bare ground patches."}
-{"flight": "08", "filename": "08_0860.JPG", "caption": "T-junction road, low building density, river, farmland, forest, water bodies, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_0861.JPG", "caption": "T-junction road, low building density, meandering water bodies, farmland, forest, bare ground, north-west."}
-{"flight": "08", "filename": "08_0862.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, ponds, east-west river bend."}
-{"flight": "08", "filename": "08_0863.JPG", "caption": "T-junction road, low building density, river, farmland, forest, rectangular ponds, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_0864.JPG", "caption": "T-junction road, low building density, meandering water bodies, farmland, forested strips, rectangular ponds."}
-{"flight": "08", "filename": "08_0865.JPG", "caption": "T-junction road, low building density, winding water bodies, farmland, forest patches, bare ground sections."}
-{"flight": "08", "filename": "08_0866.JPG", "caption": "T-junction road, low building density, winding water body, farmland, forest strips, bare ground patches."}
-{"flight": "08", "filename": "08_0867.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, bare ground, south, east, west."}
-{"flight": "08", "filename": "08_0868.JPG", "caption": "T-junction road, low building density, meandering water body, farmland, forest patches, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0869.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, bare ground, south, east, west."}
-{"flight": "08", "filename": "08_0870.JPG", "caption": "T-junction roads, scattered buildings, meandering water bodies, farmland, forested strips, bare ground patches."}
-{"flight": "08", "filename": "08_0871.JPG", "caption": "Straight roads, low building density, farmland, forested strips, water bodies, bare ground, east-west orientation."}
-{"flight": "08", "filename": "08_0872.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, linear water bodies, forested strips, bare ground patches."}
-{"flight": "08", "filename": "08_0873.JPG", "caption": "Rectangular farmland fields, intersecting straight roads, forested edges, rectangular aquaculture ponds, scattered small structures."}
-{"flight": "08", "filename": "08_0874.JPG", "caption": "rectangular farmland fields, winding water bodies, dense forest strips, straight roads, T-junctions, scattered small structures"}
-{"flight": "08", "filename": "08_0875.JPG", "caption": "Rectangular farmland plots, winding water channel, dense forest strips, scattered small structures, straight roads, east-west orientation."}
-{"flight": "08", "filename": "08_0876.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0854.JPG", "caption": "T-junction road, dense buildings, river, farmland, forest, bare ground, north, south, east, west."}
+{"flight": "08", "filename": "08_0855.JPG", "caption": "T-junction road, dense buildings west, river east, farmland south, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0856.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river, north-south road."}
+{"flight": "08", "filename": "08_0857.JPG", "caption": "T-junction road, low building density, river, forested areas, farmland, bare ground, small water body."}
+{"flight": "08", "filename": "08_0858.JPG", "caption": "T-junction road, low building density, river, forested areas, farmland, bare ground, ponds."}
+{"flight": "08", "filename": "08_0859.JPG", "caption": "T-junction road, low building density, winding water bodies, farmland, forested patches, rectangular ponds."}
+{"flight": "08", "filename": "08_0860.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0861.JPG", "caption": "T-junction road, low building density, meandering water bodies, farmland, forested strips, rectangular ponds, bare ground."}
+{"flight": "08", "filename": "08_0862.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west waterway."}
+{"flight": "08", "filename": "08_0863.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, winding river, rectangular ponds."}
+{"flight": "08", "filename": "08_0864.JPG", "caption": "T-junction road, low building density, meandering water body, farmland, forest strips, rectangular ponds."}
+{"flight": "08", "filename": "08_0865.JPG", "caption": "curved road, dense farmland, winding water channel, rectangular ponds, forested strips, industrial structures"}
+{"flight": "08", "filename": "08_0866.JPG", "caption": "T-junction road, low building density, winding water body, farmland, forested strips, bare ground patches."}
+{"flight": "08", "filename": "08_0867.JPG", "caption": "T-junction road, low building density, meandering water body, farmland, forested strips, bare ground patches."}
+{"flight": "08", "filename": "08_0868.JPG", "caption": "Straight road, low building density, meandering water body, farmland, forested edges."}
+{"flight": "08", "filename": "08_0869.JPG", "caption": "T-junction road, low building density, meandering water body, farmland, forested strips, bare ground, straight and curved roads."}
+{"flight": "08", "filename": "08_0870.JPG", "caption": "T-junction roads, low building density, meandering water bodies, farmland, forested edges, bare ground patches."}
+{"flight": "08", "filename": "08_0871.JPG", "caption": "Straight roads, low building density, farmland, forest strips, water bodies, rectangular fields."}
+{"flight": "08", "filename": "08_0872.JPG", "caption": "T-junction roads, low building density, rectangular farmland plots, linear water bodies, forested edges, bare ground patches."}
+{"flight": "08", "filename": "08_0873.JPG", "caption": "Rectilinear farmland grid, straight roads, forested corridors, rectangular aquaculture ponds, scattered small structures."}
+{"flight": "08", "filename": "08_0874.JPG", "caption": "Rectangular farmland fields, winding waterway, dense forest strips, T-junction roads, scattered small structures."}
+{"flight": "08", "filename": "08_0875.JPG", "caption": "Rectangular farmland fields, winding waterway, dense forest strips, T-junction roads, scattered small structures."}
+{"flight": "08", "filename": "08_0876.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east-west orientation."}
 {"flight": "08", "filename": "08_0877.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east-west orientation."}
-{"flight": "08", "filename": "08_0878.JPG", "caption": "Rectangular farmland plots, winding waterway, dense forest strips, scattered aquaculture ponds, rural road network."}
-{"flight": "08", "filename": "08_0879.JPG", "caption": "T-junction road, low building density, forested strips, farmland fields, water bodies, bare ground patches."}
-{"flight": "08", "filename": "08_0880.JPG", "caption": "T-junction road, low building density, forested edges, farmland, ponds, bare ground, straight roads."}
-{"flight": "08", "filename": "08_0881.JPG", "caption": "T-junction road, dense forest, farmland, water bodies, straight road, east, south."}
-{"flight": "08", "filename": "08_0882.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, linear water bodies, forested edges, straight highway alignment."}
-{"flight": "08", "filename": "08_0883.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, linear water bodies, forested edges, straight highway alignment."}
-{"flight": "08", "filename": "08_0884.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, low building density, rectangular fields, linear waterways."}
-{"flight": "08", "filename": "08_0885.JPG", "caption": "T-junction road, dense buildings east, farmland, forest, water bodies, bare ground."}
-{"flight": "08", "filename": "08_0886.JPG", "caption": "Straight highway, T-junction, dense buildings, farmland, forest, bare ground, water bodies, north, south, east, west."}
-{"flight": "08", "filename": "08_0887.JPG", "caption": "Straight highway, T-junction, dense buildings, farmland, forest, ponds, river, bare ground, east, south."}
-{"flight": "08", "filename": "08_0888.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, pond, industrial facility."}
-{"flight": "08", "filename": "08_0889.JPG", "caption": "T-junction road, dense buildings, farmland, forest, water bodies, straight river, rectangular ponds, bare ground."}
-{"flight": "08", "filename": "08_0890.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, north-up orientation."}
-{"flight": "08", "filename": "08_0891.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, rectangular water bodies, east-west alignment."}
-{"flight": "08", "filename": "08_0892.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, north-west."}
-{"flight": "08", "filename": "08_0893.JPG", "caption": "curved river, dense farmland, scattered buildings, rectangular ponds, straight roads, east-west alignment"}
-{"flight": "08", "filename": "08_0894.JPG", "caption": "T-junction road, low building density, river west, farmland, forest, bare ground, water bodies."}
-{"flight": "08", "filename": "08_0895.JPG", "caption": "Rectangular farmland plots, water bodies, winding roads, dense vegetation, scattered structures, straight and curved paths."}
-{"flight": "08", "filename": "08_0896.JPG", "caption": "rectangular ponds, farmland fields, winding roads, scattered buildings, forested edges, straight and curved paths"}
-{"flight": "08", "filename": "08_0897.JPG", "caption": "rectangular water bodies, farmland fields, bare ground, winding roads, scattered buildings, north-east orientation"}
-{"flight": "08", "filename": "08_0953.JPG", "caption": "T-junction road, dense farmland, water bodies, forested edges, bare ground patches, agricultural fields, irrigation canals, greenhouse structures, rural settlement clusters, winding waterways, rectangular pond"}
-{"flight": "08", "filename": "08_0954.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west canal."}
+{"flight": "08", "filename": "08_0878.JPG", "caption": "T-junction road, low building density, meandering water body, farmland, forest, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0879.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0880.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0881.JPG", "caption": "Straight road, T-junction, farmland, forest, water bodies, bare ground, rectangular fields, winding waterways, dense vegetation, agricultural plots, linear infrastructure, fragmented land use, mixed terrain"}
+{"flight": "08", "filename": "08_0882.JPG", "caption": "T-junction road, low building density, rectangular farmland fields, forested edges, multiple water bodies, straight highway alignment."}
+{"flight": "08", "filename": "08_0883.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, linear water bodies, forested edges, east-west orientation."}
+{"flight": "08", "filename": "08_0884.JPG", "caption": "Straight highway, rectangular farmland plots, rectangular ponds, dense forest, clustered buildings, T-junction road."}
+{"flight": "08", "filename": "08_0885.JPG", "caption": "Straight road, dense buildings east, farmland west, water bodies south, forested edges."}
+{"flight": "08", "filename": "08_0886.JPG", "caption": "Straight road, dense buildings, farmland, water bodies, forest, bare ground, T-junction."}
+{"flight": "08", "filename": "08_0887.JPG", "caption": "T-junction road, dense residential buildings, farmland, ponds, river, bare ground, forested areas."}
+{"flight": "08", "filename": "08_0888.JPG", "caption": "T-junction road, dense buildings, farmland, forest, water bodies, straight road, east river."}
+{"flight": "08", "filename": "08_0889.JPG", "caption": "T-junction road, dense buildings, farmland, forest, water bodies, straight road, east-west river."}
+{"flight": "08", "filename": "08_0890.JPG", "caption": "T-junction road, clustered buildings, farmland, forest, water bodies, bare ground, east-west river, north-south fields."}
+{"flight": "08", "filename": "08_0891.JPG", "caption": "T-junction road, dense buildings west, river bend, farmland, forest, bare ground, water bodies."}
+{"flight": "08", "filename": "08_0892.JPG", "caption": "T-junction road, dense buildings west, farmland, forest, water bodies, bare ground, rectangular fields, winding river."}
+{"flight": "08", "filename": "08_0893.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, rectangular fields, winding waterway, clustered structures, agricultural plots vegetation, linear drainage, irregular boundaries"}
+{"flight": "08", "filename": "08_0894.JPG", "caption": "T-junction road, low building density, rectangular water bodies, farmland, forest, bare ground, east river bend."}
+{"flight": "08", "filename": "08_0895.JPG", "caption": "Rectangular farmland plots, rectangular ponds, winding river, scattered buildings, straight roads, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0896.JPG", "caption": "Rectangular farmland plots, rectangular water bodies, winding road, scattered buildings, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_0897.JPG", "caption": "Rectangular farmland plots, water bodies, bare ground, scattered buildings, straight roads, east-west orientation."}
+{"flight": "08", "filename": "08_0953.JPG", "caption": "T-junction waterway, rectangular aquaculture ponds, scattered farmland, narrow roads, sparse vegetation, no buildings."}
+{"flight": "08", "filename": "08_0954.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, north, south, east, west."}
 {"flight": "08", "filename": "08_0955.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0956.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west canal."}
-{"flight": "08", "filename": "08_0957.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east river bend."}
-{"flight": "08", "filename": "08_0958.JPG", "caption": "T-junction road, mixed farmland, forest, bare ground, water bodies, low building density."}
-{"flight": "08", "filename": "08_0959.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, aquaculture ponds, irrigation canals."}
-{"flight": "08", "filename": "08_0960.JPG", "caption": "curved river, rectangular aquaculture ponds, industrial buildings, agricultural fields, forested areas, T-junction road, bare ground"}
-{"flight": "08", "filename": "08_0961.JPG", "caption": "curved river, rectangular fish ponds, industrial buildings, farmland, forested areas, T-junction road, bare ground"}
-{"flight": "08", "filename": "08_0962.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, east-facing water bodies."}
-{"flight": "08", "filename": "08_0963.JPG", "caption": "T-junction road, industrial building, aquaculture ponds, river, farmland, forested areas, bare ground, agricultural fields, water bodies, winding riverbank, rectangular ponds, vegetated"}
-{"flight": "08", "filename": "08_0964.JPG", "caption": "Straight highway, rectangular ponds, industrial building, farmland, river bend, forested areas, scattered water bodies."}
-{"flight": "08", "filename": "08_0965.JPG", "caption": "Straight road, low building density, multiple water bodies, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0966.JPG", "caption": "Straight highway, rectangular aquaculture ponds, scattered farmland, forested edges, industrial buildings east."}
-{"flight": "08", "filename": "08_0967.JPG", "caption": "Straight road, rectangular ponds, farmland, forested areas, scattered structures, winding waterways."}
-{"flight": "08", "filename": "08_0968.JPG", "caption": "Straight road, dense farmland, rectangular ponds, forested edges, winding waterways, agricultural fields."}
-{"flight": "08", "filename": "08_0969.JPG", "caption": "T-junction road, moderate building density, water bodies, farmland, forest, bare ground, east-facing water bodies."}
-{"flight": "08", "filename": "08_0970.JPG", "caption": "T-junction road, dense building cluster west, rectangular ponds, farmland, forest strips, winding waterways."}
-{"flight": "08", "filename": "08_0971.JPG", "caption": "T-junction road, dense building cluster, rectangular fish ponds, forested strips, bare ground, water bodies, farmland fields."}
-{"flight": "08", "filename": "08_0972.JPG", "caption": "rectangular ponds, forested areas, farmland fields, winding waterways, clustered buildings, straight roads, east-west orientation"}
-{"flight": "08", "filename": "08_0973.JPG", "caption": "T-junction road, medium building density, water bodies, farmland, forest, bare ground, east-west river."}
-{"flight": "08", "filename": "08_0974.JPG", "caption": "Rectangular farmland plots, dense forest patches, winding water channels, clustered residential buildings, straight road edges."}
-{"flight": "08", "filename": "08_0975.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east-west orientation."}
-{"flight": "08", "filename": "08_0976.JPG", "caption": "Straight road, low building density, forested areas, farmland, water bodies, bare ground, east-west orientation."}
-{"flight": "08", "filename": "08_0977.JPG", "caption": "Straight road, low building density, forested areas, farmland, water bodies, east-west orientation."}
-{"flight": "08", "filename": "08_0978.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, east."}
-{"flight": "08", "filename": "08_0979.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, forested area east, water bodies west."}
-{"flight": "08", "filename": "08_0980.JPG", "caption": "T-junction roads, low building density, farmland, forest, water bodies, curved road, east-west alignment."}
-{"flight": "08", "filename": "08_0981.JPG", "caption": "Straight roads, low building density, farmland, river, forest patches, scattered structures."}
-{"flight": "08", "filename": "08_0982.JPG", "caption": "Straight roads, low building density, no water bodies, farmland, east-west orientation."}
-{"flight": "08", "filename": "08_0983.JPG", "caption": "T-junction road, farmland, forest, water body, scattered buildings, straight and curved roads, bare ground."}
-{"flight": "08", "filename": "08_0984.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_0985.JPG", "caption": "rectangular farmland fields, winding water channel, dense tree lines, straight road, T-junction, bare ground, forested strips"}
-{"flight": "08", "filename": "08_0986.JPG", "caption": "rectangular farmland plots, winding water channels, dense tree lines, straight road, T-junction, bare ground, forested buffers"}
-{"flight": "08", "filename": "08_0987.JPG", "caption": "rectangular ponds, straight roads, farmland, forest strips, winding water channel, T-junction, bare ground, agricultural fields"}
-{"flight": "08", "filename": "08_0988.JPG", "caption": "Rectangular aquaculture ponds, adjacent farmland, winding water channels, dense vegetation strips, straight road access."}
-{"flight": "08", "filename": "08_0989.JPG", "caption": "Rectangular aquaculture ponds, adjacent farmland fields, winding water channel, forested buffer strips, straight road edges."}
-{"flight": "08", "filename": "08_0990.JPG", "caption": "Rectangular farmland plots, winding water channels, forested edges, straight roads, scattered structures."}
-{"flight": "08", "filename": "08_0991.JPG", "caption": "Rectangular farmland fields, winding water channel, rectangular aquaculture ponds, sparse vegetation, low building density, east-west orientation."}
-{"flight": "08", "filename": "08_0992.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_0993.JPG", "caption": "Rectangular farmland fields, winding water channels, forested edges, straight roads, rectangular ponds."}
-{"flight": "08", "filename": "08_0994.JPG", "caption": "T-junction road, low building density, forested west edge, farmland, winding water body, bare ground."}
-{"flight": "08", "filename": "08_0995.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, north-west."}
-{"flight": "08", "filename": "08_0996.JPG", "caption": "Straight road, dense forest, farmland, water bodies, bare ground, T-junction, south."}
-{"flight": "08", "filename": "08_0997.JPG", "caption": "T-junction road, low building density, river west, forested north, farmland south and east, bare ground patches."}
-{"flight": "08", "filename": "08_0998.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_0999.JPG", "caption": "curved river, dense forest, rectangular farmland, scattered buildings, winding road, adjacent wetlands"}
-{"flight": "08", "filename": "08_1000.JPG", "caption": "curved river, dense forest, farmland fields, scattered buildings, winding road, rural landscape"}
-{"flight": "08", "filename": "08_1001.JPG", "caption": "Winding river, dense forest, farmland plots, T-junction road, clustered buildings, bare ground patches."}
+{"flight": "08", "filename": "08_0956.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east river bend."}
+{"flight": "08", "filename": "08_0957.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, water bodies."}
+{"flight": "08", "filename": "08_0958.JPG", "caption": "curved river, rectangular farmland plots, forested areas, industrial buildings, straight road, T-junction, bare ground, water bodies, agricultural fields, dense vegetation, scattered structures, winding water"}
+{"flight": "08", "filename": "08_0959.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_0960.JPG", "caption": "T-junction road, low building density, river bend, farmland, forest, bare ground, aquaculture ponds, irrigation canals."}
+{"flight": "08", "filename": "08_0961.JPG", "caption": "T-junction road, low building density, river bend, farmland, aquaculture ponds, forested areas, bare ground, irrigation canals."}
+{"flight": "08", "filename": "08_0962.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest, bare ground, curved river channel."}
+{"flight": "08", "filename": "08_0963.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest, bare ground, curved riverbank."}
+{"flight": "08", "filename": "08_0964.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forest, bare ground, east river bend."}
+{"flight": "08", "filename": "08_0965.JPG", "caption": "Straight road, low building density, multiple water bodies, farmland, forest, bare ground, river east."}
+{"flight": "08", "filename": "08_0966.JPG", "caption": "straight road, rectangular ponds, farmland, forested areas, scattered buildings, winding waterways"}
+{"flight": "08", "filename": "08_0967.JPG", "caption": "Straight road, rectangular ponds, farmland, forested areas, scattered buildings, drainage ditches, agricultural fields."}
+{"flight": "08", "filename": "08_0968.JPG", "caption": "Straight road, dense farmland, rectangular ponds, winding waterways, forested buffers, agricultural fields."}
+{"flight": "08", "filename": "08_0969.JPG", "caption": "T-junction road, moderate building density, multiple water bodies, mixed farmland and forest cover."}
+{"flight": "08", "filename": "08_0970.JPG", "caption": "T-junction road, dense building cluster, rectangular aquaculture ponds, forested strips, bare ground fields, winding water channels."}
+{"flight": "08", "filename": "08_0971.JPG", "caption": "rectangular ponds, dense forest, farmland, winding waterways, T-junction road, clustered buildings, bare ground, forested areas, agricultural fields, straight road, curved water channels, dense"}
+{"flight": "08", "filename": "08_0972.JPG", "caption": "T-junction road, low building density, farmland, forest, water bodies, straight road segments."}
+{"flight": "08", "filename": "08_0973.JPG", "caption": "farmland, forest, water bodies, T-junction road, clustered buildings, straight and curved paths, dense vegetation, rectangular plots, winding waterways, mixed land cover, rural settlement, agricultural fields"}
+{"flight": "08", "filename": "08_0974.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0975.JPG", "caption": "Straight road, low building density, forested areas, farmland, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0976.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0977.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0978.JPG", "caption": "Rectangular farmland plots, dense forested areas, small water bodies, scattered buildings, winding dirt roads, T-junctions, east-west orientation."}
+{"flight": "08", "filename": "08_0979.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, forested areas, water bodies, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_0980.JPG", "caption": "Straight roads, low building density, farmland, forest, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0981.JPG", "caption": "Straight roads, low building density, farmland, river west, forested edges."}
+{"flight": "08", "filename": "08_0982.JPG", "caption": "T-junction road, low building density, meandering water body, farmland, forest patches, bare ground."}
+{"flight": "08", "filename": "08_0983.JPG", "caption": "Farmland fields, winding waterway, scattered buildings, straight roads, forested edges, T-junctions, bare ground patches."}
+{"flight": "08", "filename": "08_0984.JPG", "caption": "T-junction road, scattered buildings, water bodies, farmland, forest strips, bare ground patches."}
+{"flight": "08", "filename": "08_0985.JPG", "caption": "Rectangular farmland fields, winding water channels, scattered trees, T-junction roads, sparse buildings, bare ground patches."}
+{"flight": "08", "filename": "08_0986.JPG", "caption": "rectangular ponds, straight roads, farmland, forest strips, winding water channels, bare ground, T-junctions, east-west alignment"}
+{"flight": "08", "filename": "08_0987.JPG", "caption": "T-junction road, low building density, multiple water bodies, farmland, forested strips, winding river, rectangular ponds."}
+{"flight": "08", "filename": "08_0988.JPG", "caption": "Rectangular aquaculture ponds, adjacent farmland, winding waterways, forested buffers, straight road access."}
+{"flight": "08", "filename": "08_0989.JPG", "caption": "Rectangular aquaculture ponds, adjacent farmland fields, winding irrigation canals, dense tree lines, straight access roads."}
+{"flight": "08", "filename": "08_0990.JPG", "caption": "Rectangular water bodies, farmland fields, winding waterway, forested edges, straight roads, T-junctions, bare ground."}
+{"flight": "08", "filename": "08_0991.JPG", "caption": "Rectangular farmland fields, winding water channel, rectangular aquaculture ponds, forested edges, straight roads, T-junctions."}
+{"flight": "08", "filename": "08_0992.JPG", "caption": "Rectangular farmland fields, winding water channels, rectangular aquaculture ponds, forested edges, straight roads, T-junctions."}
+{"flight": "08", "filename": "08_0993.JPG", "caption": "Straight roads, low building density, forested edges, farmland, water bodies, east-west orientation."}
+{"flight": "08", "filename": "08_0994.JPG", "caption": "T-junction road, low building density, forested edges, farmland, water bodies, straight and curved roads."}
+{"flight": "08", "filename": "08_0995.JPG", "caption": "T-junction road, low building density, forested areas, farmland fields, winding water bodies, bare ground sections."}
+{"flight": "08", "filename": "08_0996.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, winding waterway."}
+{"flight": "08", "filename": "08_0997.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, north river bend."}
+{"flight": "08", "filename": "08_0998.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, east-west river."}
+{"flight": "08", "filename": "08_0999.JPG", "caption": "curved river, dense forest, rectangular farmland, scattered buildings, winding road, adjacent fields"}
+{"flight": "08", "filename": "08_1000.JPG", "caption": "curved river, dense forest, rectangular farmland, scattered buildings, winding road, adjacent wetlands, rural settlement cluster"}
+{"flight": "08", "filename": "08_1001.JPG", "caption": "curved river, dense forest, farmland fields, clustered buildings, winding road, agricultural ponds"}
 {"flight": "08", "filename": "08_1002.JPG", "caption": "curved river, dense forest, farmland fields, clustered buildings, straight road, T-junction, bare ground"}
-{"flight": "08", "filename": "08_1003.JPG", "caption": "curved river, rectangular farmland plots, dense forest, clustered buildings, narrow road, small pond, T-junction, east bank"}
-{"flight": "08", "filename": "08_1004.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_1005.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east river bend."}
-{"flight": "08", "filename": "08_1006.JPG", "caption": "T-junction road, low building density, farmland, water bodies, forested edges, east-west river."}
-{"flight": "08", "filename": "08_1007.JPG", "caption": "T-junction road, low building density, farmland, river, forested edges, rectangular fields, straight roads, east-west orientation."}
-{"flight": "08", "filename": "08_1008.JPG", "caption": "Rectangular farmland fields, winding road, river, scattered structures, forested riverbanks, east-west orientation."}
-{"flight": "08", "filename": "08_1009.JPG", "caption": "T-junction road, low building density, river south, farmland, bare ground, forest strips."}
-{"flight": "08", "filename": "08_1010.JPG", "caption": "T-junction road, low building density, river, farmland, forested strips, bare ground, curved waterway, rectangular fields."}
-{"flight": "08", "filename": "08_1011.JPG", "caption": "T-junction road, low building density, river, farmland, forested banks, straight and curved roads."}
-{"flight": "08", "filename": "08_1012.JPG", "caption": "Straight road, low building density, river south, farmland, forested edges, T-junction."}
-{"flight": "08", "filename": "08_1013.JPG", "caption": "Straight road, T-junction, low building density, farmland, river, forest, bare ground, east, south."}
-{"flight": "08", "filename": "08_1014.JPG", "caption": "Straight road, industrial buildings, farmland, forest, water bodies, T-junction, bare ground."}
-{"flight": "08", "filename": "08_1015.JPG", "caption": "straight road, T-junction, farmland, forest, water bodies, industrial buildings, bare ground"}
-{"flight": "08", "filename": "08_1016.JPG", "caption": "Straight road, industrial buildings, farmland, river, forested areas, bare ground, T-junction."}
-{"flight": "08", "filename": "08_1017.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, east-facing fields."}
-{"flight": "08", "filename": "08_1018.JPG", "caption": "T-junction road, industrial buildings, farmland, forest, river, bare ground, water bodies, straight road, rectangular fields, dense vegetation."}
-{"flight": "08", "filename": "08_1019.JPG", "caption": "T-junction road, industrial buildings, forested areas, farmland, river, bare ground, water bodies."}
-{"flight": "08", "filename": "08_1020.JPG", "caption": "T-junction road, industrial buildings, farmland, forest, water bodies, bare ground, south-facing fields, east-side highway."}
-{"flight": "08", "filename": "08_1021.JPG", "caption": "T-junction road, low building density, forest, farmland, water body, bare ground, straight road, east-west alignment."}
-{"flight": "08", "filename": "08_1022.JPG", "caption": "Straight road, low building density, forest, farmland, water body, T-junction, bare ground."}
-{"flight": "08", "filename": "08_1023.JPG", "caption": "T-junction road, low building density, meandering water bodies, farmland, forest, bare ground."}
-{"flight": "08", "filename": "08_1024.JPG", "caption": "T-junction road, low building density, forested area, farmland, water bodies, bare ground, north-facing fields."}
-{"flight": "08", "filename": "08_1025.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground, east-facing fields."}
-{"flight": "08", "filename": "08_1026.JPG", "caption": "T-junction road, low building density, scattered water bodies, farmland, forest, bare ground, east-west alignment."}
-{"flight": "08", "filename": "08_1027.JPG", "caption": "T-junction road, low building density, water bodies, farmland, forest, bare ground, north-up orientation."}
-{"flight": "08", "filename": "08_1028.JPG", "caption": "T-junction road, low building density, river, forest, farmland, ponds, bare ground, east-west river."}
-{"flight": "08", "filename": "08_1029.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, north-up orientation."}
-{"flight": "08", "filename": "08_1030.JPG", "caption": "T-junction road, low building density, river, forest, farmland, small water bodies, bare ground."}
-{"flight": "08", "filename": "08_1031.JPG", "caption": "T-junction road, dense buildings, river, forest, farmland, ponds, bare ground, south-facing fields."}
-{"flight": "08", "filename": "08_1032.JPG", "caption": "T-junction road, dense buildings, river, forest, farmland, pond, bare ground, east-west river bend."}
-{"flight": "08", "filename": "08_1033.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, bare ground, north-facing water body."}
+{"flight": "08", "filename": "08_1003.JPG", "caption": "curved river, dense forest, rectangular farmland, clustered buildings, straight road, T-junction, bare ground"}
+{"flight": "08", "filename": "08_1004.JPG", "caption": "T-shaped road, dense farmland, winding river, forested banks, clustered buildings, rectangular fields, bare ground patches."}
+{"flight": "08", "filename": "08_1005.JPG", "caption": "T-junction road, low building density, river bend, farmland, forested banks, rectangular fields."}
+{"flight": "08", "filename": "08_1006.JPG", "caption": "T-junction road, low building density, river bend south, rectangular farmland plots, forested riverbanks, bare ground patches."}
+{"flight": "08", "filename": "08_1007.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east river bend."}
+{"flight": "08", "filename": "08_1008.JPG", "caption": "Straight road, T-junction, farmland, forest, water body, bare ground, building, cardinal direction."}
+{"flight": "08", "filename": "08_1009.JPG", "caption": "T-junction road, low building density, river, farmland, forested edges, curved waterway, straight fields."}
+{"flight": "08", "filename": "08_1010.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, curved waterway, straight road segments."}
+{"flight": "08", "filename": "08_1011.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, curved waterway, straight road."}
+{"flight": "08", "filename": "08_1012.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, curved waterway, straight highway."}
+{"flight": "08", "filename": "08_1013.JPG", "caption": "Straight road, T-junction, industrial buildings, farmland, water bodies, forested areas, bare ground, curved waterway."}
+{"flight": "08", "filename": "08_1014.JPG", "caption": "Straight road, industrial buildings, farmland, forest, river, T-junction, bare ground, water bodies, dense vegetation, agricultural fields."}
+{"flight": "08", "filename": "08_1015.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-west river."}
+{"flight": "08", "filename": "08_1016.JPG", "caption": "T-junction road, medium building density, river, farmland, forest, bare ground, small pond."}
+{"flight": "08", "filename": "08_1017.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, east-west river bend."}
+{"flight": "08", "filename": "08_1018.JPG", "caption": "T-junction road, moderate building density, river, farmland, forest, bare ground, east-facing fields."}
+{"flight": "08", "filename": "08_1019.JPG", "caption": "T-junction road, industrial buildings, farmland, forest, river, bare ground, water bodies, dense vegetation, agricultural fields, winding waterway."}
+{"flight": "08", "filename": "08_1020.JPG", "caption": "Straight road, industrial buildings, farmland, forest, river, T-junction, bare ground, water bodies, dense vegetation, agricultural fields."}
+{"flight": "08", "filename": "08_1021.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-facing water body."}
+{"flight": "08", "filename": "08_1022.JPG", "caption": "T-junction road, low building density, river, farmland, forest, bare ground, east-facing water body."}
+{"flight": "08", "filename": "08_1023.JPG", "caption": "T-junction road, low building density, forested areas, farmland, water bodies, bare ground, winding river, rectangular fields."}
+{"flight": "08", "filename": "08_1024.JPG", "caption": "Straight road, low building density, farmland, forest, water bodies, bare ground, T-junction."}
+{"flight": "08", "filename": "08_1025.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east-west alignment."}
+{"flight": "08", "filename": "08_1026.JPG", "caption": "T-junction road, low building density, rectangular farmland plots, small water bodies, forested areas, bare ground patches."}
+{"flight": "08", "filename": "08_1027.JPG", "caption": "Straight road, low building density, water bodies, farmland, forest, bare ground, east-west orientation."}
+{"flight": "08", "filename": "08_1028.JPG", "caption": "T-junction road, low building density, river, forest, farmland, bare ground, ponds, east-west river."}
+{"flight": "08", "filename": "08_1029.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, ponds, east-west river bend."}
+{"flight": "08", "filename": "08_1030.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, small ponds, curved dirt path."}
+{"flight": "08", "filename": "08_1031.JPG", "caption": "T-junction road, dense buildings west, river, forested land, farmland, ponds, bare ground."}
+{"flight": "08", "filename": "08_1032.JPG", "caption": "T-junction road, dense buildings, river, forest, farmland, pond, bare ground, north-up orientation."}
+{"flight": "08", "filename": "08_1033.JPG", "caption": "T-junction road, medium building density, river, forest, farmland, bare ground, east-west river bend."}
