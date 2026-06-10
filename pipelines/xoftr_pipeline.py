@@ -34,7 +34,7 @@ from src.utils.data_io import DataIOWrapper, lower_config  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import RANSAC_THRESH  # noqa: E402
+from helpers.utils import RANSAC_THRESH, fit_similarity  # noqa: E402
 from helpers.workers import run_pipeline  # noqa: E402
 
 
@@ -48,11 +48,9 @@ def match_xoftr(model, drone_bgr, sat_bgr, conf_thresh=0.0):
              good=int(mask.sum()), inliers=0, H=None,
              _kp0=kp0, _kp1=kp1, _conf=conf, _mask=mask)
     if r["good"] >= 4:
-        H, mh = cv2.findHomography(
-            kp0[mask].reshape(-1, 1, 2), kp1[mask].reshape(-1, 1, 2),
-            cv2.USAC_MAGSAC, RANSAC_THRESH, maxIters=5000, confidence=0.9999)
-        if H is not None and mh is not None:
-            r["inliers"], r["H"] = int(mh.sum()), H
+        H, ninl = fit_similarity(kp0[mask], kp1[mask])
+        if H is not None:
+            r["inliers"], r["H"] = ninl, H
     return r
 
 
@@ -92,7 +90,7 @@ def main():
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
-        banner=lambda a: (f"  Method: XoFTR (resize {a.resize}) | RANSAC: {RANSAC_THRESH} | "
+        banner=lambda a: (f"  Method: XoFTR (resize {a.resize}) | RANSAC(sim-4dof): {RANSAC_THRESH} | "
                           f"MinInl: {a.min_inliers} | Dist: {a.dist}m | "
                           f"CLAHE: {'off' if a.no_clahe else 'on'} | "
                           f"Flights: {' '.join(a.flights)}"),

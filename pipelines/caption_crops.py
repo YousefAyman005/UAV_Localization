@@ -137,10 +137,10 @@ TILE_STRIDE = 512
 TEST_FRAC = 0.25
 
 
-def iter_sat_patches(flight, limit):
+def iter_sat_patches(flight, limit, band="train"):
     import pandas as pd
     tiles, _, drone_csv, _ = load_flight(flight)
-    df = split_flight_rows(pd.read_csv(drone_csv), which="train",
+    df = split_flight_rows(pd.read_csv(drone_csv), which=band,
                            test_frac=TEST_FRAC, axis="auto", buffer_frac=0.0)
     if limit is not None:
         df = df.iloc[:limit]
@@ -152,17 +152,17 @@ def iter_sat_patches(flight, limit):
         yield row["filename"], (None if patch is None else _bgr_to_pil(patch))
 
 
-def iter_drone_images(flight, limit):
+def iter_drone_images(flight, limit, band="test"):
     import pandas as pd
     _, drone_dir, drone_csv, _ = get_flight_paths(flight)
-    df = split_flight_rows(pd.read_csv(drone_csv), which="test",
+    df = split_flight_rows(pd.read_csv(drone_csv), which=band,
                            test_frac=TEST_FRAC, axis="auto", buffer_frac=0.0)
     if limit is not None:
         df = df.iloc[:limit]
     for _, row in df.iterrows():
         img = cv2.imread(os.path.join(drone_dir, row["filename"]))
         if img is not None:
-            img = cv2.resize(img, (SZ_W, SZ_H))
+            img = cv2.resize(img, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
             yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
             if yaw != 0.0:
                 h, w = img.shape[:2]
@@ -188,19 +188,19 @@ def iter_tile_patches(flight, limit):
 
 # ---------- per-flight driver ----------------------------------------------
 
-def _source_and_path(flight, target, limit):
+def _source_and_path(flight, target, limit, band):
     if target == "tile":
         out = os.path.join(CAPTION_DIR,
                            f"{flight}_tile_ts{TILE_SIZE}_st{TILE_STRIDE}.jsonl")
         return iter_tile_patches(flight, limit), "tile_id", out
-    gen = iter_sat_patches(flight, limit) if target == "sat" \
-        else iter_drone_images(flight, limit)
+    gen = iter_sat_patches(flight, limit, band) if target == "sat" \
+        else iter_drone_images(flight, limit, band)
     return gen, "filename", os.path.join(CAPTION_DIR, f"{flight}_{target}.jsonl")
 
 
-def run_flight(caption, flight, target, limit):
+def run_flight(caption, flight, target, limit, band):
     os.makedirs(CAPTION_DIR, exist_ok=True)
-    source, id_field, out_path = _source_and_path(flight, target, limit)
+    source, id_field, out_path = _source_and_path(flight, target, limit, band)
     done = set()
     if os.path.isfile(out_path):
         with open(out_path) as f:
@@ -230,16 +230,25 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--target", choices=["sat", "drone", "tile"], default="sat",
                     help="sat=GT crops (train), drone=query images (test), tile=gallery grid.")
+    ap.add_argument("--band", choices=["train", "test", "all"], default=None,
+                    help="Spatial band to caption (default: train for sat, test "
+                         "for drone). '--target drone --band train' produces the "
+                         "captions the trainer's drone<->own-caption term needs; "
+                         "bands append into the same per-flight JSONL (resumable, "
+                         "keyed by filename). Ignored for tile.")
     ap.add_argument("--flights", nargs="+", default=["all"])
     ap.add_argument("--limit", type=int, default=None,
                     help="Cap rows per flight (smoke test).")
     args = ap.parse_args()
 
+    band = args.band or ("test" if args.target == "drone" else "train")
+    if args.target == "tile" and args.band:
+        print("  NOTE: --band is ignored for --target tile (whole gallery grid).")
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     caption = build_captioner()
-    print(f"  Captioning [{args.target}] | flights {' '.join(flights)}")
+    print(f"  Captioning [{args.target}] band={band} | flights {' '.join(flights)}")
     for flight in flights:
-        run_flight(caption, flight, args.target, args.limit)
+        run_flight(caption, flight, args.target, args.limit, band)
 
 
 if __name__ == "__main__":

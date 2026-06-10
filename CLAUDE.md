@@ -41,12 +41,17 @@ and `visloc_<name>_results.csv` + `.log` output. The per-image work is
 
 > load drone img → `tile_for_gps` picks the satellite tile → add a simulated GPS-prior offset
 > (`PRIOR_OFFSET_STD_M`, seeded per-row by crc32 so it's reproducible) → `metric_crop` a
-> metric-isotropic, heading-rotated satellite patch → `match_factory` returns a homography `H` →
-> project the patch centre through `H` → `patch_px_to_gps` → `haversine_m` error → row.
+> metric-isotropic, heading-rotated satellite patch → `match_factory` returns `H` →
+> project the drone-image centre through `H` → `patch_px_to_gps` → `haversine_m` error → row.
 
-A match factory returns a dict with at least `sat_kp, drone_kp, raw, good, inliers, H`.
-Acceptance gate is `inliers >= MIN_INL`. Metrics per image: `offset_m`, `success_{5,10,15,20,25}`,
-inlier counts (`helpers/results.py` builds rows and prints the A@Xm summary).
+A match factory returns a dict with at least `sat_kp, drone_kp, raw, good, inliers, H`. `H` must
+come from the shared robust-fit stage `helpers.utils.fit_similarity` (4-DOF RANSAC similarity,
+drone→patch) so that methods differ only in their matches, never in the estimator. Acceptance
+gate is `inliers >= MIN_INL`. Metrics per image: gated `offset_m` / `success_{5..30}`, ungated
+`raw_err_m` (centre projection vs TRUE GT — the patch centre is the noisy prior, not GT), and
+the oracle `gt_in_patch` flag (GT outside the searched patch ⇒ unsolvable by construction).
+`helpers/results.py` builds rows and prints the summary: gated + ungated A@Xm, GT-in-patch
+rate, and skip counts.
 
 ### 2. Embedding retrieval (`pipelines/clip_pipeline.py`)
 Tiles the satellite into a gallery (`iter_tiles`, cached `.npz` per tile-size/stride/mtime),
@@ -66,9 +71,9 @@ per-flight GSD (`metric_m_per_px`). `gps_to_px` / `sat_px_to_gps` / `patch_px_to
 do the geo conversions. `load_flight` returns `(tiles, drone_dir, drone_csv, sat_csv)` where
 `tiles = [(bgr, geo), ...]`. Determinism is set at import (`random/np/cv2` seeded 0).
 
-**Dataset quirks:** `FLIGHTS_AVAILABLE` = `["01", "02", "03", "08"]` — the four flights used
-for this benchmark. All use a single satellite image. Drone CSV columns:
-`filename, lat, lon, height, Phi1 (yaw), ...`.
+**Dataset quirks:** `FLIGHTS_AVAILABLE` = `["01","02","03","04","05","06","08","10","11"]` —
+the nine-flight benchmark (07/09 excluded). All flights use a single satellite image. Drone CSV
+columns: `filename, lat, lon, height, Phi1 (yaw), ...`.
 
 ## Text-conditioned CLIP experiment (in progress)
 
@@ -77,16 +82,26 @@ CLIP so drone view, satellite view, and text align, then do **image+text fusion*
 `~/.claude/plans/` and the `project-text-clip` memory for design rationale. Key points that differ
 from the rest of the repo:
 
-- Uses **HF `transformers` CLIP (`openai/clip-vit-base-patch32`) + `peft` LoRA**, *not* the
-  container's `open_clip` (peft can't target open_clip's packed attention).
+- Uses **HF `transformers` CLIP-family models + `peft` LoRA**, *not* the container's `open_clip`
+  (peft can't target open_clip's packed attention). `--backbone` accepts CLIP
+  (`openai/clip-vit-base-patch32 | -large-patch14`) and SigLIP/SigLIP2 ids
+  (e.g. `google/siglip2-base-patch16-384`); input res / normalization / text padding are derived
+  from the model config (weights must be pre-staged into the HF cache for offline nodes).
 - **Within-flight SPATIAL split** via `helpers.utils.split_flight_rows` (random splits leak because
   consecutive drone frames overlap): every flight contributes a train band and a held-out test band.
-- Files: `caption_crops.py` (VLM captioner — backends `ollama`(default)/`qwen2vl`/`moondream`/
-  `anthropic`; targets `sat` = GT crops for training, `drone` = query images, `tile` = gallery grid;
-  resumable JSONL in `cache/captions/`), `clip_lora_train.py` (tri-modal InfoNCE), and
+  The trainer drops a guard band at the seam (`--split-buffer`, default 0.05; test band unaffected).
+- Files: `caption_crops.py` (VLM captioner via a local Ollama server; targets `sat` = GT crops for
+  training, `drone` = query images, `tile` = gallery grid; `--band` picks the spatial band —
+  `--target drone --band train` feeds the trainer's drone↔own-caption term; resumable JSONL in
+  `cache/captions/`), `clip_lora_train.py` (tri-modal InfoNCE with per-pairing weights
+  `--w-dt/--w-st/--w-ds/--w-ddt` — `--w-dt 0 --w-st 0` is the image-only attribution control;
+  in-batch negatives whose GT positions are closer than `--neg-mask-m` meters are masked as false
+  negatives; refuses to overwrite an existing adapter without `--overwrite`), and
   `clip_fusion_pipeline.py` (fusion retrieval; reuses the `clip_pipeline.py` gallery/retrieve/CSV
-  machinery so `analyze/retrieval_recall.py` still works). `--fuse-alpha` weights image-vs-text on
-  both query and gallery (0 = text↔text, 1 = image-only); `--no-sat-text` ablates to query-only.
+  machinery so `analyze/retrieval_recall.py` still works). `--fuse-alpha` is the IMAGE weight on
+  query and gallery (0 = text↔text, 1 = true image-only); `--gallery-alpha` decouples the gallery
+  blend (`--fuse-alpha 1.0 --gallery-alpha 0.7` = image-only query vs text-fused gallery → no VLM
+  at query time).
 
 ## Common commands
 

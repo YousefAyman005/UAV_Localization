@@ -14,7 +14,7 @@ from romatch import roma_outdoor, roma_indoor
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH
+from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, fit_similarity
 from helpers.workers import run_pipeline
 
 
@@ -34,15 +34,10 @@ def match_roma(drone_pil, sat_bgr, matcher, device, num_samples, conf_thresh=0.0
     r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0),
              good=int(mask.sum()), inliers=0, H=None,
              _kp0=kp0, _kp1=kp1, _conf=conf, _mask=mask)
-    if r["good"] >= 3:
-        M, mh = cv2.estimateAffinePartial2D(
-            kp0[mask], kp1[mask],
-            method=cv2.RANSAC,
-            ransacReprojThreshold=RANSAC_THRESH,
-            maxIters=5000, confidence=0.9999, refineIters=10)
-        if M is not None and mh is not None:
-            H = np.vstack([M, [0.0, 0.0, 1.0]]).astype(np.float64)
-            r["inliers"], r["H"] = int(mh.sum()), H
+    if r["good"] >= 4:
+        H, ninl = fit_similarity(kp0[mask], kp1[mask])
+        if H is not None:
+            r["inliers"], r["H"] = ninl, H
     return r
 
 
@@ -83,7 +78,7 @@ def main():
         load_model=load_model,
         make_match_factory=make_match_factory,
         banner=lambda a: (f"  Method: RoMa ({a.pretrained}) | NumMatches: {a.num_matches} | "
-                          f"RANSAC: {RANSAC_THRESH}px | MinInl: {a.min_inliers} | "
+                          f"RANSAC(sim-4dof): {RANSAC_THRESH}px | MinInl: {a.min_inliers} | "
                           f"Dist: {a.dist}m | "
                           f"CLAHE: {'off' if a.no_clahe else 'on'} | "
                           f"Flights: {' '.join(a.flights)}"),

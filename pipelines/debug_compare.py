@@ -102,7 +102,7 @@ def main():
         drone = cv2.imread(drone_path)
         if drone is None:
             print(f"  skip (no image): {f}"); continue
-        drone_r = cv2.resize(drone, (SZ_W, SZ_H))
+        drone_r = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
 
         sat, geo, cx, cy, _ = tile_for_gps(tiles, lat, lon)
         s = altitude_scales(height, geo, args.flight)[0]

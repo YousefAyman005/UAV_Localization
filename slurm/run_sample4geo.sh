@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
 #SBATCH --mem=46G
-#SBATCH --time=3:00:00
+#SBATCH --time=6:00:00
 
 # Zero-shot Sample4Geo (ICCV'24 cross-view geo-localization) as a retrieval model on
 # UAV-VisLoc, using the pretrained University-1652 weights. Sample4Geo's TimmModel is just
@@ -45,7 +45,7 @@ EXIT=0
 run_in_container \
   /opt/uav_localization/pipelines/clip_pipeline.py \
     --model sample4geo \
-    --flights 01 02 03 08 \
+    --flights all \
     --test-split \
     --rebuild-cache \
     --gps-radii 1000 5000 \

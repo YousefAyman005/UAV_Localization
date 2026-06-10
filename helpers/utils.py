@@ -23,7 +23,7 @@ RANSAC_THRESH      = 5.0
 MIN_INL            = 7
 TOP_MATCHES        = 50
 MIN_PATCH_COVERAGE = 0.2     # skip mostly-outside crops; edge samples still evaluate
-ACC_THRESHOLDS     = [5, 10, 15, 20, 25]
+ACC_THRESHOLDS     = [5, 10, 15, 20, 25, 30]
 BEST_N, WORST_N    = 3, 3
 JPEG_QUALITY       = 85
 EARTH_R_M          = 6_371_000.0
@@ -48,7 +48,7 @@ K_DEFAULT          = 1.75 * 2.0 * math.tan(math.radians(35.0))
 # scale-sensitive flights (05/08). Overridable per-run via env UAV_SEARCH_FACTOR.
 # K is invariant to SEARCH_FACTOR (true footprint ratio). See [[project-k-calibration]].
 SEARCH_FACTOR      = float(os.environ.get("UAV_SEARCH_FACTOR", "1.75"))
-PRIOR_OFFSET_STD_M = 80.0
+PRIOR_OFFSET_STD_M = float(os.environ.get("UAV_PRIOR_STD_M", "80.0"))  # σ of GPS prior; env-overridable for the sensitivity sweep
 
 _HERE       = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
@@ -255,6 +255,30 @@ def crop_gt_patch(tiles, lat, lon, height_m, yaw_deg=0.0, flight=None):
     return patch
 
 
+# ── Robust fit (shared by every matcher pipeline) ───────────────────────────
+
+def fit_similarity(kp0, kp1):
+    """4-DOF RANSAC similarity fit, drone px → patch px.
+
+    Every matcher pipeline uses this same robust-fit stage so that A@t
+    differences between methods come from match quality, not the estimator.
+    The patch is metric-isotropic and yaw-aligned, so the true drone→patch map
+    is ≈ translation + scale (+ small residual rotation); 4 DOF cannot
+    hallucinate perspective from a handful of inliers the way an 8-DOF
+    homography can. Returns (3×3 float64 H, inlier_count) or (None, 0).
+    """
+    kp0 = np.asarray(kp0, dtype=np.float32).reshape(-1, 2)
+    kp1 = np.asarray(kp1, dtype=np.float32).reshape(-1, 2)
+    if len(kp0) < 4 or len(kp0) != len(kp1):
+        return None, 0
+    M, mask = cv2.estimateAffinePartial2D(
+        kp0, kp1, method=cv2.RANSAC, ransacReprojThreshold=RANSAC_THRESH,
+        maxIters=5000, confidence=0.9999, refineIters=10)
+    if M is None or mask is None:
+        return None, 0
+    return np.vstack([M, [0.0, 0.0, 1.0]]).astype(np.float64), int(mask.sum())
+
+
 # ── CLAHE ───────────────────────────────────────────────────────────────────
 
 def _make_clahe(enabled):
@@ -274,13 +298,21 @@ def _make_clahe(enabled):
 # pulls constants from this module.
 from helpers.results import _build_row, _skip_row  # noqa: E402
 
-_PATCH_CENTRE = np.float32([[SZ_W / 2, SZ_H / 2]]).reshape(-1, 1, 2)
+# Centre of the (resized) DRONE image — what H projects into the patch. It
+# happens to equal the patch centre because both share SZ_W×SZ_H; if the two
+# sizes ever diverge, this must stay the drone-image centre.
+_DRONE_CENTRE = np.float32([[SZ_W / 2, SZ_H / 2]]).reshape(-1, 1, 2)
 
 
-def _predict_from_H(H, m_per_px):
-    """(px, py), err_px, err_m for the centre projected through H."""
-    px, py = cv2.perspectiveTransform(_PATCH_CENTRE, H).reshape(2)
-    err_px = math.hypot(float(px) - SZ_W / 2, float(py) - SZ_H / 2)
+def _predict_from_H(H, m_per_px, gt_px):
+    """Project the drone-image centre through H into the patch.
+
+    Returns ((px, py), err_px, err_m) where err is the distance to the TRUE GT
+    patch pixel `gt_px` — not to the patch centre, which is the noisy GPS prior.
+    Computed for any H regardless of the inlier gate, so it doubles as the
+    ungated localization error."""
+    px, py = cv2.perspectiveTransform(_DRONE_CENTRE, H).reshape(2)
+    err_px = math.hypot(float(px) - gt_px[0], float(py) - gt_px[1])
     return (float(px), float(py)), err_px, err_px * m_per_px
 
 
@@ -298,7 +330,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         os.makedirs(viz_dir, exist_ok=True)
 
     rows, best_heap, worst_heap = [], [], []
-    sample_idx, n_valid = 0, 0
+    sample_idx, n_scored = 0, 0
     running = {t: 0 for t in ACC_THRESHOLDS}
     pbar = tqdm(df.iterrows(), total=len(df), unit="img", disable=not progress)
 
@@ -311,7 +343,8 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         drone = cv2.imread(drone_path)
         if drone is None:
             rows.append(_skip_row(f, flight)); continue
-        drone = cv2.resize(drone, (SZ_W, SZ_H))
+        # INTER_AREA: correct filter for the ~4x downscale (INTER_LINEAR aliases)
+        drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
         if clahe_fn:
             drone = clahe_fn(drone)
 
@@ -342,12 +375,16 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         if best is None:
             rows.append(_skip_row(f, flight)); continue
 
-        # True GT location in patch px (for viz only): GT gps → satellite px →
-        # patch px via M⁻¹. The patch is centred on the *prior* (GT + offset), so
-        # the true GT is off-centre — drawing it here keeps the green pin honest.
+        # True GT location in patch px: GT gps → satellite px → patch px via
+        # M⁻¹. The patch is centred on the *prior* (GT + offset), so the true GT
+        # is off-centre; it is the reference for raw_err and the viz pin.
         gt_sat = gps_to_px(lat, lon, geo)
-        gt_patch = cv2.invertAffineTransform(M) @ np.array([gt_sat[0], gt_sat[1], 1.0])
-        best["_gt_px"] = (float(gt_patch[0]), float(gt_patch[1]))
+        gt_vec = cv2.invertAffineTransform(M) @ np.array([gt_sat[0], gt_sat[1], 1.0])
+        gt_px  = (float(gt_vec[0]), float(gt_vec[1]))
+        best["_gt_px"] = gt_px
+        # Oracle solvability flag: if the prior offset pushed the true GT outside
+        # the searched patch, no matcher can succeed on this row by construction.
+        gt_in_patch = (0.0 <= gt_px[0] < SZ_W) and (0.0 <= gt_px[1] < SZ_H)
 
         m_per_px = metric_m_per_px(height, flight=flight, k_override=k_override)
         best["_m_per_px"] = m_per_px
@@ -356,24 +393,25 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         plat = plon = off_m = None
         H = best.get("H")
         if H is not None:
-            raw_pred_px, raw_err_px, raw_err_m = _predict_from_H(H, m_per_px)
+            raw_pred_px, raw_err_px, raw_err_m = _predict_from_H(H, m_per_px, gt_px)
             if best.get("inliers", 0) >= min_inl:
                 plat, plon = patch_px_to_gps(raw_pred_px[0], raw_pred_px[1], M, geo)
                 off_m = haversine_m(lat, lon, plat, plon)
 
         r = _build_row(f, lat, lon, height, flight, best,
                        raw_pred_px, raw_err_px, raw_err_m, plat, plon,
-                       off_m, m_per_px)
+                       off_m, m_per_px, gt_in_patch)
         rows.append(r)
 
-        if off_m is not None:
-            n_valid += 1
-            for t in ACC_THRESHOLDS:
-                if r[f"success_{t}"]:
-                    running[t] += 1
-            if progress:
-                pbar.set_postfix({f"A@{t}": f"{100 * running[t] / n_valid:.0f}%"
-                                  for t in ACC_THRESHOLDS}, refresh=False)
+        # Live A@t over ALL scored rows (gate rejections count as failures) —
+        # the same denominator print_summary uses, so the bar matches the log.
+        n_scored += 1
+        for t in ACC_THRESHOLDS:
+            if r[f"success_{t}"]:
+                running[t] += 1
+        if progress:
+            pbar.set_postfix({f"A@{t}": f"{100 * running[t] / n_scored:.0f}%"
+                              for t in ACC_THRESHOLDS}, refresh=False)
 
         if viz_fn is not None:
             sample_idx += 1

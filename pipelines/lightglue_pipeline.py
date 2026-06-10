@@ -13,7 +13,7 @@ from kornia.feature import LightGlue, DISK, DeDoDe
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES
+from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, fit_similarity
 from helpers.visualization import draw_and_save
 from helpers.workers import run_pipeline
 
@@ -95,12 +95,9 @@ def match_and_ransac(kpd, descd, extd, kps, descs, exts,
     if len(d_idx) < 4:
         return r
 
-    src = kpd_np[d_idx].reshape(-1, 1, 2).astype(np.float32)
-    dst = kps_np[s_idx].reshape(-1, 1, 2).astype(np.float32)
-    H, mh = cv2.findHomography(src, dst, cv2.USAC_MAGSAC, RANSAC_THRESH,
-                                maxIters=5000, confidence=0.9999)
-    if H is not None and mh is not None:
-        r["inliers"], r["H"] = int(mh.sum()), H
+    H, ninl = fit_similarity(kpd_np[d_idx], kps_np[s_idx])
+    if H is not None:
+        r["inliers"], r["H"] = ninl, H
     return r
 
 
@@ -164,7 +161,7 @@ def main():
         make_match_factory=make_match_factory,
         viz_fn=lg_viz,
         banner=lambda a: (f"  Method: LightGlue/{a.method.upper()} | "
-                          f"RANSAC: {RANSAC_THRESH} | MinInl: {a.min_inliers} | "
+                          f"RANSAC(sim-4dof): {RANSAC_THRESH} | MinInl: {a.min_inliers} | "
                           f"Dist: {a.dist}m | "
                           f"CLAHE: {'off' if a.no_clahe else 'on'} | "
                           f"Flights: {' '.join(a.flights)}"),

@@ -31,13 +31,14 @@ is reported as the great-circle (haversine) distance between estimate and ground
 truth, **in meters** — not in pixels — so that results are comparable across flights
 with different satellite resolutions.
 
-Two solution paradigms are studied. The **geometric** paradigm establishes
-pixel correspondences between the drone image and a satellite patch, fits a
-homography, and projects the drone-image centre onto the map to obtain a metric
-position. The **retrieval** paradigm embeds the drone image and a grid of satellite
-tiles into a common feature space and ranks tiles by similarity, without estimating
-any geometry. The two are evaluated on different but complementary protocols
-(Sec. 3.7).
+The apparatus implements two families of localization method, described in turn
+below. The **geometric** family (Sec. 3.3–3.5) establishes pixel correspondences
+between the drone image and a satellite patch, fits a homography, and projects the
+drone-image centre onto the map to obtain a metric position. The **retrieval**
+family (Sec. 3.6) embeds the drone image and a grid of satellite tiles into a common
+feature space and ranks tiles by similarity, without estimating any geometry. Because
+the two yield different quantities — a position in metres versus a tile ranking —
+their evaluation protocols differ accordingly (Sec. 3.7).
 
 ## 3.2 Dataset
 
@@ -48,26 +49,12 @@ and `Phi1` (the yaw angle, in compass convention, clockwise from north); the sat
 metadata CSV gives each map's top-left (LT) and bottom-right (RB) corner coordinates
 (`helpers/utils.py:105`, `helpers/utils.py:129`).
 
-Georeferencing is treated as a linear map between pixel coordinates and geographic
-coordinates. From the corner coordinates and the image size $w\times h$, the pixels
-per degree are
-
-$$
-p_{\text{lat}} = \frac{h}{\phi_{\text{LT}}-\phi_{\text{RB}}}, \qquad
-p_{\text{lon}} = \frac{w}{\lambda_{\text{RB}}-\lambda_{\text{LT}}},
-$$
-
-(`helpers/utils.py:107`), which underpin all GPS↔pixel conversions in Sec. 3.3.5.
-
-**Flight selection (provisional).** The dataset nominally contains eleven flights.
-Two are unusable by the single-tile pipeline: flight **07**, whose satellite image is
-a narrow $3000\times170$-pixel strip too small for metric cropping, and flight **09**,
-whose satellite coverage is split across four separate tiles. This leaves nine usable
-flights, `01, 02, 03, 04, 05, 06, 08, 10, 11` (`helpers/utils.py:57`). A four-flight
-subset (`01, 02, 03, 08`) — for which the ground-sampling calibration of Sec. 3.3.4 is
-hand-anchored — serves as the primary benchmark set, and the set can be widened to the
-full nine when broader coverage is required.
-<!-- TODO: confirm the final flight list used for the reported results. -->
+**Flight selection.** The dataset contains eleven flights, of which two cannot be
+processed by the single-tile pipeline: flight **07**, whose satellite image is a narrow
+$3000\times170$-pixel strip too small for metric cropping, and flight **09**, whose
+satellite coverage is split across four separate tiles. The remaining nine —
+`01, 02, 03, 04, 05, 06, 08, 10, 11` (`helpers/utils.py:57`) — constitute the usable set
+on which the geometric experiments operate.
 
 ## 3.3 The Geo Core: From Correspondences to Meters
 
@@ -76,13 +63,27 @@ The geometric paradigm is realised by a single per-image procedure
 any matcher is plugged in through a *match factory* (Sec. 3.4.1), while the geometric
 bookkeeping below is shared.
 
+Throughout the geo core, georeferencing within a satellite map is treated as a linear
+map between pixel and geographic coordinates. From the map's top-left (LT) and
+bottom-right (RB) corner coordinates (Sec. 3.2) and its size $w\times h$, the pixels
+per degree are
+
+$$
+p_{\text{lat}} = \frac{h}{\phi_{\text{LT}}-\phi_{\text{RB}}}, \qquad
+p_{\text{lon}} = \frac{w}{\lambda_{\text{RB}}-\lambda_{\text{LT}}}
+$$
+
+(`helpers/utils.py:107`). These two scales underpin both the metric crop (Sec. 3.3.3)
+and the pixel↔GPS conversions and error metric (Sec. 3.3.5).
+
 ### 3.3.1 Per-image pipeline
 
 For each drone image the pipeline (`helpers/utils.py:305`):
 
 1. loads the drone image, resizes it to the working resolution
-   $W\times H = 1024\times680$ (`SZ_W, SZ_H`, `helpers/utils.py:21`), and applies
-   contrast normalization (Sec. 3.4.4);
+   $W\times H = 1024\times680$ (`SZ_W, SZ_H`, `helpers/utils.py:21`) with area-averaging
+   interpolation (`cv2.INTER_AREA`, the alias-free filter for the $\approx 4\times$
+   downscale), and applies contrast normalization (Sec. 3.4.4);
 2. selects the satellite tile containing the GPS prior and locates the prior in
    satellite pixels (`tile_for_gps`, `helpers/utils.py:142`); images whose prior falls
    outside the map are skipped;
@@ -114,25 +115,40 @@ workers, making the whole benchmark reproducible.
 
 ### 3.3.3 Metric-isotropic, heading-aligned satellite crop
 
-Matching a drone image against a raw slice of the satellite map is unreliable: the
-slice has an arbitrary scale and orientation relative to the drone view. Instead the
-pipeline resamples a **metric-isotropic** patch — one whose ground-sampling distance
-(GSD) is identical in both axes — rotated to the drone's heading (`metric_crop` /
-`_metric_affine`, `helpers/utils.py:157`).
+Matching the drone image against a raw slice of the satellite map is unreliable, because
+that slice sits at an arbitrary scale and orientation relative to the drone view. The
+pipeline therefore resamples a **standardised** satellite patch (`metric_crop`,
+`helpers/utils.py:173`): it has a fixed ground-sampling distance (GSD) — the same
+metres-per-pixel on both axes — and is rotated so the drone's heading points up. Drone
+image and patch then differ only by a small residual offset, which is exactly what the
+matcher recovers.
 
-Let $g$ be the target GSD in meters per pixel (Sec. 3.3.4), $\theta$ the drone yaw
-(`Phi1`), and let the local satellite pixel-per-meter scales at the patch's mid-latitude
-be
+The patch is produced by a single affine warp that composes three steps:
 
-$$
-s_x = \frac{p_{\text{lon}}}{\cos(\phi_{\text{mid}})\cdot D},\qquad
-s_y = \frac{p_{\text{lat}}}{D},\qquad D = 111{,}320\ \text{m/}^{\circ},
-$$
+1. **Scale** the target GSD $g$ (metres/pixel, Sec. 3.3.4) into satellite-pixel units.
+   Since the map is georeferenced in degrees, this uses the local pixel-per-meter scales
+   at the patch's mid-latitude,
+   $$
+   s_x = \frac{p_{\text{lon}}}{\cos(\phi_{\text{mid}})\cdot D},\qquad
+   s_y = \frac{p_{\text{lat}}}{D},\qquad D = 111{,}320\ \text{m/}^{\circ},
+   $$
+   where the $\cos\phi_{\text{mid}}$ term corrects east–west distance for meridian
+   convergence and $D$ is the meters-per-degree-latitude constant (`DEG_TO_M`,
+   `helpers/utils.py:30`).
+2. **Rotate** by the drone yaw $\theta$ (`Phi1`).
+3. **Translate** so the patch is centred on the (perturbed) GPS prior $(c_x,c_y)$.
 
-with $D$ (`DEG_TO_M`, `helpers/utils.py:30`) the meters-per-degree-latitude constant
-and the $\cos\phi_{\text{mid}}$ term correcting longitude for the local meridian
-convergence. The $2\times3$ affine mapping a patch pixel $(u,v)$ to a satellite pixel
-$(X,Y)$ is
+These collapse into one $2\times3$ matrix $M$ (`helpers/utils.py:165`), applied as an
+inverse-warp resample (`cv2.warpAffine`, `WARP_INVERSE_MAP`, replicate border;
+`helpers/utils.py:206`). Projecting a patch pixel through $M$ and converting to GPS
+(Sec. 3.3.5) yields that pixel's geographic coordinate. $M$ is kept in double precision
+so the pixel→GPS conversion stays sub-centimetre even at large satellite coordinates.
+
+A crop is **rejected** (and the image skipped) when less than
+$\text{MIN\_PATCH\_COVERAGE}=0.2$ of the patch's source rectangle overlaps the tile
+(`helpers/utils.py:194`), discarding samples whose footprint lies mostly off the map.
+
+In full, the warp from patch pixel $(u,v)$ to satellite pixel $(X,Y)$ is
 
 $$
 \begin{bmatrix} X \\ Y \end{bmatrix}
@@ -143,16 +159,8 @@ g\,s_y\sin\theta & \phantom{-}g\,s_y\cos\theta & t_y
 \begin{bmatrix} u \\ v \\ 1 \end{bmatrix},
 $$
 
-where the translation $(t_x,t_y)$ centres the patch on the (perturbed) prior
-$(c_x,c_y)$: $t_x = c_x - \tfrac{W}{2}M_{00} - \tfrac{H}{2}M_{01}$ and analogously for
-$t_y$ (`helpers/utils.py:165`). The patch is produced by an inverse-warp resample
-(`cv2.warpAffine`, `WARP_INVERSE_MAP`, replicate border; `helpers/utils.py:206`). $M$
-is kept in double precision so that the later pixel→GPS conversion retains sub-centimetre
-precision near large satellite coordinates.
-
-A crop is **rejected** (and the image skipped) when less than
-$\text{MIN\_PATCH\_COVERAGE}=0.2$ of the patch's source rectangle overlaps the tile
-(`helpers/utils.py:194`), discarding samples whose footprint lies mostly off the map.
+with the translation $t_x = c_x - \tfrac{W}{2}M_{00} - \tfrac{H}{2}M_{01}$ (and
+analogously $t_y$) centring the patch on $(c_x,c_y)$.
 
 ### 3.3.4 Per-flight ground-sampling calibration
 
@@ -170,10 +178,19 @@ $$
 so there is search margin around the prior, and $K_f$ is a **per-flight drone-footprint
 factor** stored in `K_PER_FLIGHT` (`helpers/utils.py:40`). The factors for flights
 `01/02/03/08` are hand-anchored; the remaining flights are calibrated automatically from
-the intrinsic scale of estimated homographies, $\sqrt{\lvert\det H_{[:2,:2]}\rvert}$,
-via `pipelines/calibrate_k.py`. Flights not present in the table fall back to a
-geometric default $K_{\text{def}} = 1.75\cdot 2.0\cdot\tan(35^\circ)\approx 2.45$
-derived from a nominal $35^\circ$ camera half-FOV (`helpers/utils.py:44`).
+the intrinsic scale of estimated homographies. Because the homography RoMa fits is a
+similarity, its scale $s=\sqrt{\lvert\det H_{[:2,:2]}\rvert}$ equals the drone-to-patch
+scale ratio, so the footprint factor is recovered as
+$K_f = s\cdot\text{SEARCH\_FACTOR}\cdot K_{\text{used}}$ — a relation **independent of the
+$K_{\text{used}}$ at which the calibration patches were built**, hence robust to a poor
+initial guess (`--mode hscale`, `pipelines/calibrate_k.py`). Run on the four hand-anchored
+flights, the procedure recovers their factors to within a few percent, which validates it
+before it is applied to the rest. (An earlier sweep that instead minimized median
+localization error failed to pin $K_f$: RoMa matches densely at almost any scale, so that
+objective is too flat — motivating the scale-from-geometry approach above.) Flights not
+present in the table fall back to a geometric default
+$K_{\text{def}} = 1.75\cdot 2.0\cdot\tan(35^\circ)\approx 2.45$ derived from a nominal
+$35^\circ$ camera half-FOV (`helpers/utils.py:44`).
 
 ### 3.3.5 Geo-referencing conversions and the error metric
 
@@ -236,19 +253,25 @@ are matched with a $k=2$ nearest-neighbour search — FLANN (KD-tree, `trees=5`,
 `checks=50`) for SIFT, brute-force Hamming for the binary descriptors — and filtered by
 **Lowe's ratio test** at threshold $0.75$ (`LOWE = 0.75`, `Baseline_pipeline.py:19`).
 
-### 3.4.3 Robust homography estimation and acceptance
+### 3.4.3 Robust transform estimation and acceptance
 
-Surviving correspondences are passed to a robust homography fit at a common reprojection
-threshold of $\text{RANSAC\_THRESH}=5.0$ px (`helpers/utils.py:22`). The robust
-estimator itself varies by matcher: the classical baseline uses plain `cv2.RANSAC`,
-most learned matchers use the MAGSAC estimator (`cv2.USAC_MAGSAC`, confidence
-$0.9999$), and RoMa fits a partial-affine model (`cv2.estimateAffinePartial2D`,
-RANSAC) that is then promoted to a homography. A homography is **accepted** as a valid
-localization only when it has at least $\text{MIN\_INL}=7$ inliers
-(`helpers/utils.py:23`, `helpers/utils.py:360`); images below this gate count toward the
-acceptance rate but contribute no metric error. The fraction of accepted images is
-reported alongside the accuracy figures, since a method that localizes a few images very
-precisely is not equivalent to one that localizes most images adequately.
+Surviving correspondences are passed to a robust-fit stage that is **identical for every
+matcher** (`helpers/utils.py::fit_similarity`, `helpers/utils.py:260`): a 4-DOF
+similarity transform estimated with `cv2.estimateAffinePartial2D` under RANSAC at a
+reprojection threshold of $\text{RANSAC\_THRESH}=5.0$ px (`helpers/utils.py:22`;
+maxIters $5000$, confidence $0.9999$, refineIters $10$), promoted to a $3\times3$
+homography for the downstream projection. A similarity is the appropriate model class
+here: the satellite patch is metric-isotropic and heading-aligned (Sec. 3.3.3), so the
+true drone$\to$patch mapping is approximately a translation plus a fixed scale, and —
+unlike an 8-DOF projective fit — a 4-DOF model cannot hallucinate perspective from a
+handful of inliers. Sharing one estimator across all methods ensures that accuracy
+differences are attributable to the quality of the correspondences alone, never to the
+robust-fit stage. A transform is **accepted** as a valid localization only when it has
+at least $\text{MIN\_INL}=7$ inliers (`helpers/utils.py:23`, `helpers/utils.py:397`);
+images below this gate count toward the acceptance rate but contribute no metric error.
+The fraction of accepted images is reported alongside the accuracy figures, since a
+method that localizes a few images very precisely is not equivalent to one that
+localizes most images adequately.
 
 ### 3.4.4 Preprocessing and determinism
 
@@ -373,17 +396,24 @@ machinery of Sec. 3.6.1, so the recall analysis of Sec. 3.7.2 applies unchanged.
 ### 3.7.1 Geometric localization: accuracy at X meters
 
 Geometric methods are scored by **accuracy at X meters** (A@Xm): the fraction of
-accepted images whose localization error is within $X$,
+*scored* images (all non-skipped images, $N$) whose localization error is within $X$ —
+images that fail the acceptance gate of Sec. 3.4.3 count as failures,
 
 $$
 A@X\text{m}=\frac{1}{N}\sum_{i=1}^{N}\mathbb{1}\!\left[\,\text{offset\_m}_i\le X\,\right],
-\qquad X\in\{5,10,15,20,25\}\text{ m},
+\qquad X\in\{5,10,15,20,25,30\}\text{ m},
 $$
 
 (`ACC_THRESHOLDS`, `helpers/utils.py:26`; summary in `helpers/results.py`). Alongside the
 accuracy curve, the summary reports the acceptance rate (Sec. 3.4.3) and error statistics
 (mean, median, RMSE, and 90th percentile) over the accepted images, so that precision and
-coverage can be read separately.
+coverage can be read separately. Two diagnostics complement the gated metric: an
+**ungated** accuracy computed from the centre-projection error against the true GT for
+any estimated transform (`raw_err_m`), which shows how much the acceptance gate costs or
+protects; and the **oracle solvability rate** `gt_in_patch` — the fraction of images
+whose true location lies inside the searched patch at all, since a prior offset large
+enough to push the ground truth out of the crop makes the image unsolvable for every
+method by construction (Sec. 3.3.2).
 
 ### 3.7.2 Retrieval: Recall@k **(provisional)**
 

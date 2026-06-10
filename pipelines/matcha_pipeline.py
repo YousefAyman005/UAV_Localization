@@ -25,13 +25,13 @@ from matcha.utils.device import to_numpy
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH
+from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, fit_similarity
 from helpers.workers import run_pipeline
 
 
 def _bgr_to_tensor(bgr, img_w, img_h, device):
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    rs  = cv2.resize(rgb, (img_w, img_h), interpolation=cv2.INTER_CUBIC)
+    rs  = cv2.resize(rgb, (img_w, img_h), interpolation=cv2.INTER_AREA)
     return (torch.from_numpy(rs).float().div(255.)
             .permute(2, 0, 1).unsqueeze(0).to(device))
 
@@ -102,12 +102,9 @@ def match_features(kpts0, desc0, kpts1, desc1, img_w, img_h, device, conf_thresh
              good=int(mask.sum()), inliers=0, H=None,
              _kp0=kp0_f, _kp1=kp1_f, _conf=conf, _mask=mask)
     if r["good"] >= 4:
-        H, mh = cv2.findHomography(kp0_f[mask].reshape(-1, 1, 2),
-                                    kp1_f[mask].reshape(-1, 1, 2),
-                                    cv2.USAC_MAGSAC, RANSAC_THRESH,
-                                    maxIters=5000, confidence=0.9999)
-        if H is not None and mh is not None:
-            r["inliers"], r["H"] = int(mh.sum()), H
+        H, ninl = fit_similarity(kp0_f[mask], kp1_f[mask])
+        if H is not None:
+            r["inliers"], r["H"] = ninl, H
     return r
 
 
@@ -164,7 +161,7 @@ def main():
         load_model=load_model,
         make_match_factory=make_match_factory,
         banner=lambda a: (f"  Method: MATCHA | Size: {a.img_w}x{a.img_h} | AMP: {a.amp} | "
-                          f"RANSAC: {RANSAC_THRESH}px | MinInl: {a.min_inliers} | "
+                          f"RANSAC(sim-4dof): {RANSAC_THRESH}px | MinInl: {a.min_inliers} | "
                           f"Dist: {a.dist}m | "
                           f"CLAHE: {'off' if a.no_clahe else 'on'} | "
                           f"Flights: {' '.join(a.flights)}"),

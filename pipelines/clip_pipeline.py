@@ -347,7 +347,7 @@ def retrieve(flight, bundle, emb, tile_ids, centers, df, drone_dir,
             r = {"filename": f, "skipped": True}
             if flight_tag: r["flight"] = flight_tag
             rows.append(r); continue
-        drone = cv2.resize(drone, (SZ_W, SZ_H))
+        drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
         rgb = cv2.cvtColor(drone, cv2.COLOR_BGR2RGB)
         t = preprocess(Image.fromarray(rgb)).unsqueeze(0)
         with torch.inference_mode():

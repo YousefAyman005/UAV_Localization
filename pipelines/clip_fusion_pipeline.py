@@ -6,8 +6,12 @@ encoder, then for each test drone image forms a fused query
     q = normalize( alpha * image_emb + (1 - alpha) * text_emb )
 
 where text_emb comes from the drone image's cached caption, and ranks tiles by
-cosine similarity. alpha=0 -> image-only, alpha=1 -> text-only; the sweep in
-between is the headline "match with both image and description" result.
+cosine similarity. alpha is the IMAGE weight on both sides: alpha=1 ->
+image-only, alpha=0 -> text-only; the sweep in between is the headline "match
+with both image and description" result. --gallery-alpha decouples the gallery
+blend from the query blend, e.g. ``--fuse-alpha 1.0 --gallery-alpha 0.7``
+retrieves with an image-only query against a text-fused gallery — tile captions
+are computed once offline, so no VLM is needed at query time.
 
 Reuses the gallery / retrieval / summary machinery from clip_pipeline.py so the
 output CSV schema is identical and analyze/retrieval_recall.py works unchanged.
@@ -49,9 +53,14 @@ torch.manual_seed(0)
 BACKBONE     = "openai/clip-vit-base-patch32"
 CLIP_MEAN    = (0.48145466, 0.4578275, 0.40821073)
 CLIP_STD     = (0.26862954, 0.26130258, 0.27577711)
-RES          = 224
 CAPTION_DIR  = "cache/captions"
-OUT_TEMPLATE = "visloc_clipfusion_a{alpha}_results.csv"
+# Encoder identity (adapter name + backbone) is part of the filename so runs
+# with different adapters can never overwrite or shadow each other.
+OUT_TEMPLATE = "visloc_{model}_{tag}_results.csv"
+
+# Tokenizer kwargs derived from the loaded backbone (set by load_ft_clip):
+# CLIP pads to the longest caption (max 77); SigLIP needs max-length padding.
+_TXT_KW = {"padding": True, "max_length": 77}
 
 TILE_SIZE    = 1024   # must match caption_crops.py
 TILE_STRIDE  = 512    # must match caption_crops.py
@@ -65,31 +74,38 @@ GPS_RADII    = (1000, 5000)
 # ---------- model bundle (HF CLIP, optional merged LoRA) -------------------
 
 def load_ft_clip(device, lora_ckpt):
-    from transformers import CLIPModel, CLIPTokenizer
+    from transformers import AutoModel, AutoTokenizer
     from torchvision import transforms
-    clip = CLIPModel.from_pretrained(BACKBONE)
+    clip = AutoModel.from_pretrained(BACKBONE)
     if lora_ckpt:
         from peft import PeftModel
         clip = PeftModel.from_pretrained(clip, lora_ckpt).merge_and_unload()
         print(f"  Loaded + merged LoRA adapter from {lora_ckpt}")
     clip.eval().to(device)
-    tokenizer = CLIPTokenizer.from_pretrained(BACKBONE)
+    tokenizer = AutoTokenizer.from_pretrained(BACKBONE)
+    res = clip.config.vision_config.image_size
+    if "siglip" in clip.config.model_type:
+        mean = std = (0.5, 0.5, 0.5)
+        _TXT_KW["padding"] = "max_length"  # SigLIP is trained with max-length padding
+    else:
+        mean, std = CLIP_MEAN, CLIP_STD
+    _TXT_KW["max_length"] = clip.config.text_config.max_position_embeddings
     preprocess = transforms.Compose([
-        transforms.Resize(RES, interpolation=transforms.InterpolationMode.BICUBIC),
-        transforms.CenterCrop(RES),
+        transforms.Resize(res, interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.CenterCrop(res),
         transforms.ToTensor(),
-        transforms.Normalize(mean=CLIP_MEAN, std=CLIP_STD),
+        transforms.Normalize(mean=mean, std=std),
     ])
     encode = lambda t: clip.get_image_features(pixel_values=t.to(device))  # noqa: E731
     with torch.inference_mode():
-        dim = encode(torch.zeros(1, 3, RES, RES, device=device)).shape[-1]
+        dim = encode(torch.zeros(1, 3, res, res, device=device)).shape[-1]
     return (encode, preprocess, dim), clip, tokenizer
 
 
 def encode_text(clip, tokenizer, captions):
     device = next(clip.parameters()).device
-    tok = tokenizer(captions, padding=True, truncation=True, max_length=77,
-                    return_tensors="pt").to(device)
+    tok = tokenizer(captions, truncation=True, return_tensors="pt",
+                    **_TXT_KW).to(device)
     with torch.inference_mode():
         return F.normalize(clip.get_text_features(**tok), dim=-1).cpu().numpy()
 
@@ -163,18 +179,18 @@ def retrieve_fusion(flight, bundle, clip, tokenizer, emb, tile_ids, centers, df,
             r = {"filename": f, "skipped": True}
             if flight_tag: r["flight"] = flight_tag
             rows.append(r); continue
-        drone = cv2.resize(drone, (SZ_W, SZ_H))
+        drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
         rgb = cv2.cvtColor(drone, cv2.COLOR_BGR2RGB)
         t = preprocess(Image.fromarray(rgb)).unsqueeze(0)
         with torch.inference_mode():
             img_emb = F.normalize(encode(t), dim=-1).cpu().numpy().squeeze(0)
 
-        # Fuse with the caption embedding. Missing caption -> image-only for this
-        # row (keeps N constant across the alpha sweep); flagged via has_caption.
+        # Fuse with the caption embedding (alpha = image weight). At alpha>=1
+        # the query is the true image-only endpoint. Missing caption ->
+        # image-only for this row (keeps N constant across the alpha sweep);
+        # flagged via has_caption.
         cap = captions.get(f)
-        if cap and alpha >= 1.0:
-            q = encode_text(clip, tokenizer, [cap]).squeeze(0)
-        elif cap:
+        if cap and alpha < 1.0:
             txt_emb = encode_text(clip, tokenizer, [cap]).squeeze(0)
             q = alpha * img_emb + (1.0 - alpha) * txt_emb
         else:
@@ -231,17 +247,19 @@ def retrieve_fusion(flight, bundle, clip, tokenizer, emb, tile_ids, centers, df,
 
 # ---------- per-flight / main ----------------------------------------------
 
-def run_flight(flight, bundle, clip, tokenizer, alpha, limit, model_name, device):
+def run_flight(flight, bundle, clip, tokenizer, alpha, gallery_alpha, limit,
+               model_name, device):
     emb, tile_ids, centers, drone_dir, drone_csv, t_gallery, cached = \
         build_flight_gallery(flight, bundle, TILE_SIZE, TILE_STRIDE,
                              BATCH_SIZE, device, CACHE_DIR, model_name, False)
     print(f"  Gallery: {len(tile_ids)} tiles | dim={emb.shape[1]} | "
           f"{'cached' if cached else f'built in {t_gallery:.1f}s'}")
 
+    g_alpha = alpha if gallery_alpha is None else gallery_alpha
     gallery = emb
-    if alpha < 1.0:
+    if g_alpha < 1.0:
         tilecaps = load_tile_captions(flight)
-        gallery = fuse_gallery(emb, tile_ids, tilecaps, clip, tokenizer, alpha)
+        gallery = fuse_gallery(emb, tile_ids, tilecaps, clip, tokenizer, g_alpha)
 
     df = pd.read_csv(drone_csv)
     df = split_flight_rows(df, which="test", test_frac=TEST_FRAC,
@@ -265,7 +283,13 @@ def main():
     ap.add_argument("--lora-ckpt", default=None,
                     help="LoRA adapter dir; omit for the stock-CLIP baseline.")
     ap.add_argument("--fuse-alpha", nargs="+", type=float, default=[0.0, 0.5, 0.7, 1.0],
-                    help="Image weight on BOTH query and gallery; 0=text-only, 1=image-only.")
+                    help="Image weight of the QUERY (and, unless --gallery-alpha is "
+                         "given, of the gallery); 0=text-only, 1=image-only.")
+    ap.add_argument("--gallery-alpha", type=float, default=None,
+                    help="Image weight of the GALLERY blend, decoupled from the "
+                         "query. E.g. --fuse-alpha 1.0 --gallery-alpha 0.7 = "
+                         "image-only query vs text-fused gallery (no VLM at "
+                         "query time). Default: follow --fuse-alpha.")
     ap.add_argument("--limit", type=int, default=None,
                     help="Cap rows per flight (smoke test).")
     ap.add_argument("--caption-dir", default=CAPTION_DIR,
@@ -286,23 +310,33 @@ def main():
     flights = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     bb_tag = BACKBONE.split("/")[-1].replace("clip-vit-", "").replace("-patch", "p")
-    model_name = f"cliphf_{'lora' if args.lora_ckpt else 'base'}_{bb_tag}"
+    # Adapter NAME (not just "lora") keys the gallery cache and the output CSVs:
+    # different adapters must never share cached gallery embeddings.
+    ad_tag = (os.path.basename(os.path.normpath(args.lora_ckpt))
+              if args.lora_ckpt else "base")
+    model_name = f"cliphf_{ad_tag}_{bb_tag}"
+    g_str = "follows query" if args.gallery_alpha is None else args.gallery_alpha
     print(f"  Device: {device} | encoder: {model_name} | "
-          f"alphas: {args.fuse_alpha} | flights: {' '.join(flights)}")
+          f"alphas: {args.fuse_alpha} (gallery: {g_str}) | "
+          f"flights: {' '.join(flights)}")
 
     print("  Loading CLIP ... ", end="", flush=True)
     bundle, clip, tokenizer = load_ft_clip(device, args.lora_ckpt)
     print("done")
 
     for alpha in args.fuse_alpha:
-        out_csv  = OUT_TEMPLATE.format(alpha=alpha)
+        tag = f"a{alpha}"
+        if args.gallery_alpha is not None and args.gallery_alpha != alpha:
+            tag += f"_g{args.gallery_alpha}"
+        out_csv  = OUT_TEMPLATE.format(model=model_name, tag=tag)
         log_path = out_csv.replace(".csv", ".log")
-        print(f"\n=== FUSION alpha={alpha} ({model_name}) ===")
+        print(f"\n=== FUSION {tag} ({model_name}) ===")
         with TeeLogger(log_path):
             all_rows, all_floors = [], []
             for flight in flights:
                 rows, floors, t_gal, t_ret, cached = run_flight(
-                    flight, bundle, clip, tokenizer, alpha, args.limit, model_name, device)
+                    flight, bundle, clip, tokenizer, alpha, args.gallery_alpha,
+                    args.limit, model_name, device)
                 fdf = pd.DataFrame(rows)
                 valid = fdf[~fdf["skipped"].fillna(False)]
                 if not valid.empty:

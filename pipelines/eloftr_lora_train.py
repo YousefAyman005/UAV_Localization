@@ -215,7 +215,8 @@ def _to_input(bgr, long_side):
     s = 1.0
     if long_side and long_side > 0:
         s = long_side / SZ_W
-        bgr = cv2.resize(bgr, (int(round(SZ_W * s)), int(round(SZ_H * s))))
+        bgr = cv2.resize(bgr, (int(round(SZ_W * s)), int(round(SZ_H * s))),
+                         interpolation=cv2.INTER_AREA if s < 1.0 else cv2.INTER_LINEAR)
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     rh, rw = gray.shape
     return _pad32(gray), s, rh, rw
@@ -293,7 +294,7 @@ class PairDataset(Dataset):
         crop = cv2.imread(crop_path)
         if drone is None or crop is None:
             return None
-        drone = cv2.resize(drone, (SZ_W, SZ_H))
+        drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
         if self.clahe_fn:
             drone = self.clahe_fn(drone)           # crop PNG is already CLAHE'd
         g0, s, rh, rw = _to_input(drone, self.long_side)

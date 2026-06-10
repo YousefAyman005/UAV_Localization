@@ -103,16 +103,19 @@ Per-image localization flow (`collect_pipeline_rows_multitile`):
 > load drone img → `tile_for_gps` picks the satellite tile → **add a simulated GPS-prior offset**
 > (`PRIOR_OFFSET_STD_M = 80 m`, seeded per-row by `crc32(flight/filename)` so it's reproducible
 > across processes) → `metric_crop` a **metric-isotropic, heading-rotated** satellite patch at a
-> target ground-sampling distance → `match_factory` returns homography `H` → project patch centre
-> through `H` → `patch_px_to_gps` → `haversine_m` error → row.
+> target ground-sampling distance → `match_factory` returns `H` (shared 4-DOF RANSAC similarity,
+> `fit_similarity`) → project drone-image centre through `H` → `patch_px_to_gps` → `haversine_m`
+> error → row.
 
 Key pieces:
 - **`metric_crop` / `_metric_affine`** build the 2×3 affine mapping *output-patch px → satellite px*
   so the patch is metric-isotropic at GSD `m_per_px = SEARCH_FACTOR * K * height_m / SZ_W`.
-  `SEARCH_FACTOR = 1.5` (patch larger than drone view, so there's room to localize),
+  `SEARCH_FACTOR = 1.75` (sweep-chosen; patch larger than drone view, so there's room to
+  localize; env-overridable via `UAV_SEARCH_FACTOR`),
   `SZ_W,SZ_H = 1024,680`. Yaw (`Phi1`) rotates the patch to drone heading.
-- **`K_PER_FLIGHT`** calibrates per-flight drone-footprint GSD: `{"01":1.00,"02":1.00,"03":0.95,"08":1.00}`;
-  `K_DEFAULT = 1.75*2*tan(35°)`. This calibration (commit "calibrating K") matters a lot for accuracy.
+- **`K_PER_FLIGHT`** calibrates per-flight drone-footprint GSD for all 9 active flights
+  (anchors `01/02/08 = 1.00`, `03 = 0.95`; the rest H-scale-calibrated);
+  `K_DEFAULT = 1.75*2*tan(35°)`. This calibration matters a lot for accuracy.
 - **`gps_to_px` / `sat_px_to_gps` / `patch_px_to_gps` / `haversine_m`** — geo conversions (float64).
 - **`load_flight`** → `(tiles, drone_dir, drone_csv, sat_csv)`, `tiles = [(bgr, geo), ...]`.
 - **`split_flight_rows`** — deterministic **SPATIAL** train/test split (sort by wider geo axis,

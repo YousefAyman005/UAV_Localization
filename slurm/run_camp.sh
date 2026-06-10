@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
 #SBATCH --mem=46G
-#SBATCH --time=3:00:00
+#SBATCH --time=6:00:00
 
 # Zero-shot CAMP (IEEE TGRS'24 cross-view geo-localization) as a retrieval model on
 # UAV-VisLoc, using the pretrained University-1652 weights. CAMP is vendored at
@@ -44,7 +44,7 @@ EXIT=0
 run_in_container \
   /opt/uav_localization/pipelines/clip_pipeline.py \
     --model camp \
-    --flights 01 02 03 08 \
+    --flights all \
     --test-split \
     --rebuild-cache \
     --gps-radii 1000 5000 \

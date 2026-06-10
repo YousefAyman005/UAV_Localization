@@ -12,7 +12,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import RANSAC_THRESH, TOP_MATCHES
+from helpers.utils import TOP_MATCHES, fit_similarity
 from helpers.visualization import draw_and_save
 from helpers.workers import run_pipeline
 
@@ -44,11 +44,11 @@ def run_match(sat_gray, kpd, dd, detector, matcher):
              for m, n in [pair] if m.distance < LOWE * n.distance]
     r["raw"], r["good"], r["_matches"] = len(pairs), len(good), good
     if len(good) >= 4:
-        src = np.float32([kpd[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-        dst = np.float32([kps[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
-        H, mask = cv2.findHomography(src, dst, cv2.RANSAC, RANSAC_THRESH)
-        if H is not None and mask is not None:
-            r["inliers"], r["H"] = int(mask.sum()), H
+        src = np.float32([kpd[m.queryIdx].pt for m in good])
+        dst = np.float32([kps[m.trainIdx].pt for m in good])
+        H, ninl = fit_similarity(src, dst)
+        if H is not None:
+            r["inliers"], r["H"] = ninl, H
     return r
 
 

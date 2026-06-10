@@ -52,6 +52,7 @@ apptainer run --nv \
     --env TORCH_HOME=/data/torch_home \
     --env HF_HOME=/data/torch_home/huggingface \
     --env UAV_SEARCH_FACTOR=${UAV_SEARCH_FACTOR:-1.75} \
+    --env UAV_PRIOR_STD_M=${UAV_PRIOR_STD_M:-80.0} \
     --pwd /data/job_results \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/eloftr_pipeline.py \

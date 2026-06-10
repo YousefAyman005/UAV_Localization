@@ -187,7 +187,7 @@ def gen_flight(flight, matcher, device, args):
         drone = cv2.imread(os.path.join(drone_dir, f))
         if drone is None:
             st["skip_no_drone"] += 1; continue
-        drone = cv2.resize(drone, (SZ_W, SZ_H))
+        drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
         if clahe_fn:
             drone = clahe_fn(drone)
 
