@@ -43,7 +43,8 @@ apptainer run --nv \
         --pretrained extre \
         --extre-weights /data/weights/roma_extre.pth \
         --flights 01 02 03 06 08 \
-        --visualize
+        --visualize \
+        "$@"
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"

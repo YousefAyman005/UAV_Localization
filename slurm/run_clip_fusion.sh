@@ -9,7 +9,10 @@
 #SBATCH --gpus=1
 #SBATCH -p gpu3
 #SBATCH --mem=32G
-#SBATCH --time=2:00:00
+# A 5-alpha sweep costs ~28 min/alpha on 9 flights (satellite TIFs are reloaded
+# per flight per alpha) -> ~2h20m total; 2h was too tight and a timeout loses
+# the un-tarred results. Single-cell runs finish well under 1h.
+#SBATCH --time=3:30:00
 
 # Image+text fusion retrieval with the LoRA-fine-tuned CLIP.
 # Prereqs:

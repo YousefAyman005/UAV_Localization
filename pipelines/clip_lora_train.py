@@ -195,8 +195,11 @@ def make_collate(tokenizer, max_len, padding):
         dtok   = _tok([b[3] if b[3] else "" for b in batch])
         dmask  = torch.tensor([bool(b[3]) for b in batch])
         coords = torch.stack([b[4] for b in batch])
-        return (drone, sat, tok["input_ids"], tok["attention_mask"],
-                dtok["input_ids"], dtok["attention_mask"], dmask, coords)
+        # SigLIP tokenizers emit no attention_mask (model_input_names=
+        # ["input_ids"]; the text tower is trained attending over max-length
+        # padding) — pass None through rather than fabricating one.
+        return (drone, sat, tok["input_ids"], tok.data.get("attention_mask"),
+                dtok["input_ids"], dtok.data.get("attention_mask"), dmask, coords)
     return collate
 
 
@@ -318,7 +321,8 @@ def train(args):
         pbar = tqdm(loader, desc=f"  epoch {ep+1}/{args.epochs}", unit="batch")
         for drone, sat, ids, attn, dids, dattn, dmask, coords in pbar:
             drone, sat = drone.to(device), sat.to(device)
-            ids, attn = ids.to(device), attn.to(device)
+            ids  = ids.to(device)
+            attn = attn.to(device) if attn is not None else None
             opt.zero_grad(set_to_none=True)
             with torch.amp.autocast("cuda", enabled=device.type == "cuda"):
                 neg = overlap_neg_mask(coords.to(device), args.neg_mask_m)
@@ -344,7 +348,8 @@ def train(args):
                     sub = dmask.to(device)
                     td = F.normalize(clip.get_text_features(
                         input_ids=dids[dmask].to(device),
-                        attention_mask=dattn[dmask].to(device)), dim=-1)
+                        attention_mask=(dattn[dmask].to(device)
+                                        if dattn is not None else None)), dim=-1)
                     nsub = neg[sub][:, sub] if neg is not None else None
                     l = info_nce(d[sub], td, logit_scale, nsub)
                     loss = loss + args.w_ddt * l

@@ -29,13 +29,16 @@ echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
 mkdir -p "${LOCAL_JOB_DIR}/torch_home/hub"
 
-# Optionally mount a trained LoRA adapter so you can evaluate it by forwarding
-# --lora-ckpt /opt/uav_localization/weights/eloftr_lora (writes the separate
-# visloc_eloftr_lora_results.csv). Baseline runs are unaffected.
-LORA_HOST="$DATAPOOL3/datasets/Visloc/weights/eloftr_lora"
+# Optionally mount a trained LoRA adapter (ELOFTR_LORA_NAME picks the datapool
+# weights dir, default eloftr_lora) and evaluate it by forwarding
+# --lora-ckpt /opt/uav_localization/weights/<name> (writes the separate
+# visloc_eloftr_lora_results.csv). Baseline runs are unaffected. The repo must
+# contain a matching git-ignored mount point weights/<name> (repo mounted ro).
+LORA_NAME="${ELOFTR_LORA_NAME:-eloftr_lora}"
+LORA_HOST="$DATAPOOL3/datasets/Visloc/weights/${LORA_NAME}"
 LORA_BIND=()
 if [ -d "$LORA_HOST" ]; then
-  LORA_BIND=(--bind "${LORA_HOST}:/opt/uav_localization/weights/eloftr_lora:ro")
+  LORA_BIND=(--bind "${LORA_HOST}:/opt/uav_localization/weights/${LORA_NAME}:ro")
 fi
 
 echo "SEARCH_FACTOR override: UAV_SEARCH_FACTOR=${UAV_SEARCH_FACTOR:-1.75}"

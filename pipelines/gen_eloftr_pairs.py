@@ -17,15 +17,19 @@ all stored keypoint coords live in that frame (the same one the student consumes
 and the stored homographies map ``drone_px -> crop_px`` (the convention
 ``helpers.utils._predict_from_H`` expects: it warps the drone centre into the crop).
 
-Train/test leakage: labels are generated per spatial band via
-``helpers.utils.split_flight_rows`` (the SAME split the eval pipelines use). Use
-``--split train`` for the LoRA training set and ``--split test`` (usually with
-``--no-teacher``) to make a held-out validation set of crops + geo-homographies.
+Train/val/test leakage: labels are generated per spatial band via
+``helpers.utils.split_flight_rows`` (bands bottom→top: train | buffer | val |
+test). Use ``--split train`` for the LoRA training set and ``--split val
+--no-teacher`` for the early-stopping set (crops + geo-homographies); the top
+``test`` band stays untouched for the final benchmark comparison
+(``analyze/band_metrics.py`` filters any results CSV to it).
 
 Example (cluster, via slurm/run_gen_pairs.sh):
-    python pipelines/gen_eloftr_pairs.py --flights all --teacher extre
-    python pipelines/gen_eloftr_pairs.py --flights all --split test --no-teacher \
-           --offset-mode jitter --out-dir cache/eloftr_pairs_val
+    python pipelines/gen_eloftr_pairs.py --flights all --teacher extre \
+           --val-frac 0.10 --split-buffer 0.05
+    python pipelines/gen_eloftr_pairs.py --flights all --split val --no-teacher \
+           --offset-mode jitter --val-frac 0.10 --split-buffer 0.05 \
+           --out-dir cache/eloftr_pairs2_val
 Smoke test:
     python pipelines/gen_eloftr_pairs.py --flights 01 --limit 30 --num-samples 2000
 """
@@ -160,7 +164,8 @@ def gen_flight(flight, matcher, device, args):
     _, drone_dir, drone_csv, _ = get_flight_paths(flight)
     df = pd.read_csv(drone_csv)
     df = split_flight_rows(df, which=args.split, test_frac=args.test_frac,
-                           axis=args.split_axis, buffer_frac=args.split_buffer)
+                           axis=args.split_axis, buffer_frac=args.split_buffer,
+                           val_frac=args.val_frac)
     if args.limit is not None:
         df = df.iloc[: args.limit]
 
@@ -214,7 +219,7 @@ def gen_flight(flight, matcher, device, args):
 
         H_geo, gps_px = geo_homography(M, geo, lat, lon)
 
-        kp0 = kp1 = conf = H_teacher = None
+        kp0 = kp1 = conf = H_teacher = cd_px = None
         if not args.no_teacher:
             res = match_roma(bgr_to_pil(drone), patch, matcher, device,
                              args.num_samples, conf_thresh=args.conf_thresh)
@@ -224,18 +229,24 @@ def gen_flight(flight, matcher, device, args):
                 st["dropped_few_corr"] += 1; continue
             st["n_corr"].append(len(kp0))
             st["teacher_conf"].append(float(np.median(conf)))
-            # teacher-H vs geo-H agreement at the drone centre
+            # teacher-H vs geo-H agreement at the drone centre — stored per-pair
+            # so the trainer can drop alias-suspect labels (repetitive terrain)
             c = np.array([[SZ_W / 2.0, SZ_H / 2.0]], dtype=np.float64).reshape(-1, 1, 2)
             pt_t = cv2.perspectiveTransform(c, H_teacher).reshape(2)
             pt_g = cv2.perspectiveTransform(c, H_geo).reshape(2)
-            st["center_disagree_px"].append(float(np.hypot(*(pt_t - pt_g))))
+            cd_px = float(np.hypot(*(pt_t - pt_g)))
+            st["center_disagree_px"].append(cd_px)
 
         st["n_true" if label == "true" else "n_jitter"] += 1
         meta = dict(flight=flight, filename=f, stem=stem, split=args.split,
                     offset_mode=label, offset_m=[dx_m, dy_m],
                     n_corr=0 if kp0 is None else int(len(kp0)),
                     median_conf=None if kp0 is None else float(np.median(conf)),
+                    center_disagree_px=cd_px,
                     m_per_px=float(m_per_px), true_gps_px=gps_px,
+                    search_factor=float(SEARCH_FACTOR),
+                    test_frac=args.test_frac, val_frac=args.val_frac,
+                    split_buffer=args.split_buffer,
                     crop_w=SZ_W, crop_h=SZ_H, clahe=not args.no_clahe,
                     teacher=None if args.no_teacher else args.teacher,
                     num_samples=args.num_samples, conf_thresh=args.conf_thresh,
@@ -253,6 +264,7 @@ def gen_flight(flight, matcher, device, args):
             has_teacher=np.array(H_teacher is not None),
             H_geo=H_geo, M_affine=M.astype(np.float64),
             m_per_px=np.float64(m_per_px),
+            search_factor=np.float64(SEARCH_FACTOR),
             true_gps_px=np.array(gps_px, np.float64),
             meta=np.array(json.dumps(meta)))
         st["written"] += 1
@@ -283,8 +295,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--flights", nargs="+", default=["all"])
-    ap.add_argument("--split", choices=["train", "test"], default="train",
-                    help="Spatial band: train labels for finetuning, test for the held-out val set.")
+    ap.add_argument("--split", choices=["train", "val", "test"], default="train",
+                    help="Spatial band: train labels for finetuning, val for the held-out "
+                         "early-stopping set (test stays untouched for the final benchmark).")
     ap.add_argument("--limit", type=int, default=None, help="Cap rows/flight (smoke test).")
     ap.add_argument("--teacher", choices=["extre", "outdoor", "indoor"], default="extre")
     ap.add_argument("--extre-weights", default=os.path.join(
@@ -306,6 +319,9 @@ def main():
                     help="Skip RoMa; write crop + geo-homography only (fast; for the val set).")
     ap.add_argument("--out-dir", default="cache/eloftr_pairs")
     ap.add_argument("--test-frac", type=float, default=0.25)
+    ap.add_argument("--val-frac", type=float, default=0.0,
+                    help="Fraction of each flight reserved as the val band (between "
+                         "buffer and test); 0 disables.")
     ap.add_argument("--split-axis", choices=["auto", "lat", "lon"], default="auto")
     ap.add_argument("--split-buffer", type=float, default=0.0)
     ap.add_argument("--device", default="cuda")
@@ -339,6 +355,8 @@ def main():
 
     summary = dict(
         split=args.split, flights=flights, teacher=None if args.no_teacher else args.teacher,
+        search_factor=float(SEARCH_FACTOR), test_frac=args.test_frac,
+        val_frac=args.val_frac, split_buffer=args.split_buffer,
         offset_mode=args.offset_mode, num_samples=args.num_samples,
         conf_thresh=args.conf_thresh, min_correspondences=args.min_correspondences,
         totals=dict(rows=agg["rows"], written=agg["written"],

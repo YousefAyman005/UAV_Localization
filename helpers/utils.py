@@ -218,15 +218,19 @@ def patch_px_to_gps(px, py, M, geo):
 
 
 def split_flight_rows(df, which="train", test_frac=0.25, axis="auto",
-                      buffer_frac=0.0):
+                      buffer_frac=0.0, val_frac=0.0):
     """Deterministic SPATIAL split of a flight's drone rows.
 
     Drone frames along a flight overlap heavily, so a random split leaks ground
     between train and test. Instead we sort by the wider-spread geographic axis
-    (lat or lon) and take a contiguous band at one end as `test`, the rest as
-    `train`. `buffer_frac` drops a guard band between them to remove seam overlap.
-    `which` ∈ {train, test, all}; returns the filtered df (row order preserved)."""
-    if which == "all" or test_frac <= 0 or df.empty:
+    (lat or lon) and slice contiguous bands, bottom → top:
+    ``train | buffer | val | test``. The test band (top `test_frac`) is
+    unaffected by `val_frac`/`buffer_frac`, so existing test splits stay
+    bit-identical. `buffer_frac` drops a guard band directly above train —
+    protecting train↔val when a val band exists, train↔test otherwise.
+    `which` ∈ {train, val, test, all}; returns the filtered df (row order
+    preserved). With val_frac=0 behavior is identical to before val existed."""
+    if which == "all" or df.empty or (test_frac <= 0 and val_frac <= 0):
         return df.reset_index(drop=True)
     lat = df["lat"].to_numpy(dtype=float)
     lon = df["lon"].to_numpy(dtype=float)
@@ -235,10 +239,12 @@ def split_flight_rows(df, which="train", test_frac=0.25, axis="auto",
     order  = np.argsort(df[axis].to_numpy(dtype=float))
     n      = len(df)
     n_test = int(round(n * test_frac))
+    n_val  = int(round(n * val_frac))
     n_buf  = int(round(n * buffer_frac))
-    test_idx  = order[n - n_test:]                  # top band → test
-    train_idx = order[: max(0, n - n_test - n_buf)]  # bottom band (minus buffer)
-    keep = test_idx if which == "test" else train_idx
+    test_idx  = order[n - n_test:]                               # top band → test
+    val_idx   = order[n - n_test - n_val: n - n_test]            # directly below test
+    train_idx = order[: max(0, n - n_test - n_val - n_buf)]      # bottom (minus buffer)
+    keep = {"train": train_idx, "val": val_idx, "test": test_idx}[which]
     return df.iloc[np.sort(keep)].reset_index(drop=True)
 
 

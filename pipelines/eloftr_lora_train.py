@@ -51,7 +51,8 @@ from src.config.default import get_cfg_defaults  # noqa: E402
 from src.utils.misc import lower_config  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from helpers.utils import FLIGHTS_AVAILABLE, SZ_H, SZ_W, get_flight_paths, _make_clahe  # noqa: E402
+from helpers.utils import (FLIGHTS_AVAILABLE, MIN_INL, SEARCH_FACTOR, SZ_H, SZ_W,  # noqa: E402
+                           _make_clahe, fit_similarity, get_flight_paths)
 
 torch.manual_seed(0)
 
@@ -111,7 +112,8 @@ def spvs_coarse_homo(data, cfg):
     grid1_c = create_meshgrid(h1, w1, False, device).reshape(1, h1 * w1, 2).repeat(N, 1, 1)
     grid0_i, grid1_i = scale * grid0_c, scale * grid1_c
 
-    w_pt0_c = _warp_homo(grid0_i, data["H_0to1"]) / scale
+    w_pt0_i = _warp_homo(grid0_i, data["H_0to1"])
+    w_pt0_c = w_pt0_i / scale
     w_pt1_c = _warp_homo(grid1_i, data["H_1to0"]) / scale
     w_pt0_round = w_pt0_c.round().long()
     w_pt1_round = w_pt1_c.round().long()
@@ -119,6 +121,13 @@ def spvs_coarse_homo(data, cfg):
     nearest_index0 = w_pt1_round[..., 0] + w_pt1_round[..., 1] * w0
     nearest_index1[_ob(w_pt0_round, rw1c, rh1c)] = 0
     nearest_index0[_ob(w_pt1_round, rw0c, rh0c)] = 0
+    if "S1_inv" in data:
+        # Crop-side aug: replicate-border bands carry no true content. A point
+        # whose pre-aug position S1^-1·y falls outside the real frame cannot be
+        # ground truth on either leg (no-op when S1 = I).
+        rw1i, rh1i = data["real_w"], data["real_h"]
+        nearest_index1[_ob(_warp_homo(w_pt0_i, data["S1_inv"]), rw1i, rh1i)] = 0
+        nearest_index0[_ob(_warp_homo(grid1_i, data["S1_inv"]), rw1i, rh1i)] = 0
 
     loop_back = torch.gather(nearest_index0, 1, nearest_index1.clamp(0, h1 * w1 - 1))
     correct = loop_back == torch.arange(h0 * w0, device=device)[None].repeat(N, 1)
@@ -134,7 +143,7 @@ def spvs_coarse_homo(data, cfg):
     if len(b_ids) == 0:  # avoid empty-gt crashes downstream
         b_ids = i_ids = j_ids = torch.zeros(1, dtype=torch.long, device=device)
     data.update({"spv_b_ids": b_ids, "spv_i_ids": i_ids, "spv_j_ids": j_ids,
-                 "spv_w_pt0_i": _warp_homo(grid0_i, data["H_0to1"]),
+                 "spv_w_pt0_i": w_pt0_i,
                  "spv_pt1_i": grid1_i})
 
 
@@ -173,7 +182,11 @@ def spvs_fine_homo(data, cfg):
             continue
         wp = _warp_homo(grid_unfold[sel].reshape(1, -1, 2), data["H_0to1"][[b]])
         wp = wp.reshape(cnt, WW, 2)
-        correct[sel] = (wp[..., 0] >= 0) & (wp[..., 0] < rw1) & (wp[..., 1] >= 0) & (wp[..., 1] < rh1)
+        ok = (wp[..., 0] >= 0) & (wp[..., 0] < rw1) & (wp[..., 1] >= 0) & (wp[..., 1] < rh1)
+        if "S1_inv" in data:  # exclude replicate-border content (see spvs_coarse_homo)
+            orig = _warp_homo(wp.reshape(1, -1, 2), data["S1_inv"][[b]]).reshape(cnt, WW, 2)
+            ok &= ~_ob(orig, rw1, rh1)
+        correct[sel] = ok
         w_pt0_i[sel] = wp
 
     delta_i = w_pt0_i - pt1_i[b_ids, j_ids][:, None, :]          # [m, WW, 2]
@@ -229,6 +242,37 @@ def _scale_H(H, s):
     return (S @ H @ np.linalg.inv(S)).astype(np.float64)
 
 
+def _photometric(img):
+    """Mild photometric jitter (uint8 BGR, post-CLAHE): gamma, contrast/
+    brightness, occasional blur/noise. Applied independently per image so the
+    drone<->satellite appearance gap itself is varied each epoch."""
+    g = np.random.uniform(0.7, 1.4)
+    lut = np.clip((np.linspace(0.0, 1.0, 256) ** g) * 255.0, 0, 255).astype(np.uint8)
+    img = cv2.LUT(img, lut)
+    img = cv2.convertScaleAbs(img, alpha=np.random.uniform(0.85, 1.15),
+                              beta=np.random.uniform(-20.0, 20.0))
+    if np.random.rand() < 0.3:
+        img = cv2.GaussianBlur(img, (3, 3), np.random.uniform(0.3, 1.0))
+    if np.random.rand() < 0.3:
+        noise = np.random.normal(0.0, np.random.uniform(2.0, 6.0), img.shape)
+        img = np.clip(img.astype(np.float32) + noise.astype(np.float32),
+                      0, 255).astype(np.uint8)
+    return img
+
+
+def _rand_similarity(max_rot_deg, max_scale, max_trans_px):
+    """Random similarity about the crop centre, in cv2.warpAffine's FORWARD
+    convention (no WARP_INVERSE_MAP): a feature at src px c lands at S·c."""
+    ang = np.random.uniform(-max_rot_deg, max_rot_deg)
+    sc = np.random.uniform(1.0 - max_scale, 1.0 + max_scale)
+    M = cv2.getRotationMatrix2D((SZ_W / 2.0, SZ_H / 2.0), ang, sc)
+    M[0, 2] += np.random.uniform(-max_trans_px, max_trans_px)
+    M[1, 2] += np.random.uniform(-max_trans_px, max_trans_px)
+    S = np.eye(3, dtype=np.float64)
+    S[:2] = M
+    return S
+
+
 def _fit_H(d, gt_mode):
     """Per-pair homography drone->crop in the native SZ_W x SZ_H frame."""
     H_geo = d["H_geo"].astype(np.float64)
@@ -248,9 +292,15 @@ def _fit_H(d, gt_mode):
     return H_teacher if H_teacher is not None else H_geo
 
 
-def build_index(pairs_dir, flights, gt_mode, limit):
-    """[(drone_path, crop_png, H_3x3, name), ...] from per-flight manifests."""
-    index = []
+def build_index(pairs_dir, flights, gt_mode, limit, min_corr=0, max_teacher_geo_m=0.0):
+    """[{drone_path, png_path, H, name, m_per_px, true_gps_px, flight}, ...].
+
+    Quality filter (train indexes): drop pairs with fewer than `min_corr`
+    teacher inliers, or whose teacher-H disagrees with the geo-H at the drone
+    centre by more than `max_teacher_geo_m` meters (alias-suspect labels on
+    repetitive terrain; <=0 disables). Pairs generated at a different
+    SEARCH_FACTOR than the current one are a hard error (stale cache)."""
+    index, no_sf = [], 0
     for flight in flights:
         fdir = os.path.join(pairs_dir, flight)
         manifest = os.path.join(fdir, "manifest.jsonl")
@@ -262,60 +312,121 @@ def build_index(pairs_dir, flights, gt_mode, limit):
             metas = [json.loads(line) for line in fh if line.strip()]
         if limit is not None:
             metas = metas[:limit]
-        n = 0
+        n = n_corr_drop = n_disagree_drop = 0
         for meta in metas:
             npz_path = os.path.join(pairs_dir, meta["npz"])
             png_path = os.path.join(pairs_dir, meta["png"])
             if not (os.path.isfile(npz_path) and os.path.isfile(png_path)):
                 continue
+            sf = meta.get("search_factor")
+            if sf is None:
+                no_sf += 1
+            elif abs(float(sf) - SEARCH_FACTOR) > 1e-6:
+                sys.exit(f"Pairs in {pairs_dir} were generated at SEARCH_FACTOR={sf}, "
+                         f"current is {SEARCH_FACTOR} — regenerate them.")
+            m_per_px = float(meta["m_per_px"])
+            if min_corr > 0 and meta.get("teacher") and meta.get("n_corr", 0) < min_corr:
+                n_corr_drop += 1; continue
             with np.load(npz_path, allow_pickle=True) as d:
                 H = _fit_H(d, gt_mode)
-            index.append((os.path.join(drone_dir, meta["filename"]), png_path,
-                          H.astype(np.float32), f"{flight}/{meta['filename']}"))
+                if max_teacher_geo_m > 0 and bool(d["has_teacher"]):
+                    cd_px = meta.get("center_disagree_px")
+                    if cd_px is None:  # old cache: recompute from the stored Hs
+                        c = np.array([[[SZ_W / 2.0, SZ_H / 2.0]]], dtype=np.float64)
+                        pt_t = cv2.perspectiveTransform(c, d["H_teacher"]).reshape(2)
+                        pt_g = cv2.perspectiveTransform(c, d["H_geo"]).reshape(2)
+                        cd_px = float(np.hypot(*(pt_t - pt_g)))
+                    if cd_px * m_per_px > max_teacher_geo_m:
+                        n_disagree_drop += 1; continue
+            index.append(dict(drone_path=os.path.join(drone_dir, meta["filename"]),
+                              png_path=png_path, H=H.astype(np.float64),
+                              name=f"{flight}/{meta['filename']}",
+                              m_per_px=m_per_px,
+                              true_gps_px=tuple(meta["true_gps_px"]),
+                              flight=flight))
             n += 1
-        print(f"  flight {flight}: {n} pairs ({gt_mode})")
+        drops = (f", dropped {n_corr_drop} low-corr + {n_disagree_drop} "
+                 f"teacher-vs-geo>{max_teacher_geo_m:g}m"
+                 if (n_corr_drop or n_disagree_drop) else "")
+        print(f"  flight {flight}: {n} pairs ({gt_mode}{drops})")
+    if no_sf:
+        print(f"  WARN: {no_sf} pairs lack search_factor metadata (old cache?) — "
+              f"cannot verify crop scale matches SEARCH_FACTOR={SEARCH_FACTOR}.")
     return index
 
 
 class PairDataset(Dataset):
-    """Returns grayscale drone + cached (already-CLAHE'd) crop + homography."""
+    """Grayscale drone + cached (already-CLAHE'd) crop + homography.
 
-    def __init__(self, index, long_side, clahe):
+    With aug=True (train band only): independent photometric jitter on both
+    images plus a random similarity S on the crop with the label updated as
+    H' = S @ H — label-exact geometric variation mimicking the yaw/K/prior
+    noise the benchmark exhibits."""
+
+    def __init__(self, index, long_side, clahe, aug=False,
+                 aug_rot=8.0, aug_scale=0.1, aug_trans=48.0):
         self.index = index
         self.long_side = long_side
         self.clahe_fn = _make_clahe(clahe)
+        self.aug = aug
+        self.aug_rot, self.aug_scale, self.aug_trans = aug_rot, aug_scale, aug_trans
 
     def __len__(self):
         return len(self.index)
 
     def __getitem__(self, i):
-        drone_path, crop_path, H, name = self.index[i]
-        drone = cv2.imread(drone_path)
-        crop = cv2.imread(crop_path)
+        e = self.index[i]
+        drone = cv2.imread(e["drone_path"])
+        crop = cv2.imread(e["png_path"])
         if drone is None or crop is None:
             return None
         drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
         if self.clahe_fn:
             drone = self.clahe_fn(drone)           # crop PNG is already CLAHE'd
+        H = e["H"].astype(np.float64)
+        S = np.eye(3, dtype=np.float64)
+        if self.aug:
+            drone = _photometric(drone)
+            crop = _photometric(crop)
+            S = _rand_similarity(self.aug_rot, self.aug_scale, self.aug_trans)
+            crop = cv2.warpAffine(crop, S[:2].astype(np.float32), (SZ_W, SZ_H),
+                                  flags=cv2.INTER_LINEAR,
+                                  borderMode=cv2.BORDER_REPLICATE)
+            H = S @ H                              # feature c -> S·c in the aug crop
         g0, s, rh, rw = _to_input(drone, self.long_side)
         g1, _, _, _ = _to_input(crop, self.long_side)
-        Hs = _scale_H(H.astype(np.float64), s)
-        return (torch.from_numpy(g0).float().div(255.)[None],
-                torch.from_numpy(g1).float().div(255.)[None],
-                torch.from_numpy(Hs).float(), rh, rw, name)
+        return dict(image0=torch.from_numpy(g0).float().div(255.)[None],
+                    image1=torch.from_numpy(g1).float().div(255.)[None],
+                    H=torch.from_numpy(_scale_H(H, s)),
+                    S1=torch.from_numpy(_scale_H(S, s)),
+                    rh=rh, rw=rw, scale=s, name=e["name"],
+                    m_per_px=e["m_per_px"],
+                    true_gps_px=torch.tensor(e["true_gps_px"], dtype=torch.float64))
+
+
+def _worker_init(_wid):
+    # helpers.utils seeds np.random globally at import; forked DataLoader
+    # workers would otherwise share identical augmentation streams.
+    # torch.initial_seed() is per-worker and per-epoch, yet reproducible
+    # under torch.manual_seed(0).
+    np.random.seed(torch.initial_seed() % 2 ** 32)
 
 
 def collate(batch):
     batch = [b for b in batch if b is not None]
     if not batch:
         return None
-    img0 = torch.stack([b[0] for b in batch])
-    img1 = torch.stack([b[1] for b in batch])
-    H = torch.stack([b[2] for b in batch])
-    Hinv = torch.inverse(H)
-    return {"image0": img0, "image1": img1, "H_0to1": H, "H_1to0": Hinv,
-            "real_h": batch[0][3], "real_w": batch[0][4],
-            "pair_names": [b[5] for b in batch]}
+    H = torch.stack([b["H"] for b in batch])       # float64 for stable inverses
+    S1 = torch.stack([b["S1"] for b in batch])
+    return {"image0": torch.stack([b["image0"] for b in batch]),
+            "image1": torch.stack([b["image1"] for b in batch]),
+            "H_0to1": H.float(), "H_1to0": torch.inverse(H).float(),
+            "S1_inv": torch.inverse(S1).float(),
+            "real_h": batch[0]["rh"], "real_w": batch[0]["rw"],
+            "scale_in": batch[0]["scale"],
+            "m_per_px": [b["m_per_px"] for b in batch],
+            "true_gps_px": torch.stack([b["true_gps_px"] for b in batch]),
+            "pair_names": [b["name"] for b in batch]}
 
 
 # ── model (LoRA) ───────────────────────────────────────────────────────────────
@@ -357,17 +468,23 @@ def build_model(ckpt_path, device, rank, alpha, dropout, targets, grad_ckpt, dum
 # ── train / val ────────────────────────────────────────────────────────────────
 
 def _move(batch, device):
-    for k in ("image0", "image1", "H_0to1", "H_1to0"):
+    for k in ("image0", "image1", "H_0to1", "H_1to0", "S1_inv"):
         batch[k] = batch[k].to(device)
     return batch
 
 
 @torch.no_grad()
 def validate(peft_model, inner, loader, device):
-    """Median reprojection error (px) of predicted matches vs the per-pair geo-H,
-    plus mean #matches, on the held-out test band. Lower error = better."""
+    """Benchmark-aligned validation on the held-out val band.
+
+    Per pair: predicted matches -> helpers.utils.fit_similarity (the SAME 4-DOF
+    estimator every eval pipeline uses) -> project the drone centre -> error in
+    METERS vs the true-GPS pixel. Gated like the benchmark: a failed fit or
+    < MIN_INL inliers counts as a miss (err = inf). The stored m_per_px is the
+    CROP-frame GSD, so err_px * m_per_px is meters directly. Also returns the
+    legacy median match-reprojection error vs the geo-H for continuity."""
     peft_model.eval()
-    errs, nmatches = [], []
+    errs_m, reproj, nmatches = [], [], []
     for batch in loader:
         if batch is None:
             continue
@@ -378,14 +495,28 @@ def validate(peft_model, inner, loader, device):
         inb = (kp0[:, 0] < rw) & (kp0[:, 1] < rh) & (kp1[:, 0] < rw) & (kp1[:, 1] < rh)
         kp0, kp1 = kp0[inb], kp1[inb]
         nmatches.append(int(len(kp0)))
-        if len(kp0) == 0:
-            errs.append(float(max(rh, rw)))                 # penalize no-match
+        if len(kp0):
+            proj = _warp_homo(kp0[None].float(), batch["H_0to1"][:1])[0]
+            reproj.append(float((proj - kp1.float()).norm(dim=1).median()))
+        else:
+            reproj.append(float(max(rh, rw)))               # penalize no-match
+        H_pred, ninl = fit_similarity(kp0.cpu().numpy(), kp1.cpu().numpy())
+        if H_pred is None or ninl < MIN_INL:
+            errs_m.append(float("inf"))
             continue
-        proj = _warp_homo(kp0[None].float(), batch["H_0to1"][:1])[0]
-        errs.append(float((proj - kp1.float()).norm(dim=1).median()))
+        s = float(batch["scale_in"])
+        p = H_pred @ np.array([rw / 2.0, rh / 2.0, 1.0])
+        p = p[:2] / max(float(p[2]), 1e-12)
+        gt = batch["true_gps_px"][0].numpy() * s            # native crop px -> input px
+        err_px = float(np.hypot(p[0] - gt[0], p[1] - gt[1]))
+        errs_m.append(err_px * batch["m_per_px"][0] / s)    # m_per_px is per NATIVE px
     peft_model.train()
-    return (float(np.median(errs)) if errs else float("inf"),
-            float(np.mean(nmatches)) if nmatches else 0.0)
+    errs_m = np.asarray(errs_m if errs_m else [float("inf")], dtype=float)
+    return dict(med_err_m=float(np.median(errs_m)),
+                acc25=float(np.mean(errs_m <= 25.0)),
+                fail_frac=float(np.mean(np.isinf(errs_m))),
+                reproj_px=float(np.median(reproj)) if reproj else float("inf"),
+                mean_matches=float(np.mean(nmatches)) if nmatches else 0.0)
 
 
 def train(args):
@@ -395,20 +526,25 @@ def train(args):
     print(f"  Device: {device} | flights {' '.join(flights)} | gt-mode {args.gt_mode} | "
           f"long-side {args.long_side or 'native'} | bs {args.batch_size} | amp {args.amp}")
 
-    index = build_index(args.pairs_dir, flights, args.gt_mode, args.limit)
+    index = build_index(args.pairs_dir, flights, args.gt_mode, args.limit,
+                        min_corr=args.min_corr,
+                        max_teacher_geo_m=args.max_teacher_geo_m)
     if not index:
         sys.exit(f"No training pairs in {args.pairs_dir}. Run gen_eloftr_pairs.py first.")
-    print(f"  Total training pairs: {len(index)}")
+    print(f"  Total training pairs: {len(index)} | aug {'off' if args.no_aug else 'on'}")
 
     peft_model, inner = build_model(args.weights, device, args.rank, args.alpha,
                                     args.dropout, args.targets, args.grad_ckpt, args.dump_modules)
     loss_fn = LoFTRLoss(lower_config(cfg)).to(device)
     loss_fn.train()
 
-    ds = PairDataset(index, args.long_side, not args.no_clahe)
+    ds = PairDataset(index, args.long_side, not args.no_clahe, aug=not args.no_aug,
+                     aug_rot=args.aug_rot, aug_scale=args.aug_scale,
+                     aug_trans=args.aug_trans)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True,
                         num_workers=args.workers, drop_last=True,
-                        collate_fn=collate, pin_memory=True)
+                        collate_fn=collate, pin_memory=True,
+                        worker_init_fn=_worker_init)
 
     val_loader = None
     if os.path.isdir(args.val_pairs_dir):
@@ -417,19 +553,25 @@ def train(args):
             val_loader = DataLoader(PairDataset(val_index, args.long_side, not args.no_clahe),
                                     batch_size=1, shuffle=False, num_workers=args.workers,
                                     collate_fn=collate, pin_memory=True)
-            print(f"  Validation pairs: {len(val_index)} (test band)")
+            print(f"  Validation pairs: {len(val_index)} (val band)")
     if val_loader is None:
-        print(f"  No val set at {args.val_pairs_dir} (gen with --split test --no-teacher); "
+        print(f"  No val set at {args.val_pairs_dir} (gen with --split val --no-teacher); "
               f"skipping validation/early-stop.")
 
     params = [p for p in peft_model.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=0.1)
     total_steps = max(1, len(loader) * args.epochs)
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=total_steps)
+    warmup = max(0, min(args.warmup_steps, total_steps - 1))
+    cosine = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, total_steps - warmup))
+    sched = (torch.optim.lr_scheduler.SequentialLR(
+                 opt, [torch.optim.lr_scheduler.LinearLR(opt, start_factor=0.05,
+                                                         total_iters=warmup), cosine],
+                 milestones=[warmup])
+             if warmup else cosine)
     scaler = torch.amp.GradScaler("cuda", enabled=args.amp and device.type == "cuda")
 
     os.makedirs(args.out_dir, exist_ok=True)
-    best_val = float("inf")
+    best_key, best, history = (float("inf"), 0.0), None, []
     peft_model.train()
     for ep in range(args.epochs):
         pbar = tqdm(loader, desc=f"  epoch {ep+1}/{args.epochs}", unit="batch")
@@ -460,33 +602,53 @@ def train(args):
                              l=f"{float(ls['loss_l']):.3f}", refresh=False)
 
         if val_loader is not None:
-            reproj, nm = validate(peft_model, inner, val_loader, device)
-            print(f"  [val] epoch {ep+1}: median reproj {reproj:.2f}px | mean matches {nm:.0f}")
-            if reproj < best_val:
-                best_val = reproj
-                _save(peft_model, args, cfg, len(index), flights, best_val, tag="best")
+            vm = validate(peft_model, inner, val_loader, device)
+            vm["epoch"] = ep + 1
+            vm["train_loss"] = run / max(1, len(loader))
+            history.append(vm)
+            print(f"  [val] epoch {ep+1}: median err {vm['med_err_m']:.1f}m | "
+                  f"A@25 {100*vm['acc25']:.1f}% | fit-fail {100*vm['fail_frac']:.0f}% | "
+                  f"reproj {vm['reproj_px']:.1f}px | matches {vm['mean_matches']:.0f}")
+            key = (vm["med_err_m"], -vm["acc25"])
+            if key < best_key:                   # strict < keeps the earlier epoch on ties
+                best_key, best = key, dict(vm)
+                _save(peft_model, args, cfg, len(index), flights, tag="best",
+                      best=best, history=history)
                 print(f"    new best -> saved to {args.out_dir}")
 
     if val_loader is None:                       # no early-stop signal: keep the final epoch
-        _save(peft_model, args, cfg, len(index), flights, None, tag="final")
+        _save(peft_model, args, cfg, len(index), flights, tag="final")
     else:                                        # best already in out_dir; stash the last epoch
-        _save(peft_model, args, cfg, len(index), flights, best_val, tag="last",
-              out_dir=args.out_dir + "_last")
-    print(f"  Done. Best val reproj: {best_val if best_val < float('inf') else 'n/a'} | "
-          f"adapter -> {args.out_dir}")
+        _save(peft_model, args, cfg, len(index), flights, tag="last",
+              out_dir=args.out_dir + "_last", best=best, history=history)
+    msg = (f"median err {best['med_err_m']:.1f}m @ epoch {best['epoch']}"
+           if best else "n/a")
+    print(f"  Done. Best val: {msg} | adapter -> {args.out_dir}")
 
 
-def _save(peft_model, args, cfg, n_pairs, flights, best_val, tag, out_dir=None):
+def _save(peft_model, args, cfg, n_pairs, flights, tag, out_dir=None,
+          best=None, history=None):
     out_dir = out_dir or args.out_dir
     os.makedirs(out_dir, exist_ok=True)
     peft_model.save_pretrained(out_dir)
     with open(os.path.join(out_dir, "train_meta.json"), "w") as fh:
         json.dump({"base_ckpt": os.path.basename(args.weights), "rank": args.rank,
                    "alpha": args.alpha, "dropout": args.dropout, "targets": args.targets,
-                   "epochs": args.epochs, "lr": args.lr, "n_pairs": n_pairs,
+                   "epochs": args.epochs, "lr": args.lr, "warmup_steps": args.warmup_steps,
+                   "n_pairs": n_pairs,
                    "flights": flights, "gt_mode": args.gt_mode, "long_side": args.long_side,
                    "amp": args.amp, "local_weight": cfg.LOFTR.LOSS.LOCAL_WEIGHT,
-                   "best_val_reproj_px": best_val, "saved_at": tag}, fh, indent=2)
+                   "aug": (None if args.no_aug else
+                           dict(rot=args.aug_rot, scale=args.aug_scale,
+                                trans=args.aug_trans)),
+                   "min_corr": args.min_corr,
+                   "max_teacher_geo_m": args.max_teacher_geo_m,
+                   "search_factor": float(SEARCH_FACTOR),
+                   "pairs_dir": args.pairs_dir, "val_pairs_dir": args.val_pairs_dir,
+                   "val_metric": "fit_similarity centre error vs true-GPS px (m), "
+                                 f"gated at MIN_INL={MIN_INL}",
+                   "best": best, "val_history": history,
+                   "saved_at": tag}, fh, indent=2)
 
 
 def main():
@@ -501,13 +663,29 @@ def main():
     ap.add_argument("--gt-mode", choices=["homo", "teacher", "geo"], default="homo",
                     help="homo: per-pair homography fit to teacher corr (default); "
                          "teacher: stored RoMa similarity; geo: GPS-prior homography (ablation).")
-    ap.add_argument("--epochs", type=int, default=10)
+    ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch-size", type=int, default=2)
     ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--warmup-steps", type=int, default=100,
+                    help="Linear LR warmup steps before the cosine decay (0 disables).")
     ap.add_argument("--rank", type=int, default=8)
     ap.add_argument("--alpha", type=int, default=16)
     ap.add_argument("--dropout", type=float, default=0.05)
     ap.add_argument("--lora-mlp", action="store_true", help="Also LoRA the coarse MLP linears.")
+    ap.add_argument("--no-aug", action="store_true",
+                    help="Disable train-time augmentation (ablation).")
+    ap.add_argument("--aug-rot", type=float, default=8.0,
+                    help="Max |rotation| in degrees for the crop-side similarity jitter.")
+    ap.add_argument("--aug-scale", type=float, default=0.1,
+                    help="Max |scale-1| for the crop-side similarity jitter.")
+    ap.add_argument("--aug-trans", type=float, default=48.0,
+                    help="Max |translation| in px for the crop-side similarity jitter.")
+    ap.add_argument("--min-corr", type=int, default=16,
+                    help="Drop teacher pairs with fewer inlier correspondences.")
+    ap.add_argument("--max-teacher-geo-m", type=float, default=64.0,
+                    help="Drop teacher pairs whose teacher-H vs geo-H drone-centre "
+                         "disagreement exceeds this many meters (alias-suspect "
+                         "labels on repetitive terrain). <=0 disables.")
     ap.add_argument("--long-side", type=int, default=0,
                     help="Resize long side to this (0 = native 1024x680, like eval). "
                          "Lower (e.g. 832) cuts memory; correspondences/H are rescaled.")
