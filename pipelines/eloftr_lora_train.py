@@ -385,6 +385,8 @@ class PairDataset(Dataset):
             drone = self.clahe_fn(drone)           # crop PNG is already CLAHE'd
         H = e["H"].astype(np.float64)
         S = np.eye(3, dtype=np.float64)
+        tgp = np.asarray(e["true_gps_px"], dtype=np.float64)
+        m_per_px = e["m_per_px"]
         if self.aug:
             drone = _photometric(drone)
             crop = _photometric(crop)
@@ -393,6 +395,10 @@ class PairDataset(Dataset):
                                   flags=cv2.INTER_LINEAR,
                                   borderMode=cv2.BORDER_REPLICATE)
             H = S @ H                              # feature c -> S·c in the aug crop
+            # The GT pixel moves with the crop content, and the aug scale changes
+            # the crop GSD: keep the meters-loss target exact under augmentation.
+            tgp = (S @ np.array([tgp[0], tgp[1], 1.0]))[:2]
+            m_per_px = m_per_px / float(np.sqrt(abs(np.linalg.det(S[:2, :2]))))
         g0, s, rh, rw = _to_input(drone, self.long_side)
         g1, _, _, _ = _to_input(crop, self.long_side)
         return dict(image0=torch.from_numpy(g0).float().div(255.)[None],
@@ -400,8 +406,8 @@ class PairDataset(Dataset):
                     H=torch.from_numpy(_scale_H(H, s)),
                     S1=torch.from_numpy(_scale_H(S, s)),
                     rh=rh, rw=rw, scale=s, name=e["name"],
-                    m_per_px=e["m_per_px"],
-                    true_gps_px=torch.tensor(e["true_gps_px"], dtype=torch.float64))
+                    m_per_px=m_per_px,
+                    true_gps_px=torch.tensor(tgp, dtype=torch.float64))
 
 
 def _worker_init(_wid):
