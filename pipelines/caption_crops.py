@@ -69,14 +69,53 @@ def _clean_caption(text):
     return text.strip().strip(",").strip()
 
 
+class _RestOllama:
+    """Minimal ollama.Client stand-in over the plain REST API (requests only).
+    Used on the cluster, where the container has no `ollama` package. Returns
+    the same dict shapes the old (<0.4) client returned, which make_ollama
+    already handles."""
+
+    def __init__(self, host=None):
+        import requests
+        self._rq = requests
+        host = host or "http://127.0.0.1:11434"
+        if "://" not in host:
+            host = "http://" + host
+        self._url = host.rstrip("/")
+
+    def list(self):
+        r = self._rq.get(self._url + "/api/tags", timeout=10)
+        r.raise_for_status()
+        return r.json()
+
+    def chat(self, model, messages, options, think=None):
+        import base64
+        msgs = []
+        for m in messages:
+            m = dict(m)
+            if "images" in m:  # REST wants base64 strings, not raw bytes
+                m["images"] = [base64.b64encode(b).decode("ascii")
+                               if isinstance(b, (bytes, bytearray)) else b
+                               for b in m["images"]]
+            msgs.append(m)
+        payload = {"model": model, "messages": msgs, "stream": False,
+                   "options": options}
+        if think is not None:
+            payload["think"] = think
+        # generous timeout: the first request also loads the model weights
+        r = self._rq.post(self._url + "/api/chat", json=payload, timeout=600)
+        r.raise_for_status()
+        return r.json()
+
+
 def make_ollama(model_id, max_tokens, _device, host=None, retries=4):
     """Caption via a local Ollama server (default http://localhost:11434)."""
+    host = host or os.environ.get("OLLAMA_HOST")
     try:
         import ollama
+        client = ollama.Client(host=host) if host else ollama.Client()
     except ImportError:
-        sys.exit("ollama package not installed. Run: pip install ollama")
-    host = host or os.environ.get("OLLAMA_HOST")
-    client = ollama.Client(host=host) if host else ollama.Client()
+        client = _RestOllama(host)
     try:
         resp = client.list()
         # ollama >= 0.4 returns a ListResponse object; older versions return a dict.
