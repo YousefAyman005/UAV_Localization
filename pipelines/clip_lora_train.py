@@ -47,8 +47,8 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
-    FLIGHTS_AVAILABLE, crop_gt_patch, get_flight_paths, load_flight,
-    split_flight_rows,
+    FLIGHTS_AVAILABLE, corrected_yaw, crop_gt_patch, get_flight_paths,
+    load_flight, north_up_drone, split_flight_rows,
 )
 
 torch.manual_seed(0)
@@ -118,8 +118,10 @@ def build_pair_index(flights, caption_dir, pairs_dir, limit, split):
                 cv2.imwrite(sat_path, patch)
             dcap = dcaps.get(fname, "")
             n_dcap += bool(dcap)
+            yaw = corrected_yaw(flight, float(row["Phi1"])) \
+                if "Phi1" in row.index else 0.0
             index.append((os.path.join(drone_dir, fname), sat_path, cap, dcap,
-                          float(row["lat"]), float(row["lon"])))
+                          float(row["lat"]), float(row["lon"]), yaw))
             n += 1
         del tiles
         print(f"  flight {flight}: {n} training triples "
@@ -139,10 +141,12 @@ class PairDataset(Dataset):
     scale jitter (sat_aug) so training covers the scale gap between GT
     footprint crops and the fixed-size gallery tiles used at test time."""
 
-    def __init__(self, index, res, mean, std, train=True, sat_aug=True):
+    def __init__(self, index, res, mean, std, train=True, sat_aug=True,
+                 north_up=False):
         self.index = index
         self.train = train
         self.res = res
+        self.north_up = north_up
         self.mean = torch.tensor(mean).view(3, 1, 1)
         self.std  = torch.tensor(std).view(3, 1, 1)
         from torchvision import transforms
@@ -166,17 +170,20 @@ class PairDataset(Dataset):
     def __len__(self):
         return len(self.index)
 
-    def _img(self, path, tf):
+    def _img(self, path, tf, yaw=None):
         bgr = cv2.imread(path)
         if bgr is None:
             return torch.zeros(3, self.res, self.res)
+        if yaw is not None:
+            bgr = north_up_drone(bgr, yaw)
         pil = Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
         t = _to_tensor(tf(pil))
         return (t - self.mean) / self.std
 
     def __getitem__(self, i):
-        drone_path, sat_path, cap, dcap, lat, lon = self.index[i]
-        drone = self._img(drone_path, self.drone_tf)
+        drone_path, sat_path, cap, dcap, lat, lon, yaw = self.index[i]
+        drone = self._img(drone_path, self.drone_tf,
+                          yaw=yaw if self.north_up else None)
         sat   = self._img(sat_path, self.sat_tf)
         return drone, sat, cap, dcap, torch.tensor([lat, lon], dtype=torch.float64)
 
@@ -285,7 +292,7 @@ def train(args):
           f"buffer={args.split_buffer})")
     print(f"  Loss weights: dt={args.w_dt} st={args.w_st} ds={args.w_ds} "
           f"ddt={args.w_ddt} | neg-mask {args.neg_mask_m} m | "
-          f"sat_aug={not args.no_sat_aug}")
+          f"sat_aug={not args.no_sat_aug} | north_up={args.north_up}")
 
     index = build_pair_index(flights, args.caption_dir, args.pairs_dir,
                              args.limit, split)
@@ -301,7 +308,8 @@ def train(args):
     peft_model, clip, tokenizer, info = build_model(
         device, args.rank, args.alpha, args.dropout, args.grad_ckpt)
     ds = PairDataset(index, info["res"], info["mean"], info["std"],
-                     train=True, sat_aug=not args.no_sat_aug)
+                     train=True, sat_aug=not args.no_sat_aug,
+                     north_up=args.north_up)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True,
                         num_workers=args.workers, drop_last=True,
                         collate_fn=make_collate(tokenizer, info["max_len"],
@@ -375,6 +383,7 @@ def train(args):
                    "loss_weights": {"dt": args.w_dt, "st": args.w_st,
                                     "ds": args.w_ds, "ddt": args.w_ddt},
                    "neg_mask_m": args.neg_mask_m,
+                   "north_up": args.north_up,
                    "sat_aug": not args.no_sat_aug}, f, indent=2)
     print(f"  Saved LoRA adapter -> {args.out_dir}")
 
@@ -413,6 +422,11 @@ def main():
                          "negatives). 0 disables.")
     ap.add_argument("--no-sat-aug", action="store_true",
                     help="Disable the satellite-crop scale jitter (RandomResizedCrop).")
+    ap.add_argument("--north-up", action="store_true",
+                    help="Rotate drone images north-up via corrected_yaw "
+                         "(center square crop + rotation) so they share the "
+                         "orientation of the north-up sat positives/gallery. "
+                         "Evaluate with the pipelines' matching --north-up.")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--lr", type=float, default=1e-4)

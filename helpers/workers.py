@@ -32,7 +32,7 @@ def _sample_df(df, limit):
 
 
 def _collect_flight(flight, match_factory, viz_fn, viz_dir, clahe, limit,
-                    min_inl, progress):
+                    min_inl, progress, yaw_cal=True):
     tiles, drone_dir, drone_csv, _ = load_flight(flight)
     df = _sample_df(pd.read_csv(drone_csv), limit)
     if progress:
@@ -40,7 +40,8 @@ def _collect_flight(flight, match_factory, viz_fn, viz_dir, clahe, limit,
     return collect_pipeline_rows_multitile(
         tiles, df, match_factory,
         drone_dir=drone_dir, flight=flight, clahe=clahe, min_inl=min_inl,
-        viz_fn=viz_fn if viz_dir else None, viz_dir=viz_dir, progress=progress)
+        viz_fn=viz_fn if viz_dir else None, viz_dir=viz_dir, progress=progress,
+        yaw_cal=yaw_cal)
 
 
 def _gpu_worker(args):
@@ -53,7 +54,8 @@ def _gpu_worker(args):
     return [r for f in flight_group
             for r in _collect_flight(
                 f, match_factory, spec["viz_fn"], run["viz_dir"],
-                run["clahe"], run["limit"], run["min_inl"], progress=False)]
+                run["clahe"], run["limit"], run["min_inl"], progress=False,
+                yaw_cal=run["yaw_cal"])]
 
 
 def _cpu_worker(args):
@@ -66,7 +68,7 @@ def _cpu_worker(args):
         drone_dir=drone_dir, flight=flight, clahe=run["clahe"],
         min_inl=run["min_inl"],
         viz_fn=spec["viz_fn"] if run["viz_dir"] else None,
-        viz_dir=run["viz_dir"], progress=False)
+        viz_dir=run["viz_dir"], progress=False, yaw_cal=run["yaw_cal"])
 
 
 def _run_gpu_flights(flights, spec, run):
@@ -82,7 +84,8 @@ def _run_gpu_flights(flights, spec, run):
         return [r for f in flights
                 for r in _collect_flight(
                     f, match_factory, spec["viz_fn"], run["viz_dir"],
-                    run["clahe"], run["limit"], run["min_inl"], progress=True)]
+                    run["clahe"], run["limit"], run["min_inl"], progress=True,
+                    yaw_cal=run["yaw_cal"])]
 
     ctx = multiprocessing.get_context("spawn")
     worker_args = [(g, i, spec, run) for i, g in enumerate(groups)]
@@ -110,7 +113,7 @@ def _run_cpu_chunks(flights, workers, spec, run):
                 drone_dir=drone_dir, flight=flight, clahe=run["clahe"],
                 min_inl=run["min_inl"],
                 viz_fn=spec["viz_fn"] if run["viz_dir"] else None,
-                viz_dir=run["viz_dir"]))
+                viz_dir=run["viz_dir"], yaw_cal=run["yaw_cal"]))
         else:
             chunk_args = [(c, tiles, drone_dir, flight, spec, run) for c in chunks]
             with multiprocessing.Pool(len(chunks)) as pool:
@@ -131,6 +134,9 @@ def _add_common_args(parser):
                         help=f"Minimum RANSAC inliers to accept H (default: {MIN_INL}).")
     parser.add_argument("--no-clahe",    action="store_true",
                         help="Disable CLAHE preprocessing (on by default).")
+    parser.add_argument("--no-yaw-cal",  action="store_true",
+                        help="Disable the per-leg YAW_OFFSET correction of "
+                             "Phi1 (on by default; for ablation).")
 
 
 def run_pipeline(*, name, load_model, make_match_factory,
@@ -165,7 +171,8 @@ def run_pipeline(*, name, load_model, make_match_factory,
     spec = dict(load_model=load_model, make_match_factory=make_match_factory,
                 viz_fn=viz_fn)
     run  = dict(args=args, viz_dir=viz_dir, clahe=not args.no_clahe,
-                limit=args.limit, min_inl=args.min_inliers)
+                limit=args.limit, min_inl=args.min_inliers,
+                yaw_cal=not args.no_yaw_cal)
 
     with TeeLogger(out_csv.replace(".csv", ".log")):
         if parallelism == "gpu_flights":

@@ -3,6 +3,7 @@ import math
 import os
 import random
 import sys
+import time
 import zlib
 
 import cv2
@@ -10,6 +11,13 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
+
+# Optional: only needed for accurate GPU timing (cuda sync around the match
+# call). The CPU baseline and local tooling must work without torch.
+try:
+    import torch
+except ImportError:
+    torch = None
 
 Image.MAX_IMAGE_PIXELS = None  # large satellite TIFs
 
@@ -49,6 +57,55 @@ K_DEFAULT          = 1.75 * 2.0 * math.tan(math.radians(35.0))
 # K is invariant to SEARCH_FACTOR (true footprint ratio). See [[project-k-calibration]].
 SEARCH_FACTOR      = float(os.environ.get("UAV_SEARCH_FACTOR", "1.75"))
 PRIOR_OFFSET_STD_M = float(os.environ.get("UAV_PRIOR_STD_M", "80.0"))  # σ of GPS prior; env-overridable for the sensitivity sweep
+
+# Per-flight, per-leg yaw correction (degrees ADDED to Phi1 before metric_crop).
+# The recorded yaw only approximates the camera's image orientation: the
+# deviation is constant within a flight leg but differs between legs (sign
+# flips with flight direction — wind-crab + mount-offset signature).
+# Calibrated like K_PER_FLIGHT from matcher geometry: median residual rotation
+# of the 4-DOF similarity on RoMa-extre matches, 40 frames/flight
+# (analyze/check_crop_rotation.py --calibrate, 2026-06-11; raw legs in
+# cache/yaw_calibration.json). {flight: [(leg_heading_deg, offset_deg), ...]}
+YAW_OFFSET = {
+    "01": [(166.4, -5.3), (29.2, -12.9)],
+    "02": [(173.1, -2.1), (6.9, 2.5)],
+    "03": [(-40.4, -1.7), (122.6, -7.0)],
+    "04": [(-9.6, 1.1), (168.9, -3.8)],
+    "05": [(104.7, -4.5), (-102.6, 3.9)],
+    "06": [(171.1, -8.8), (-21.2, 2.9)],
+    "08": [(109.1, -23.4), (-81.8, 14.2)],
+    "10": [(171.9, 6.4), (-34.3, -7.6)],
+    "11": [(90.3, -1.9), (-88.8, -0.5)],
+}
+
+
+def corrected_yaw(flight, yaw_deg):
+    """Phi1 + the calibrated camera-vs-yaw offset of the nearest flight leg."""
+    legs = YAW_OFFSET.get(str(flight))
+    if not legs:
+        return yaw_deg
+    leg = min(legs, key=lambda l: abs((yaw_deg - l[0] + 180.0) % 360.0 - 180.0))
+    return yaw_deg + leg[1]
+
+
+def north_up_drone(bgr, yaw_deg):
+    """Rotate a (heading-up) drone image to north-up via its compass yaw.
+
+    Center square crop, then content rotation by -yaw: validated empirically
+    (analyze/plot_northup_sign.py geometry test — north_up_drone applied to
+    metric_crop(yaw) reproduces metric_crop(0) at NCC 0.97; the +yaw sign
+    scores ~0). NB caption_crops.iter_drone_images rotates by +Phi1, i.e.
+    the OPPOSITE sign — compass words in drone captions are unreliable.
+    Pass corrected_yaw(). Used by the CLIP line (--north-up) so query and
+    gallery share orientation; the matcher line instead rotates the
+    satellite patch (metric_crop)."""
+    h, w = bgr.shape[:2]
+    side = min(h, w)
+    y0, x0 = (h - side) // 2, (w - side) // 2
+    sq = bgr[y0:y0 + side, x0:x0 + side]
+    M = cv2.getRotationMatrix2D((side / 2, side / 2), -yaw_deg, 1.0)
+    return cv2.warpAffine(sq, M, (side, side))
+
 
 _HERE       = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(os.path.dirname(_HERE), "UAV_VisLoc_dataset")
@@ -252,8 +309,10 @@ def crop_gt_patch(tiles, lat, lon, height_m, yaw_deg=0.0, flight=None):
     """Satellite patch centered on the *true* GPS of a drone image (no prior noise).
 
     Shared by the captioner and the CLIP LoRA trainer so both operate on the
-    identical positive crop. Returns a BGR patch or None when the location is out
-    of bounds / barely overlaps the tile."""
+    identical positive crop (both pass yaw_deg=0: north-up, matching the
+    gallery tiles). NB: a caller passing a Phi1-derived yaw must apply
+    corrected_yaw() itself. Returns a BGR patch or None when the location is
+    out of bounds / barely overlaps the tile."""
     sat, geo, cx, cy, in_bounds = tile_for_gps(tiles, lat, lon)
     if not in_bounds:
         return None
@@ -322,10 +381,16 @@ def _predict_from_H(H, m_per_px, gt_px):
     return (float(px), float(py)), err_px, err_px * m_per_px
 
 
+def _cuda_sync():
+    """Barrier for accurate GPU timing; no-op without torch/CUDA."""
+    if torch is not None and torch.cuda.is_available():
+        torch.cuda.synchronize()
+
+
 def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
                                     flight=None, min_inl=MIN_INL, clahe=True,
                                     viz_fn=None, viz_dir=None, progress=True,
-                                    k_override=None):
+                                    k_override=None, yaw_cal=True):
     """Iterate `df`: load drone → pick tile → metric_crop → match → record row."""
     if drone_dir is None:
         raise ValueError("drone_dir is required")
@@ -337,6 +402,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
 
     rows, best_heap, worst_heap = [], [], []
     sample_idx, n_scored = 0, 0
+    warmed = False
     running = {t: 0 for t in ACC_THRESHOLDS}
     pbar = tqdm(df.iterrows(), total=len(df), unit="img", disable=not progress)
 
@@ -344,6 +410,8 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         f = row["filename"]
         lat, lon, height = float(row["lat"]), float(row["lon"]), float(row["height"])
         yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
+        if yaw_cal:
+            yaw = corrected_yaw(flight, yaw)
 
         drone_path = os.path.join(drone_dir, f)
         drone = cv2.imread(drone_path)
@@ -377,7 +445,17 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
         if clahe_fn:
             patch = clahe_fn(patch)
 
+        # t_match_ms covers everything method-specific: drone-side encoding,
+        # matching, and the robust fit inside the factory. One untimed call
+        # on the first row that gets here absorbs CUDA/cuDNN/lazy-init cost.
+        if not warmed:
+            match_factory(drone)(patch)
+            warmed = True
+        _cuda_sync()
+        _t0 = time.perf_counter()
         best = match_factory(drone)(patch)
+        _cuda_sync()
+        t_match_ms = (time.perf_counter() - _t0) * 1e3
         if best is None:
             rows.append(_skip_row(f, flight)); continue
 
@@ -406,7 +484,7 @@ def collect_pipeline_rows_multitile(tiles, df, match_factory, *, drone_dir,
 
         r = _build_row(f, lat, lon, height, flight, best,
                        raw_pred_px, raw_err_px, raw_err_m, plat, plon,
-                       off_m, m_per_px, gt_in_patch)
+                       off_m, m_per_px, gt_in_patch, t_match_ms=t_match_ms)
         rows.append(r)
 
         # Live A@t over ALL scored rows (gate rejections count as failures) —

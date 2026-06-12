@@ -3,7 +3,7 @@
 #SBATCH --mail-user=youssef.elsayed@hhi.fraunhofer.de
 #SBATCH --job-name=uav-eloftr-lora
 #SBATCH --output=logs/%j_%x.out
-#SBATCH --partition=gpu5
+#SBATCH --partition=gpu3
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -35,7 +35,8 @@ if [ ! -f "$ELOFTR_WEIGHTS_HOST" ]; then
 fi
 
 OUT_NAME="${ELOFTR_LORA_OUT:-eloftr_lora2_r8aug}"
-echo "Adapter out-dir: weights/${OUT_NAME} (+ _last)"
+PAIRS_NAME="${PAIRS_NAME:-eloftr_pairs2}"
+echo "Adapter out-dir: weights/${OUT_NAME} (+ _last); pairs: cache/${PAIRS_NAME}"
 
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
@@ -47,8 +48,8 @@ mkdir -p "$DATAPOOL3/datasets/Visloc/weights/${OUT_NAME}_last"
 apptainer run --nv \
     --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
-    --bind "$DATAPOOL3/datasets/Visloc/cache/eloftr_pairs2:/opt/uav_localization/cache/eloftr_pairs2:ro" \
-    --bind "$DATAPOOL3/datasets/Visloc/cache/eloftr_pairs2_val:/opt/uav_localization/cache/eloftr_pairs2_val:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/cache/${PAIRS_NAME}:/opt/uav_localization/cache/${PAIRS_NAME}:ro" \
+    --bind "$DATAPOOL3/datasets/Visloc/cache/${PAIRS_NAME}_val:/opt/uav_localization/cache/${PAIRS_NAME}_val:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/${OUT_NAME}:/opt/uav_localization/weights/${OUT_NAME}" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/${OUT_NAME}_last:/opt/uav_localization/weights/${OUT_NAME}_last" \
     --bind "${ELOFTR_WEIGHTS_HOST}:/data/weights/eloftr_outdoor.ckpt:ro" \
@@ -60,8 +61,8 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/eloftr_lora_train.py \
         --weights /data/weights/eloftr_outdoor.ckpt \
-        --pairs-dir /opt/uav_localization/cache/eloftr_pairs2 \
-        --val-pairs-dir /opt/uav_localization/cache/eloftr_pairs2_val \
+        --pairs-dir "/opt/uav_localization/cache/${PAIRS_NAME}" \
+        --val-pairs-dir "/opt/uav_localization/cache/${PAIRS_NAME}_val" \
         --out-dir "/opt/uav_localization/weights/${OUT_NAME}" \
         "$@"
 APPTAINER_EXIT=$?

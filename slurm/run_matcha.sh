@@ -7,6 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
+# Pinned to gpu3 (A100-40GB) so t_match_ms is comparable across matchers.
+#SBATCH -p gpu3
 #SBATCH --mem=32G
 #SBATCH --time=6:00
 

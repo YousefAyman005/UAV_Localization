@@ -213,6 +213,62 @@ def spvs_fine_homo(data, cfg):
     data["conf_matrix_f_gt"] = conf_f_gt
 
 
+def gt_center_loss(batch, cfg, b, topk=512, delta_m=30.0):
+    """Differentiable centre-projection error in METERS for sample b.
+
+    Soft correspondences from the coarse dual-softmax: for the top-`topk`
+    drone cells by row mass (selection under no_grad), the matched satellite
+    position is the row-normalized soft-argmax over real (unpadded) satellite
+    cells. A confidence-weighted closed-form 4-DOF similarity (same family as
+    the benchmark's fit_similarity, but differentiable) maps drone->crop; the
+    projected drone centre vs true_gps_px gives the loss. Gradients flow
+    through the conf values — the coarse assignment itself — which is the only
+    path wide enough to absorb a 10–20 px systematic bias (the fine window is
+    smaller than the bias). Returns None when too few confident rows exist."""
+    device = batch["image0"].device
+    scale = cfg.LOFTR.RESOLUTION[0]
+    H0, W0 = batch["image0"].shape[2:]
+    H1, W1 = batch["image1"].shape[2:]
+    h0, w0, h1, w1 = H0 // scale, W0 // scale, H1 // scale, W1 // scale
+    conf = batch["conf_matrix"][b]                       # [h0*w0, h1*w1], diff.
+    gy0, gx0 = torch.meshgrid(torch.arange(h0, device=device),
+                              torch.arange(w0, device=device), indexing="ij")
+    pos0 = torch.stack([gx0, gy0], -1).reshape(-1, 2).float() * scale
+    gy1, gx1 = torch.meshgrid(torch.arange(h1, device=device),
+                              torch.arange(w1, device=device), indexing="ij")
+    pos1 = torch.stack([gx1, gy1], -1).reshape(-1, 2).float() * scale
+    src_ok = (pos0[:, 0] < batch["real_w"]) & (pos0[:, 1] < batch["real_h"])
+    dst_ok = ((pos1[:, 0] < batch["real_w"]) & (pos1[:, 1] < batch["real_h"])).float()
+    with torch.no_grad():                                # row selection only
+        mass = (conf * dst_ok[None, :]).sum(1) * src_ok.float()
+        k = min(topk, int(src_ok.sum()))
+        if k < 8:
+            return None
+        rows = torch.topk(mass, k).indices
+    crows = conf[rows] * dst_ok[None, :]                 # [k, S], differentiable
+    w = crows.sum(1)
+    keep = w > 1e-4
+    if int(keep.sum()) < 8:
+        return None
+    w, crows, x = w[keep], crows[keep], pos0[rows][keep]
+    q = (crows / w[:, None]) @ pos1                      # soft satellite coords
+    sw = w / w.sum()
+    mx = (sw[:, None] * x).sum(0)
+    mq = (sw[:, None] * q).sum(0)
+    xc, qc = x - mx, q - mq
+    sxx = (sw * (xc * qc).sum(1)).sum()
+    sxy = (sw * (xc[:, 0] * qc[:, 1] - xc[:, 1] * qc[:, 0])).sum()
+    den = (sw * (xc * xc).sum(1)).sum().clamp(min=1e-8)
+    a, bb = sxx / den, sxy / den
+    cc = torch.tensor([batch["real_w"] / 2.0, batch["real_h"] / 2.0],
+                      device=device) - mx
+    pred = torch.stack([a * cc[0] - bb * cc[1], bb * cc[0] + a * cc[1]]) + mq
+    s_in = float(batch["scale_in"])
+    gt = batch["true_gps_px"][b].to(device).float() * s_in
+    err_m = torch.norm(pred - gt) * (batch["m_per_px"][b] / s_in)
+    return F.huber_loss(err_m, torch.zeros_like(err_m), delta=delta_m)
+
+
 # ── image / homography prep ────────────────────────────────────────────────────
 
 def _pad32(gray):
@@ -592,7 +648,16 @@ def train(args):
                 inner(batch)
                 spvs_fine_homo(batch, cfg)
                 loss_fn(batch)
-            loss = batch["loss"]
+                loss = args.w_teacher * batch["loss"]
+                gt_term = None
+                if args.w_gt > 0:
+                    terms = [gt_center_loss(batch, cfg, b, topk=args.gt_topk,
+                                            delta_m=args.gt_huber_m)
+                             for b in range(batch["image0"].shape[0])]
+                    terms = [t for t in terms if t is not None]
+                    if terms:
+                        gt_term = torch.stack(terms).mean()
+                        loss = loss + args.w_gt * gt_term
             scaler.scale(loss).backward()
             scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(params, 0.5)
@@ -605,7 +670,9 @@ def train(args):
             ls = batch["loss_scalars"]
             pbar.set_postfix(loss=f"{run/(step+1):.3f}",
                              c=f"{float(ls['loss_c']):.3f}", f=f"{float(ls['loss_f']):.3f}",
-                             l=f"{float(ls['loss_l']):.3f}", refresh=False)
+                             l=f"{float(ls['loss_l']):.3f}",
+                             gt=("-" if gt_term is None else f"{float(gt_term):.2f}"),
+                             refresh=False)
 
         if val_loader is not None:
             vm = validate(peft_model, inner, val_loader, device)
@@ -649,6 +716,8 @@ def _save(peft_model, args, cfg, n_pairs, flights, tag, out_dir=None,
                                 trans=args.aug_trans)),
                    "min_corr": args.min_corr,
                    "max_teacher_geo_m": args.max_teacher_geo_m,
+                   "w_gt": args.w_gt, "w_teacher": args.w_teacher,
+                   "gt_topk": args.gt_topk, "gt_huber_m": args.gt_huber_m,
                    "search_factor": float(SEARCH_FACTOR),
                    "pairs_dir": args.pairs_dir, "val_pairs_dir": args.val_pairs_dir,
                    "val_metric": "fit_similarity centre error vs true-GPS px (m), "
@@ -692,6 +761,15 @@ def main():
                     help="Drop teacher pairs whose teacher-H vs geo-H drone-centre "
                          "disagreement exceeds this many meters (alias-suspect "
                          "labels on repetitive terrain). <=0 disables.")
+    ap.add_argument("--w-gt", type=float, default=0.0,
+                    help="Weight of the differentiable GT centre-projection loss "
+                         "(meters vs true_gps_px). 0 = pure distillation (old behaviour).")
+    ap.add_argument("--w-teacher", type=float, default=1.0,
+                    help="Global scale on the teacher coarse/fine/local losses.")
+    ap.add_argument("--gt-topk", type=int, default=512,
+                    help="Coarse rows (by confidence mass) used in the GT-loss fit.")
+    ap.add_argument("--gt-huber-m", type=float, default=30.0,
+                    help="Huber delta in meters for the GT centre loss.")
     ap.add_argument("--long-side", type=int, default=0,
                     help="Resize long side to this (0 = native 1024x680, like eval). "
                          "Lower (e.g. 832) cuts memory; correspondences/H are rescaled.")

@@ -24,8 +24,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
     SZ_W, SZ_H, DEG_TO_M, PRIOR_OFFSET_STD_M,
-    FLIGHTS_AVAILABLE, get_flight_paths, load_satellite, haversine_m, TeeLogger,
-    split_flight_rows,
+    FLIGHTS_AVAILABLE, corrected_yaw, get_flight_paths, load_satellite,
+    haversine_m, north_up_drone, TeeLogger, split_flight_rows,
 )
 
 torch.manual_seed(0)
@@ -325,7 +325,7 @@ def haversine_m_vec(lat, lon, lats, lons):
 
 
 def retrieve(flight, bundle, emb, tile_ids, centers, df, drone_dir,
-             dist, topk, gps_radii=(), flight_tag=None):
+             dist, topk, gps_radii=(), flight_tag=None, north_up=False):
     """Run top-k retrieval; returns (rows, floors, t_retrieval).
 
     For each radius R in `gps_radii`, also computes the GT tile's rank
@@ -348,6 +348,9 @@ def retrieve(flight, bundle, emb, tile_ids, centers, df, drone_dir,
             if flight_tag: r["flight"] = flight_tag
             rows.append(r); continue
         drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
+        if north_up:
+            yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
+            drone = north_up_drone(drone, corrected_yaw(flight, yaw))
         rgb = cv2.cvtColor(drone, cv2.COLOR_BGR2RGB)
         t = preprocess(Image.fromarray(rgb)).unsqueeze(0)
         with torch.inference_mode():
@@ -423,7 +426,7 @@ def run_flight(flight, bundle, args, model_name, device):
     rows, floors, t_retrieval = retrieve(
         flight, bundle, emb, tile_ids, centers, df, drone_dir,
         args.dist, args.topk, gps_radii=tuple(args.gps_radii),
-        flight_tag=flight)
+        flight_tag=flight, north_up=getattr(args, "north_up", False))
     return rows, floors, t_gallery, t_retrieval, cached
 
 
@@ -490,6 +493,10 @@ def parse_args():
     ap.add_argument("--topk",          type=int,   default=5)
     ap.add_argument("--limit",         type=int,   default=None,
                     help="Cap drone images per flight (for quick tests).")
+    ap.add_argument("--north-up", action="store_true",
+                    help="Rotate drone queries north-up via corrected_yaw "
+                         "before embedding (match an adapter trained with "
+                         "--north-up). Gallery tiles are north-up already.")
     ap.add_argument("--satclip-ckpt",    type=str, default=SATCLIP_CKPT)
     ap.add_argument("--mobileclip-ckpt", type=str, default=None,
                     help="Local path to MobileCLIP-S2 open_clip_pytorch_model.bin "

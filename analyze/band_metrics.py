@@ -27,8 +27,10 @@ import sys
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from helpers.results import print_summary  # noqa: E402
+# helpers.utils must be imported before helpers.results: utils' module-level
+# back-import of results only resolves when utils is the one initialized first.
 from helpers.utils import ACC_THRESHOLDS, MIN_INL, split_flight_rows  # noqa: E402
+from helpers.results import print_summary  # noqa: E402
 
 
 def _method_name(path):

@@ -7,7 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
-#SBATCH -p gpu3
+# Any A100 partition works (ViT-L/14 OOMs on the 16GB V100s of gpu1/gpu2/gpu*).
+#SBATCH -p gpu3,gpu4,gpu5
 #SBATCH --mem=32G
 # A 5-alpha sweep costs ~28 min/alpha on 9 flights (satellite TIFs are reloaded
 # per flight per alpha) -> ~2h20m total; 2h was too tight and a timeout loses

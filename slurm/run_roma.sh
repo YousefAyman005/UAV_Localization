@@ -9,9 +9,9 @@
 #SBATCH --gpus=1
 #SBATCH --mem=32G
 #SBATCH --time=8:00:00
-# RoMa uses a DINOv2 ViT-L backbone, which OOMs on the 16GB V100s the default
-# gpu* partition can land on — restrict to the A100 partitions.
-#SBATCH -p gpu3,gpu4,gpu5
+# Pinned to gpu3 (A100-40GB) so t_match_ms is comparable across matchers;
+# also avoids the 16GB V100s of the default gpu* partition (RoMa's ViT-L OOMs).
+#SBATCH -p gpu3
 
 # RoMa (zju3dv/RoMa). Variant = first arg: outdoor | indoor | extre.
 #   extre = AerialExtreMatch fine-tune; needs the pre-staged roma_extre.pth bound.

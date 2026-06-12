@@ -5,7 +5,7 @@
 #SBATCH --output=logs/%j_%x.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=12
 #SBATCH --gpus=1
 #SBATCH -p gpu3,gpu5
 #SBATCH --mem=32G

@@ -41,7 +41,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
     SZ_W, SZ_H, DEG_TO_M, PRIOR_OFFSET_STD_M, FLIGHTS_AVAILABLE,
-    haversine_m, split_flight_rows, TeeLogger,
+    corrected_yaw, haversine_m, north_up_drone, split_flight_rows, TeeLogger,
 )
 from pipelines.clip_pipeline import (
     ACC_THRS, CACHE_DIR, build_flight_gallery, haversine_m_vec,
@@ -162,7 +162,7 @@ def fuse_gallery(emb, tile_ids, tilecaps, clip, tokenizer, alpha):
 
 def retrieve_fusion(flight, bundle, clip, tokenizer, emb, tile_ids, centers, df,
                     drone_dir, captions, alpha, dist, topk, gps_radii=(),
-                    flight_tag=None):
+                    flight_tag=None, north_up=False):
     encode, preprocess, _ = bundle
     lats_g, lons_g = centers[:, 0], centers[:, 1]
     topk_col = f"top{topk}_hit"
@@ -180,6 +180,9 @@ def retrieve_fusion(flight, bundle, clip, tokenizer, emb, tile_ids, centers, df,
             if flight_tag: r["flight"] = flight_tag
             rows.append(r); continue
         drone = cv2.resize(drone, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
+        if north_up:
+            yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
+            drone = north_up_drone(drone, corrected_yaw(flight, yaw))
         rgb = cv2.cvtColor(drone, cv2.COLOR_BGR2RGB)
         t = preprocess(Image.fromarray(rgb)).unsqueeze(0)
         with torch.inference_mode():
@@ -248,7 +251,7 @@ def retrieve_fusion(flight, bundle, clip, tokenizer, emb, tile_ids, centers, df,
 # ---------- per-flight / main ----------------------------------------------
 
 def run_flight(flight, bundle, clip, tokenizer, alpha, gallery_alpha, limit,
-               model_name, device):
+               model_name, device, north_up=False):
     emb, tile_ids, centers, drone_dir, drone_csv, t_gallery, cached = \
         build_flight_gallery(flight, bundle, TILE_SIZE, TILE_STRIDE,
                              BATCH_SIZE, device, CACHE_DIR, model_name, False)
@@ -272,7 +275,8 @@ def run_flight(flight, bundle, clip, tokenizer, alpha, gallery_alpha, limit,
               f"to image-only.")
     rows, floors, t_ret = retrieve_fusion(
         flight, bundle, clip, tokenizer, gallery, tile_ids, centers, df, drone_dir,
-        captions, alpha, DIST_THRESH, TOPK, gps_radii=GPS_RADII, flight_tag=flight)
+        captions, alpha, DIST_THRESH, TOPK, gps_radii=GPS_RADII, flight_tag=flight,
+        north_up=north_up)
     return rows, floors, t_gallery, t_ret, cached
 
 
@@ -292,6 +296,10 @@ def main():
                          "query time). Default: follow --fuse-alpha.")
     ap.add_argument("--limit", type=int, default=None,
                     help="Cap rows per flight (smoke test).")
+    ap.add_argument("--north-up", action="store_true",
+                    help="Rotate drone queries north-up via corrected_yaw "
+                         "before embedding (use with an adapter trained "
+                         "with --north-up).")
     ap.add_argument("--caption-dir", default=CAPTION_DIR,
                     help="Dir with {flight}_drone / _tile caption JSONLs.")
     ap.add_argument("--cache-dir", default=CACHE_DIR,
@@ -336,7 +344,7 @@ def main():
             for flight in flights:
                 rows, floors, t_gal, t_ret, cached = run_flight(
                     flight, bundle, clip, tokenizer, alpha, args.gallery_alpha,
-                    args.limit, model_name, device)
+                    args.limit, model_name, device, north_up=args.north_up)
                 fdf = pd.DataFrame(rows)
                 valid = fdf[~fdf["skipped"].fillna(False)]
                 if not valid.empty:

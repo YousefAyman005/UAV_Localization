@@ -19,7 +19,7 @@ def _round(x, n):
 
 def _build_row(filename, lat, lon, height, flight, match,
                raw_pred_px, raw_err_px, raw_err_m, plat, plon, off_m, m_per_px,
-               gt_in_patch=None):
+               gt_in_patch=None, t_match_ms=None):
     # Intrinsic scale of the estimated homography (drone→patch). For a similarity
     # H this is exactly the drone↔patch scale ratio; used by the H-scale K
     # calibration in pipelines/calibrate_k.py (K = h_scale · SEARCH_FACTOR · K_used).
@@ -39,6 +39,7 @@ def _build_row(filename, lat, lon, height, flight, match,
                m_per_px=_round(m_per_px, 4),
                pred_lat=_round(plat, 7), pred_lon=_round(plon, 7),
                offset_m=_round(off_m, 2), h_scale=_round(h_scale, 5),
+               t_match_ms=_round(t_match_ms, 2),
                gt_in_patch=gt_in_patch)
     for t in ACC_THRESHOLDS:
         row[f"success_{t}"] = off_m is not None and off_m <= t
@@ -89,6 +90,14 @@ def print_summary(v, label, min_inl=MIN_INL, n_skipped=0):
         re = raw_err.dropna()
         print(f"  Ungated err vs GT:   median {re.median():.1f}m | "
               f"P90 {np.percentile(re, 90):.1f}m | max {re.max():.1f}m")
+    # Per-image matching latency (model fwd + robust fit). Guarded: CSVs
+    # written before this column existed must still summarize cleanly.
+    if "t_match_ms" in v.columns:
+        tm = pd.to_numeric(v["t_match_ms"], errors="coerce").dropna()
+        if len(tm):
+            print(f"  Match time:          median {tm.median():.1f} ms | "
+                  f"mean {tm.mean():.1f} ms | "
+                  f"P90 {np.percentile(tm, 90):.1f} ms")
     print(f"  Homography accepted: {len(accepted)}/{n} ({100 * len(accepted) / n:.1f}%)")
     print(f"  Median inliers: {v['inliers'].median():.0f} | "
           f"ratio: {v['inlier_ratio'].median():.3f}")

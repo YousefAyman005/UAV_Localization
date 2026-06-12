@@ -19,8 +19,8 @@
 # the test band stays untouched for the final benchmark comparison.
 # Default = train-band labels for ALL 9 flights. For the held-out val band
 # (crops + geo-homography only, no teacher), submit:
-#   sbatch slurm/run_gen_pairs.sh --split val --no-teacher --offset-mode jitter \
-#          --out-dir /opt/uav_localization/cache/eloftr_pairs2_val
+#   PAIRS_NAME=<name> sbatch slurm/run_gen_pairs.sh --split val --no-teacher \
+#          --offset-mode jitter --out-dir /opt/uav_localization/cache/<name>_val
 # Extra args are forwarded (argparse last-occurrence wins), e.g.:
 #   sbatch slurm/run_gen_pairs.sh --flights 03 --limit 12      # smoke test
 
@@ -32,18 +32,24 @@ if [ ! -f "$EXTRE_WEIGHTS_HOST" ]; then
   exit 1
 fi
 
+# PAIRS_NAME versions the pair-set dirs (gen is resumable: existing npz are
+# skipped, so a NEW name is required when upstream geometry changes — e.g.
+# eloftr_pairs3 = post yaw-calibration).
+PAIRS_NAME="${PAIRS_NAME:-eloftr_pairs2}"
+echo "Pair dirs: cache/${PAIRS_NAME} (+ _val)"
+
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 mkdir -p "${LOCAL_JOB_DIR}/job_results"
 mkdir -p "${LOCAL_JOB_DIR}/torch_home/hub"
-mkdir -p "$DATAPOOL3/datasets/Visloc/cache/eloftr_pairs2"
-mkdir -p "$DATAPOOL3/datasets/Visloc/cache/eloftr_pairs2_val"
+mkdir -p "$DATAPOOL3/datasets/Visloc/cache/${PAIRS_NAME}"
+mkdir -p "$DATAPOOL3/datasets/Visloc/cache/${PAIRS_NAME}_val"
 
 apptainer run --nv \
     --bind "${SLURM_SUBMIT_DIR}:/opt/uav_localization:ro" \
     --bind "$DATAPOOL3/datasets/Visloc:/opt/uav_localization/UAV_VisLoc_dataset:ro" \
-    --bind "$DATAPOOL3/datasets/Visloc/cache/eloftr_pairs2:/opt/uav_localization/cache/eloftr_pairs2" \
-    --bind "$DATAPOOL3/datasets/Visloc/cache/eloftr_pairs2_val:/opt/uav_localization/cache/eloftr_pairs2_val" \
+    --bind "$DATAPOOL3/datasets/Visloc/cache/${PAIRS_NAME}:/opt/uav_localization/cache/${PAIRS_NAME}" \
+    --bind "$DATAPOOL3/datasets/Visloc/cache/${PAIRS_NAME}_val:/opt/uav_localization/cache/${PAIRS_NAME}_val" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/torch_hub/checkpoints:/data/torch_home/hub/checkpoints:ro" \
     --bind "$DATAPOOL3/datasets/Visloc/weights/huggingface:/data/torch_home/huggingface:ro" \
     --bind "${EXTRE_WEIGHTS_HOST}:/data/weights/roma_extre.pth:ro" \
@@ -58,7 +64,7 @@ apptainer run --nv \
         --extre-weights /data/weights/roma_extre.pth \
         --val-frac 0.10 \
         --split-buffer 0.05 \
-        --out-dir /opt/uav_localization/cache/eloftr_pairs2 \
+        --out-dir "/opt/uav_localization/cache/${PAIRS_NAME}" \
         "$@"
 APPTAINER_EXIT=$?
 

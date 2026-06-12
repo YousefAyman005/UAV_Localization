@@ -6,7 +6,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --gpus=1
+# CPU-only (SIFT/ORB/BRISK never touch the GPU), but on a gpu3 node so the
+# host CPU matches the one the GPU matchers' t_match_ms was measured next to.
+#SBATCH -p gpu3
 #SBATCH --mem=32G
 #SBATCH --time=8:00:00
 

@@ -53,7 +53,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from helpers.utils import (  # noqa: E402
     DEG_TO_M, FLIGHTS_AVAILABLE, PRIOR_OFFSET_STD_M, RANSAC_THRESH,
     SEARCH_FACTOR, SZ_H, SZ_W, _make_clahe, get_flight_paths, gps_to_px,
-    load_flight, metric_crop, metric_m_per_px, split_flight_rows, tile_for_gps,
+    corrected_yaw, load_flight, metric_crop, metric_m_per_px, split_flight_rows,
+    tile_for_gps,
 )
 
 # RoMa teacher helpers. Deferred-safe: romatch needs torch+GPU, so a local
@@ -182,6 +183,7 @@ def gen_flight(flight, matcher, device, args):
         f = row["filename"]
         lat, lon, height = float(row["lat"]), float(row["lon"]), float(row["height"])
         yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
+        yaw = corrected_yaw(flight, yaw)  # per-leg camera-vs-Phi1 calibration
         stem = os.path.splitext(f)[0]
         npz_path = os.path.join(out_dir, stem + ".npz")
         png_path = os.path.join(out_dir, stem + ".png")
