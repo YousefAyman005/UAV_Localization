@@ -18,12 +18,27 @@ from helpers.workers import run_pipeline
 
 LOWE = 0.75
 FLANN_TREES, FLANN_CHECKS = 5, 50
+N_FEATURES = 5000  # common keypoint budget so the speed column is apples-to-apples
 
 
 def _make_detector(method):
-    return {"sift":  cv2.SIFT_create,
-            "orb":   lambda: cv2.ORB_create(5000),
+    # SIFT/ORB cap internally via nfeatures; BRISK has no such arg and is capped
+    # post-hoc in _detect. Without a shared budget BRISK fires ~28k keypoints and
+    # its brute-force Hamming match (O(N_drone*N_sat)) dwarfs the others.
+    return {"sift":  lambda: cv2.SIFT_create(N_FEATURES),
+            "orb":   lambda: cv2.ORB_create(N_FEATURES),
             "brisk": cv2.BRISK_create}[method]()
+
+
+def _detect(detector, gray):
+    """detectAndCompute capped to the top N_FEATURES keypoints by response, so
+    every baseline matches the same budget (no-op for SIFT/ORB, which cap inside)."""
+    kps, ds = detector.detectAndCompute(gray, None)
+    if ds is not None and len(kps) > N_FEATURES:
+        idx = np.argsort([-k.response for k in kps])[:N_FEATURES]
+        kps = [kps[i] for i in idx]
+        ds  = ds[idx]
+    return kps, ds
 
 
 def _make_matcher(method):
@@ -34,7 +49,7 @@ def _make_matcher(method):
 
 
 def run_match(sat_gray, kpd, dd, detector, matcher):
-    kps, ds = detector.detectAndCompute(sat_gray, None)
+    kps, ds = _detect(detector, sat_gray)
     r = dict(sat_kp=len(kps), drone_kp=len(kpd), raw=0, good=0, inliers=0, H=None,
              _kps=kps, _kpd=kpd, _matches=[])
     if ds is None or dd is None or len(kps) < 4 or len(kpd) < 4:
@@ -65,7 +80,7 @@ def make_match_factory(_model, _device, args):
     matcher  = _make_matcher(args.method)
 
     def match_factory(drone):
-        kpd, dd = detector.detectAndCompute(cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY), None)
+        kpd, dd = _detect(detector, cv2.cvtColor(drone, cv2.COLOR_BGR2GRAY))
         return lambda p: run_match(cv2.cvtColor(p, cv2.COLOR_BGR2GRAY),
                                     kpd, dd, detector, matcher)
     return match_factory

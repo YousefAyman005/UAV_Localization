@@ -285,8 +285,10 @@ one is run with here is given in Sec. 4.4.3.
 ### 4.4.2 Classical baseline
 
 The classical baseline provides a detector-and-descriptor lower bound against which
-the learned matchers are measured. It supports SIFT, ORB (5000 features), and BRISK
-detectors. Descriptors are matched with a $k=2$ nearest-neighbour search — an
+the learned matchers are measured. It supports SIFT, ORB, and BRISK detectors, each
+capped to a common budget of $5000$ keypoints (the highest-response features) so the
+methods are compared at equal keypoint count rather than at each detector's default
+density. Descriptors are matched with a $k=2$ nearest-neighbour search — an
 approximate KD-tree search (five randomized trees, 50 leaf checks) for SIFT,
 brute-force Hamming for the binary descriptors — and filtered by **Lowe's ratio test**
 at threshold $0.75$.
