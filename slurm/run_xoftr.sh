@@ -55,8 +55,7 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/xoftr_pipeline.py \
         --weights /data/weights/weights_xoftr_640.ckpt \
-        --flights 01 02 03 06 08 \
-        --visualize \
+        --flights all \
         "$@"
 APPTAINER_EXIT=$?
 

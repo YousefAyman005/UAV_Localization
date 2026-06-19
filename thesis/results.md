@@ -1,176 +1,198 @@
-# Results **(provisional)**
+# Results
 
-> **Drafting conventions.** As in the Methodology chapter, sections marked
-> **(provisional)** may still change and should be revisited before submission.
-> The narrative of which method family is the central contribution is **deferred**
-> (cf. Methodology §4.9) and is *not* taken here: results are reported per family
-> on their own protocols. Numbers below are from the expanded nine-flight
-> benchmark (`01,02,03,04,05,06,08,10,11`) unless stated otherwise. A@30 figures
-> for the primary run are computed from the stored per-image errors (`offset_m`,
-> rounded to 2 dp), accurate to within $\sim0.5$ pp; later runs report A@30
-> directly.
+> **(provisional)** Numbers are from the current post-unification, yaw-corrected runs
+> unless stated otherwise. HTML comments are working notes — strip them before
+> submission.
 
-This chapter reports the geometric-localization results on the expanded benchmark.
-The worked example throughout is **EfficientLoFTR fine-tuned with LoRA** (the
-distilled student of Sec.~\ref{bg:eloftr}/Methodology §4.4.4), with **RoMa
-(AerialExtreMatch)** as a strong reference and as the distillation teacher. Results
-for the remaining matchers and for the CLIP retrieval line are pending and noted as
-TODO in §6.7.
+<!-- STRUCTURE NOTE: this single chapter replaces the old split (Experiments +
+     Results). Repoint any \ref{ch:results} / "§6.x" cross-references to §5.x here. -->
 
-<!-- TODO: add the other matchers (SIFT/ORB, LightGlue, LoFTR, XoFTR, MATCHA) and
-     the CLIP retrieval results under the same 9-flight geometry. -->
+The benchmark, search geometry, and 4-DOF estimator are fixed in the Methodology
+chapter (Ch. 4): nine UAV-VisLoc flights (`01,02,03,04,05,06,08,10,11`), a GPS prior of
+$\sigma=80$ m, a per-flight calibrated ground-sampling distance, a search factor of
+$1.75$, and — for the geometric methods — one shared similarity estimator and acceptance
+gate. This chapter describes the dataset cleaning, then reports the feature-matcher
+benchmark, the effect of fine-tuning a matcher, the embedding-retrieval results, and the
+per-flight bias measured in the dataset. A synthetic Berlin set was built and tested first but is
+not part of the benchmark: its query images were rendered from the same satellite
+imagery as the reference map, so it does not contain a drone↔satellite domain gap. All
+results below use UAV-VisLoc.
 
-## 6.1 Preliminary dataset: a synthetic Berlin benchmark
+## 5.1 Dataset cleaning
 
-Before adopting UAV-VisLoc, a custom dataset over the city of Berlin was built to
-prototype the localization pipeline. A satellite basemap of Berlin was fetched from
-the Google Maps Static API; the query ("drone") images were fetched from the **same**
-API at a higher zoom level and then perturbed with a battery of geometric and
-photometric augmentations — shearing, rotation, blur, colour shifts, and synthetic
-fog. A CSV recorded the ground-truth GPS of the basemap and of each query so that
-predicted positions could be verified.
+Not every image in UAV-VisLoc is usable for localization. A number of frames contain no
+distinctive ground structure for any method to match against: the clearest case is
+imagery captured over open water, where the frame is an almost uniform blue-green field
+with no features at all. Such images cannot be localized by construction — they carry no
+geometric or appearance cue tying them to a place on the map — so they say nothing about
+how good a method is; keeping them would penalize every method equally but arbitrarily,
+inflating the failure rate without measuring anything. A non-trivial number of these
+unusable frames occur across the flights, and all of them were removed before
+benchmarking. To keep the comparison fair, the same cleaned dataset is used for every
+method reported in this chapter — feature matchers and embedding retrieval alike — so all
+numbers below are computed over an identical set of localizable images.
 
-The dataset proved unsuitable as a benchmark for one decisive reason: it **lacks a
-genuine cross-domain gap**. Because the query and the reference are rendered from the
-*same* satellite-imagery source, the two views share their underlying image
-statistics; the augmentations emulate nuisance variation (blur, colour, fog) but not
-the actual appearance difference between a *real drone photograph* and a *satellite
-map* — which is precisely the difficulty the task is meant to measure. A matcher can
-exploit the shared rendering cues, so any results are optimistic and do not transfer
-to real imagery. The synthetic Berlin set was therefore retired in favour of
-UAV-VisLoc (Methodology §4.2), whose drone images are genuine aerial photographs
-paired with independently-sourced satellite maps and thus exhibit the authentic
-drone↔satellite domain gap. All results in the remainder of this chapter use
-UAV-VisLoc.
+## 5.2 Feature-matcher benchmark
 
-## 6.2 Ground-sampling calibration
+All matchers run under the shared geometry on the full benchmark (every image of all
+nine flights, $N\approx5058$; the GT position lies inside the searched patch for 99.7 %
+of images, and 6 images are skipped, for every matcher). Table 5.3 reports gated A@Xm,
+median error over accepted images, and per-image match time.
 
-The per-flight footprint factor $K_f$ (Methodology §4.3.4) was recovered from the
-intrinsic scale of RoMa's similarity homographies. As a validation, the procedure
-was run on the four hand-anchored flights, whose factors are known; it recovers them
-to within a few percent (Table 6.1), confirming the scale-from-geometry estimate
-before it is trusted on the uncalibrated flights.
+**Table 5.3 — Matcher benchmark, overall ($N=5058$, full benchmark).**
 
-**Table 6.1 — Calibration validation on the hand-anchored flights.**
-
-| Flight | hand-anchored $K_f$ | recovered $K_f$ | deviation |
-|---|---|---|---|
-| 01 | 1.00 | 0.935 | −6.5 % |
-| 02 | 1.00 | 0.934 | −6.6 % |
-| 03 | 0.95 | 0.981 | +3.3 % |
-| 08 | 1.00 | 0.988 | −1.2 % |
-
-The factors recovered for the five newly enabled flights are
-$K_{04}=0.99,\ K_{05}=0.167,\ K_{06}=0.352,\ K_{10}=0.361,\ K_{11}=0.297$. Several
-are much smaller than a naive nadir-FOV guess would suggest — flights 05 and 11 in
-particular correspond to narrow-FOV (telephoto) optics (horizontal FOV $\approx
-9.5^\circ$ and $17^\circ$). A notable consequence: at the previously assumed
-$K_{05}=0.5$ the satellite patch spanned $\sim1736$ m, exceeding the $\sim1834$ m
-height of flight 05's small satellite map, so crops ran off the map edge; the
-calibrated $K_{05}=0.167$ yields a $\sim580$ m patch that fits, which is the single
-largest accuracy change in this study (§6.6).
-
-## 6.3 Search-margin sensitivity
-
-The search factor (Methodology §4.3.4) trades patch coverage against the drone↔patch
-scale gap: a larger patch keeps the drone footprint inside the search region under
-the GPS prior, but at a fixed pixel budget it shrinks the drone relative to the patch
-and so reduces inlier counts. Sweeping it over the full benchmark (Table 6.2) shows
-overall accuracy is flat from 1.5 to 1.75 and then declines, while median inliers
-fall monotonically. $\text{SEARCH\_FACTOR}=1.75$ is adopted: it raises the margin for
-the small-footprint flights (06, 10) — whose margin had fallen below the 80 m prior
-after calibration — at no overall cost.
-
-**Table 6.2 — Overall A@25m and median inlier count vs SEARCH\_FACTOR.**
-
-| SEARCH\_FACTOR | 1.5 | 1.75 | 1.8 | 1.9 | 2.0 |
+| Matcher | A@20 | A@25 | A@30 | med. err (m) | $t_\text{match}$ (ms) |
 |---|---|---|---|---|---|
-| Overall A@25m (%) | 60.0 | **60.0** | 59.8 | 59.9 | 59.2 |
-| Median inliers | 668 | 516 | 476 | 398 | 320 |
+| SIFT (baseline) | 15.4 | 20.5 | 24.8 | 26.1 | 1128 |
+| ORB (baseline) | 10.2 | 14.1 | 17.1 | 23.9 | 327 |
+| BRISK (baseline) | 15.0 | 20.3 | 24.3 | 23.3 | 8105 |
+| LightGlue–SIFT | 35.5 | 46.3 | 55.0 | 26.2 | 457 |
+| LightGlue–DISK | 33.4 | 44.2 | 52.0 | 22.6 | 122 |
+| LightGlue–DeDoDe | 43.0 | 56.1 | 66.6 | 22.2 | 235 |
+| LoFTR | 43.3 | 56.6 | 66.6 | 22.0 | 127 |
+| XoFTR | 44.3 | 57.8 | 67.6 | 21.7 | 53 |
+| EfficientLoFTR | **46.1** | **59.9** | **70.1** | 21.1 | 73 |
+| RoMa | 45.4 | 59.1 | 69.6 | 21.5 | 492 |
+| RoMa (AerialExtreMatch) | 45.7 | 59.5 | 69.8 | 21.5 | 490 |
 
-## 6.4 Per-flight localization accuracy
+The three classical descriptors reach 14.1–20.5 % A@25m, with ORB lowest and SIFT and
+BRISK close behind. The learned matchers range from 44.2 % (LightGlue–DISK) to 59.9 %
+(EfficientLoFTR). LightGlue–DeDoDe (56.1 %) and LoFTR (56.6 %) sit together; XoFTR is
+57.8 %; the three highest are EfficientLoFTR (59.9 %), RoMa (59.1 %), and RoMa–AEM
+(59.5 %), within 0.8 pp of each other. Median error over accepted images is 21–23 m for
+the learned matchers — LightGlue–SIFT is an outlier at 26 m — and 23–26 m for the
+baselines. Match time ranges from 53 ms (XoFTR)
+and 73 ms (EfficientLoFTR) to 490 ms (RoMa) and 8105 ms (BRISK).
 
-Table 6.3 reports A@25m and A@30m per flight for the fine-tuned EfficientLoFTR at the
-adopted geometry. Overall the system localizes **60.0 %** of images within 25 m and
-**69.9 %** within 30 m. Accuracy is strongly flight-dependent: the textured,
-near-nadir, lower-altitude flights (02, 03, 08) reach 76–79 % at 25 m, whereas a
-distinct group (04, 05, 10, 11) trails — analysed in §6.6.
+Per-flight, EfficientLoFTR ranges from 34.6 % to 78.3 % A@25m (Table 5.4). Flights 02,
+03, and 08 are highest (69–78 %); flights 04, 05, 10, and 11 are lowest (34–46 %).
+Flight 04 is near-nadir and has the highest inlier counts of any flight, with A@25m of
+34.6 % and a median offset of ${\sim}32$ m; EfficientLoFTR (34.6 %) and RoMa–AEM
+(34.3 %) score within 0.3 pp of each other on it. Flights 05 and 11 were flown with a
+tilted camera ($\Omega\approx13^\circ$; flight 11 also $\kappa\approx12^\circ$). Flight
+10 has a median of ${\sim}21$ inliers and the smallest image count.
 
-**Table 6.3 — EfficientLoFTR-LoRA, per-flight accuracy (SEARCH\_FACTOR 1.75).**
+**Table 5.4 — EfficientLoFTR, per-flight A@25m / A@30m (full benchmark).**
 
-| Flight | A@25m | A@30m |
-|---|---|---|
-| 01 | 64.9 | 75.5 |
-| 02 | 76.5 | 83.6 |
-| 03 | 78.9 | 90.5 |
-| 04 | 36.4 | 46.7 |
-| 05 | 44.6 | 54.8 |
-| 06 | 58.9 | 63.1 |
-| 08 | 66.4 | 77.0 |
-| 10 | 45.8 | 51.4 |
-| 11 | 48.6 | 61.9 |
-| **Overall** | **60.0** | **69.9** |
+| Flight | N | A@20m | A@25m | A@30m |
+|---|---|---|---|---|
+| 01 | 564 | 52.7 | 66.3 | 78.0 |
+| 02 | 719 | 67.2 | 78.3 | 83.3 |
+| 03 | 768 | 57.8 | 76.0 | 89.1 |
+| 04 | 738 | 22.1 | 34.6 | 44.0 |
+| 05 | 473 | 30.0 | 44.0 | 55.4 |
+| 06 | 328 | 48.2 | 60.4 | 65.9 |
+| 08 | 739 | 54.4 | 69.1 | 79.6 |
+| 10 | 139 | 25.9 | 46.0 | 59.7 |
+| 11 | 590 | 35.1 | 46.1 | 59.0 |
+| **Overall** | **5058** | **46.1** | **59.9** | **70.1** |
 
-## 6.5 Student versus teacher
+<!-- Tables 5.3/5.4 from tar/figures_input/ (the matcher-figure generation,
+     summary_matchers.tex), full benchmark all rows. 5.4 per-flight uses the same
+     non-skipped & gt-in-patch denominator as 5.3 (N=5058 overall, not 5074), so the
+     two tables agree on the overall 59.9/70.1. A@20 added 2026-06-19, recomputed from
+     the per-image offset_m in those same CSVs (same gate; summary_matchers.tex itself
+     lists only A@5/10/25/30); A@5/A@10 dropped. MATCHA was not run. -->
 
-Because the LoRA student is distilled from RoMa, RoMa was evaluated under the
-identical geometry as a reference ceiling (Table 6.4). The distilled student
-**matches or exceeds its teacher overall** (60.0 % vs 58.5 % at 25 m) and on most
-flights — including flights it was never trained on (04, 11) — while being far
-cheaper at inference. RoMa leads only on flights 02, 06, and 10, by small margins.
-The practical reading is twofold: (i) the distillation objective of bringing a light,
-fast matcher up to a heavy teacher's quality is met and slightly surpassed; and
-(ii) there is consequently little headroom for a further distillation pass from the
-same teacher.
+## 5.3 Fine-tuning EfficientLoFTR
 
-**Table 6.4 — RoMa (teacher) vs EfficientLoFTR-LoRA (student), A@25m per flight.**
+EfficientLoFTR was LoRA-fine-tuned on the train bands of all nine flights, selected on
+the validation bands, and scored on the held-out test band ($N=1268$, the same rows for
+every variant). Two supervision sources were used: distillation from the RoMa–AEM
+teacher (three adapters: rank 8, rank 16, and rank 8 without augmentation), and a
+differentiable ground-truth GPS centre loss.
 
-| Flight | RoMa | ELoFTR-LoRA | Δ (student−teacher) |
+At model selection the best distillation adapter (rank 16) reaches a validation-band
+A@25m of 65.5 %, against 64.7 % for the stock matcher and 66.1 % for the teacher.
+On the held-out test band (Table 5.5), the stock matcher, the teacher, and the
+GT-supervised adapter are within 0.4 pp: 59.5 %, 59.9 %, and 59.5 % A@25m. The
+no-training bias-correction control reaches 61.0 % (E/N frame) and 66.2 % (track frame).
+
+**Table 5.5 — Test-band accuracy ($N=1268$, yaw-corrected).**
+
+| Method (test band) | A@20m | A@25m | A@30m | median offset (m) |
+|---|---|---|---|---|
+| Stock EfficientLoFTR | 46.8 | 59.5 | 69.8 | 20.7 |
+| RoMa (AerialExtreMatch) — teacher | 46.9 | 59.9 | 71.1 | 20.8 |
+| EfficientLoFTR-LoRA — GT-supervised | 46.4 | 59.5 | 69.4 | 20.3 |
+| Bias-correction control — E/N frame | 47.3 | 61.0 | 70.0 | 20.6 |
+| Bias-correction control — track frame | **54.1** | **66.2** | **75.9** | **18.6** |
+
+<!-- Distillation comparison is on the val band (the distilled-winner test re-eval was
+     not re-run yaw-corrected). Test-band table: tar/eloftr_v2_results/yawfix/ (A@20/25/30
+     read from band_summary_yawfix_test.csv, ALL rows). The matcher-figure generation
+     lists the distilled LoRA at test-band A@25 60.6 and +calib 66.3, consistent within
+     ~0.5 pp. -->
+
+## 5.4 Embedding retrieval
+
+The satellite map is tiled into a gallery ($1024$ px, stride $512$) and the drone images
+are ranked by embedding cosine similarity, with no homography. Table 5.6 reports
+Recall@{1, 5, 10} for the zero-shot encoders and for the LoRA-fine-tuned CLIP variants,
+together with prior-conditioned Recall@1 within 5 km and 1 km of the GPS prior.
+
+**Table 5.6 — Retrieval, Recall@{1,5,10} (%) and prior-conditioned R@1.**
+
+| Model | R@1 | R@5 | R@10 | R@1 (≤5 km) | R@1 (≤1 km) |
+|---|---|---|---|---|---|
+| CLIP ViT-L/14 | 6.6 | 16.7 | 26.7 | 6.9 | 8.8 |
+| SigLIP2 B/16-384 | 8.8 | 26.7 | 34.9 | 9.7 | 13.8 |
+| CAMP (University-1652) | 16.7 | 29.9 | 39.0 | 16.7 | 20.1 |
+| Sample4Geo (University-1652) | 17.0 | 36.2 | 44.3 | 17.0 | 23.6 |
+| CLIP-L/14 + LoRA (image-only) | 28.9 | 55.3 | 68.2 | 28.9 | 32.7 |
+| CLIP-L/14 + LoRA (north-up) | 29.9 | 53.8 | 64.5 | 29.9 | 34.6 |
+| SigLIP2 + LoRA | 17.3 | 43.1 | 55.7 | 17.6 | 22.6 |
+
+Among the zero-shot encoders, the two University-1652 cross-view models score highest at
+Recall@1 (CAMP 16.7 %, Sample4Geo 17.0 %), above SigLIP2 (8.8 %) and CLIP ViT-L/14
+(6.6 %). LoRA fine-tuning raises CLIP ViT-L/14 to 28.9 % (image-only) and 29.9 %
+(north-up), and SigLIP2 to 17.3 %. The image–text fusion-weight sweep is shown in the
+retrieval figures; the image-only weight ($\alpha=1$) gives the Recall@1 reported above.
+
+<!-- Table 5.6 from thesis/figures/matchers/summary_retrieval.csv (pooled, N=318;
+     "img-only" and "north-up" are the v4 round). Full fusion-weight sweep and the
+     tri-modal vs image-only-control comparison are in recall_v2_summary.csv and the
+     retrieval_alpha_sweep figure; the generic/geo encoders (MobileCLIP, DINOv2,
+     GeoCLIP, SatCLIP) on the 9-flight protocol are still pending. -->
+
+## 5.5 Per-flight bias
+
+Decomposing each flight's mean error vector into along-track and world-fixed components
+gives a consistent along-track offset — about $+14$ m on flight 03, $+10$ m on 04,
+$+7$ m on 05, $+5$ m on 11, and $-5$ to $-9$ m on 01 — and a world-fixed offset of about
+$-11$ m north on flight 08. Flight 02 is near zero. The offsets are reproduced by the
+EfficientLoFTR student and the RoMa teacher within 1–2 m, and the cross-view scale
+agrees to within 7 %.
+
+Subtracting each flight's median train-band offset from the test-band predictions, with
+no training, changes A@25m as in Table 5.7: overall it rises from 59.5 % to 66.2 % in
+the track frame and to 61.0 % in the E/N frame. The per-flight change is largest on
+flights 10 (+22.2), 03 (+19.3), 08 (+9.2), and 05 (+8.4); flight 02 is unchanged, and
+flights 01 and 06 decrease slightly.
+
+**Table 5.7 — Stock EfficientLoFTR test-band A@25m, raw vs per-flight track-frame
+correction (held-out test band, yaw-corrected).**
+
+| Flight | raw A@25 | corrected A@25 | Δ |
 |---|---|---|---|
-| 01 | 65.8 | 64.9 | −0.9 |
-| 02 | 79.9 | 76.5 | −3.4 |
-| 03 | 76.0 | 78.9 | +2.9 |
-| 04 | 33.7 | 36.4 | +2.7 |
-| 05 | 43.6 | 44.6 | +1.0 |
-| 06 | 61.2 | 58.9 | −2.3 |
-| 08 | 59.5 | 66.4 | +6.9 |
-| 10 | 49.3 | 45.8 | −3.5 |
-| 11 | 45.1 | 48.6 | +3.5 |
-| **Overall** | **58.5** | **60.0** | **+1.5** |
+| 01 | 67.4 | 66.7 | −0.7 |
+| 02 | 79.4 | 79.4 | 0.0 |
+| 03 | 73.4 | 92.7 | +19.3 |
+| 04 | 33.2 | 40.8 | +7.6 |
+| 05 | 50.9 | 59.3 | +8.4 |
+| 06 | 54.8 | 52.4 | −2.4 |
+| 08 | 69.2 | 78.4 | +9.2 |
+| 10 | 36.1 | 58.3 | +22.2 |
+| 11 | 45.3 | 46.6 | +1.3 |
+| **Overall** | **59.5** | **66.2** | **+6.7** |
 
-## 6.6 Failure-mode analysis
+<!-- Bias values and Table 5.7 from tar/eloftr_v2_results/yawfix/ (test band). The
+     decomposition is computed on per-flight means; heading is proxied by track
+     direction. No correction is applied to the headline numbers in §5.2–5.3. -->
 
-The four trailing flights fail for three distinct reasons — none of which the
-matcher choice or the calibration can remove.
+## 5.6 Remaining runs
 
-**Repetitive-texture aliasing (flight 04).** Flight 04 is near-nadir
-($\Omega\approx-3^\circ$) yet caps near 36 %. It has the *highest* inlier counts of
-any flight and a *tight* error spread (median 31 m, P90 56 m): matching succeeds, but
-on near-uniform farmland the homography locks onto a look-alike field parcel shifted
-by roughly one period, producing a consistent offset rather than scattered failures.
-Both the student and the teacher cap at ${\sim}34$–$36$ %, confirming this is an
-ambiguity in the scene content, not a property of either matcher.
-
-**Obliquity (flights 05, 11).** These flights were flown with a tilted camera
-($\Omega\approx13^\circ$; flight 11 also $\kappa\approx12^\circ$), which might be
-expected to break the planar-homography model. In practice its effect is limited
-here: because these are narrow-FOV cameras (§6.2, horizontal FOV $\approx 9.5^\circ$
-and $17^\circ$), a $13^\circ$ tilt induces little perspective distortion across the
-small angular field, and the fitted homography absorbs the residual. The binding
-constraints are instead altitude, ground-sampling distance, and — for flight 05 —
-the small satellite map.
-
-**Sparse, low-texture matching (flight 10).** Flight 10 is near-nadir but matches
-weakly — a median of only $\sim15$ inliers, barely above the acceptance gate — on
-repetitive orchard rows, and has the smallest image count (144). Recalibrating its
-scale (from 0.6 to 0.36) nearly doubled its A@25m (23.6 → 45.8 %), but the residual
-ceiling is set by low texture and small sample size.
-
-## 6.7 Outstanding **(provisional)**
-
-<!-- TODO -->
-- Evaluate the remaining feature matchers (SIFT/ORB, LightGlue, LoFTR, XoFTR, MATCHA)
-  under the same nine-flight geometry for a complete cross-method comparison.
-- Report the CLIP retrieval line (embedding + text-fusion) on the Recall@k protocol
-  (Methodology §4.7.2).
-- Decide the overall method-comparison framing (Methodology §4.9) once the above land.
+- MATCHA, under the current geometry, for the matcher benchmark (Table 5.3).
+- The generic and geography-aware retrieval encoders (MobileCLIP, DINOv2, GeoCLIP,
+  SatCLIP) on the nine-flight protocol (Table 5.6).
+- The rewritten-caption retrieval round.

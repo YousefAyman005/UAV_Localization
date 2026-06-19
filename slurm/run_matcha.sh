@@ -10,7 +10,7 @@
 # Pinned to gpu3 (A100-40GB) so t_match_ms is comparable across matchers.
 #SBATCH -p gpu3
 #SBATCH --mem=32G
-#SBATCH --time=6:00
+#SBATCH --time=6:00:00
 
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
@@ -33,7 +33,8 @@ apptainer run --nv \
     /opt/uav_localization/pipelines/matcha_pipeline.py \
         --weights /opt/uav_localization/weights/matcha_pretrained.pth \
         --amp \
-        --flights 01 02 03 06 08
+        --flights all \
+        "$@"
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"

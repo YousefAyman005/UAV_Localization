@@ -13,6 +13,7 @@
 #SBATCH --time=2:00:00
 
 PRETRAINED=${1:-outdoor}
+shift || true
 case "$PRETRAINED" in
   outdoor|indoor) ;;
   *) echo "Usage: sbatch $0 outdoor|indoor" >&2; exit 1 ;;
@@ -36,8 +37,8 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/loftr_pipeline.py \
         --pretrained "${PRETRAINED}" \
-        --flights 01 02 03 06 08 \
-        --visualize
+        --flights all \
+        "$@"
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"

@@ -10,13 +10,14 @@
 # Pinned to gpu3 (A100-40GB) so t_match_ms is comparable across matchers.
 #SBATCH -p gpu3
 #SBATCH --mem=32G
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 
 METHOD=${1:-disk}
 case "$METHOD" in
   disk|dedodeb|sift) ;;
   *) echo "Usage: sbatch $0 disk|dedodeb|sift" >&2; exit 1 ;;
 esac
+shift || true
 
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
@@ -36,8 +37,8 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/lightglue_pipeline.py \
         --method "${METHOD}" \
-        --flights 01 02 03 06 08 \
-        --visualize
+        --flights all \
+        "$@"
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"

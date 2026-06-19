@@ -9,7 +9,9 @@
 # CPU-only (SIFT/ORB/BRISK never touch the GPU), but on a gpu3 node so the
 # host CPU matches the one the GPU matchers' t_match_ms was measured next to.
 #SBATCH -p gpu3
-#SBATCH --mem=32G
+# 10 forked SIFT workers each inherit the loaded satellite (COW) — 32G OOM-killed
+# a worker on the 852MP flight-03 tile and deadlocked the pool (job 378129).
+#SBATCH --mem=96G
 #SBATCH --time=8:00:00
 
 METHOD=${1:-sift}
@@ -17,6 +19,7 @@ case "$METHOD" in
   sift|orb|brisk) ;;
   *) echo "Usage: sbatch $0 sift|orb|brisk" >&2; exit 1 ;;
 esac
+shift || true
 
 source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
@@ -37,8 +40,8 @@ apptainer run --nv \
     /opt/uav_localization/pipelines/Baseline_pipeline.py \
         --method "${METHOD}" \
         --workers 10 \
-        --flights 01 02 03 06 08 \
-        --visualize
+        --flights all \
+        "$@"
 APPTAINER_EXIT=$?
 
 cd "${LOCAL_JOB_DIR}"

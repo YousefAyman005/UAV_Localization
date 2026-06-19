@@ -27,7 +27,11 @@ source "/etc/slurm/local_job_dir.sh"
 echo "$PWD/stats/${SLURM_JOB_ID}_stats.out" > $LOCAL_JOB_DIR/stats_file_loc_cfg
 
 OLLAMA_DIR="$DATAPOOL3/datasets/Visloc/weights/ollama"
-export OLLAMA_HOST=127.0.0.1:11434
+# Per-job port: two of these jobs can land on the SAME node, and a fixed port
+# means the first to finish kills the shared server out from under the other
+# (Connection refused). Derive a unique port from the job id so co-located
+# jobs each get their own ollama serve.
+export OLLAMA_HOST=127.0.0.1:$(( 11434 + SLURM_JOB_ID % 20000 ))
 mkdir -p "${LOCAL_JOB_DIR}/ollama_home"
 
 # Ollama server inside the container (Ubuntu 22.04 userland; --nv exposes the

@@ -44,8 +44,7 @@ apptainer run --nv \
     /opt/uav_localization/pipelines/roma_pipeline.py \
         --pretrained extre \
         --extre-weights /data/weights/roma_extre.pth \
-        --flights 01 02 03 06 08 \
-        --visualize \
+        --flights all \
         "$@"
 APPTAINER_EXIT=$?
 

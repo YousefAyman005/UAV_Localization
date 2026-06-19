@@ -13,8 +13,8 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
-    FLIGHTS_AVAILABLE, SZ_W, SZ_H, crop_gt_patch, get_flight_paths,
-    load_flight, split_flight_rows,
+    FLIGHTS_AVAILABLE, SZ_W, SZ_H, corrected_yaw, crop_gt_patch,
+    get_flight_paths, load_flight, north_up_drone, split_flight_rows,
 )
 
 CAPTION_DIR    = "cache/captions"
@@ -24,13 +24,16 @@ OLLAMA_MODEL = "qwen3.5:9b"
 
 # Static instruction shared by every backend.
 SYSTEM_PROMPT = (
-    "List the permanent physical features of this ground patch in 10-15 words. "
-    "Include: road shape (T-junction, curve, straight), building density, "
-    "water bodies, land cover (farmland, forest, bare ground). "
-    "Add cardinal direction (north, south, east, west) only for key features. "
-    "Comma-separated noun phrases only. No verbs, no articles, no preamble. "
-    "Never use: north-up, view, shows, patch, image, photo, satellite, aerial, drone, shadow, "
-    "or any color/brightness word (bright, dark, light, pale, grey, green, brown, etc.)."
+    "List the distinctive layout of this ground patch in UNDER 18 words, as "
+    "short comma-separated phrases, so it can be told apart from nearby "
+    "patches. The patch is already rotated so up = north; use north/south/"
+    "east/west for directions. Cover only what is present: where the main road "
+    "runs; which side water is on or how it flows (e.g. south to east); where "
+    "fields and buildings sit (left, right, a named side, centre). Be specific "
+    "about position. No full sentences, no preamble; do not start with 'a', "
+    "'an' or 'the'. Never use these words: north-up, view, shows, patch, "
+    "image, photo, satellite, aerial, drone, shadow. "
+    "Do not mention colour or brightness."
 )
 USER_TEXT = "Describe this ground patch."
 
@@ -162,7 +165,7 @@ def make_ollama(model_id, max_tokens, _device, host=None, retries=4):
 
 def build_captioner():
     print(f"  Backend ollama | model {OLLAMA_MODEL}")
-    return make_ollama(OLLAMA_MODEL, 40, None)
+    return make_ollama(OLLAMA_MODEL, 48, None)   # ~18-word layout caption
 
 
 # ---------- crop sources ----------------------------------------------------
@@ -201,12 +204,13 @@ def iter_drone_images(flight, limit, band="test"):
     for _, row in df.iterrows():
         img = cv2.imread(os.path.join(drone_dir, row["filename"]))
         if img is not None:
-            img = cv2.resize(img, (SZ_W, SZ_H), interpolation=cv2.INTER_AREA)
-            yaw = float(row["Phi1"]) if "Phi1" in row.index else 0.0
-            if yaw != 0.0:
-                h, w = img.shape[:2]
-                M = cv2.getRotationMatrix2D((w / 2, h / 2), yaw, 1.0)
-                img = cv2.warpAffine(img, M, (w, h))
+            # North-up via the SAME transform the CLIP trainer/fusion apply
+            # (north_up_drone + corrected_yaw). The old code rotated by +Phi1,
+            # the OPPOSITE sign, so caption directions never matched the image
+            # the encoder actually sees (see helpers.utils.north_up_drone).
+            yaw = corrected_yaw(flight, float(row["Phi1"])) \
+                if "Phi1" in row.index else 0.0
+            img = north_up_drone(img, yaw)
         yield row["filename"], (None if img is None else _bgr_to_pil(img))
 
 

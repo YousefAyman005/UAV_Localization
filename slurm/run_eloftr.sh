@@ -62,8 +62,7 @@ apptainer run --nv \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
     /opt/uav_localization/pipelines/eloftr_pipeline.py \
         --weights /data/weights/eloftr_outdoor.ckpt \
-        --flights 01 02 03 06 08 \
-        --visualize \
+        --flights all \
         "$@"
 APPTAINER_EXIT=$?
 
