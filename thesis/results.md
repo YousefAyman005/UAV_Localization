@@ -118,111 +118,136 @@ are ranked by embedding cosine similarity, with no homography. Table 5.5 reports
 Recall@{1, 5, 10} for the zero-shot encoders and for the LoRA-fine-tuned CLIP variants,
 together with prior-conditioned Recall@1 within 5 km and 1 km of the GPS prior.
 
-**Table 5.5 — Retrieval, Recall@{1,5,10} (%) and prior-conditioned R@1.**
+**Table 5.5 — Retrieval, Recall@{1,5,10} (%) and prior-conditioned R@1 (spatial test
+band, $N=1270$).**
 
 | Model | R@1 | R@5 | R@10 | R@1 (≤5 km) | R@1 (≤1 km) |
 |---|---|---|---|---|---|
-| CLIP ViT-L/14 | 6.6 | 16.7 | 26.7 | 6.9 | 8.8 |
-| SigLIP2 B/16-384 | 8.8 | 26.7 | 34.9 | 9.7 | 13.8 |
-| CAMP (University-1652) | 16.7 | 29.9 | 39.0 | 16.7 | 20.1 |
-| Sample4Geo (University-1652) | 17.0 | 36.2 | 44.3 | 17.0 | 23.6 |
-| CLIP-L/14 + LoRA (image-only) | 28.9 | 55.3 | 68.2 | 28.9 | 32.7 |
-| CLIP-L/14 + LoRA (v5) | 32.1 | 62.3 | 70.4 | 32.7 | 36.2 |
-| CLIP-L/14 + LoRA (v5, fused) | 34.3 | 60.4 | 68.2 | 34.6 | 39.3 |
-| SigLIP2 + LoRA | 17.3 | 43.1 | 55.7 | 17.6 | 22.6 |
+| CLIP ViT-L/14 | 6.4 | 20.3 | 29.5 | 6.6 | 9.6 |
+| SigLIP2 B/16-384 | 9.4 | 27.3 | 37.9 | 9.8 | 13.4 |
+| CAMP (University-1652) | 17.6 | 39.5 | 50.6 | 18.0 | 21.7 |
+| Sample4Geo (University-1652) | 19.8 | 42.0 | 53.1 | 20.6 | 24.9 |
+| CLIP-L/14 + LoRA (image-only) | 33.3 | 63.9 | 73.7 | 33.9 | 38.0 |
+| CLIP-L/14 + LoRA (v5) | **37.1** | **66.9** | **76.5** | **37.5** | **40.1** |
+| SigLIP2 + LoRA | 21.4 | 50.7 | 64.2 | 22.0 | 26.3 |
 
 Among the zero-shot encoders, the two University-1652 cross-view models score highest at
-Recall@1 (CAMP 16.7 %, Sample4Geo 17.0 %), above SigLIP2 (8.8 %) and CLIP ViT-L/14
-(6.6 %). LoRA fine-tuning of CLIP ViT-L/14 raises Recall@1 from 28.9 % (image-only
-control) to 32.1 % for the latest caption-round adapter (v5, image-only query), and
-SigLIP2 to 17.3 %. For v5, adding caption text at the fusion-weight peak ($\alpha=0.8$)
-lifts Recall@1 further to 34.3 % — the first round in which text fusion improves on
-image-only retrieval ($\alpha=1$) rather than degrading it — while image-only keeps the
-best Recall@{5,10}. The full image–text fusion-weight sweep is shown in the retrieval
-figures.
+Recall@1 (CAMP 17.6 %, Sample4Geo 19.8 %), above SigLIP2 (9.4 %) and CLIP ViT-L/14
+(6.4 %). LoRA fine-tuning is the decisive lever: it lifts CLIP ViT-L/14 to 33.3 %
+(image-only training control) and 37.1 % for the v5 caption-round adapter — past both
+cross-view models — and SigLIP2 to 21.4 %. Adding caption text at query time does not
+help: across the fusion-weight sweep (Table 5.6) image-only retrieval ($\alpha=1$) gives
+the best Recall@1 and Recall@10, so the v5 figures above are for the image-only query.
 
-<!-- Table 5.5 from thesis/figures/matchers/summary_retrieval.csv (pooled, N=318).
-     LoRA rows are the v5 caption round (compare/ adapter, 2026-06-17); the two v5 rows
-     are alpha=1.0 (image-only query) and alpha=0.8 (fusion peak), kept as separate rows
-     so no alpha column is needed; the image-only control was only run at alpha=1.0. Full
-     fusion-weight sweep in the retrieval_alpha_sweep figure; the generic/geo encoders
-     (MobileCLIP, DINOv2, GeoCLIP, SatCLIP) on the 9-flight protocol are still pending. -->
+<!-- Table 5.5 from analyze/plot_matcher_figures.py over cache/retrieval_v5_input
+     (N=1270 = the full 25% spatial test band; the earlier N=318 was a DOUBLE test-band
+     split, fixed in _load_retrieval). v5 row = compare/ adapter (2026-06-17), image-only
+     query (alpha=1.0), evaluated WITH --north-up (the adapter is trained north_up=True).
+     Fusion (alpha<1) does not beat image-only — see Table 5.6 — so the v5-fused row was
+     dropped. The generic/geo encoders (MobileCLIP, DINOv2, GeoCLIP, SatCLIP) on the
+     9-flight protocol are still pending. -->
 
 Two patterns stand out. First, retrieval is a much coarser localiser than matching: the
-best Recall@1 (${\approx}34$ %) is well below the matchers' ${\approx}60$ % A@25m, and a
+best Recall@1 (${\approx}37$ %) is well below the matchers' ${\approx}60$ % A@25m, and a
 retrieval hit only places the query in a $1024$-px gallery tile, with no metric pose and
 no geometric verification. Embedding retrieval is therefore better read as a coarse prior
 or a recovery stage than as a metric solution. Second, adapting to the task matters far
 more than the choice of backbone: the two University-1652 cross-view models roughly double
-the generic zero-shot CLIP/SigLIP encoders (${\approx}17$ % vs 6.6–8.8 % R@1) because they
-were trained on the drone↔satellite cross-view problem, but LoRA fine-tuning on the target
-flights is the larger lever still, lifting CLIP from 6.6 % to 32.1 % R@1 — past even the
-cross-view-pretrained models. The caption text is only a secondary signal: not until the
-v5 round does fusing it help at all (34.3 % vs 32.1 % image-only), and then by only
-${\approx}2$ pp at a tuned fusion weight, with image-only retrieval still best at
-Recall@{5,10}; text is a marginal, conditional gain rather than the decisive view-invariant
+the generic zero-shot CLIP/SigLIP encoders (18–20 % vs 6.4–9.4 % R@1) because they were
+trained on the drone↔satellite cross-view problem, but LoRA fine-tuning on the target
+flights is the larger lever still, lifting CLIP from 6.4 % to 37.1 % R@1 — past even the
+cross-view-pretrained models. The caption text, by contrast, is not a useful query-time
+signal: across the fusion-weight sweep (Table 5.6) image-only retrieval is best on
+Recall@1 and Recall@10, so fusing the VLM caption does not deliver the view-invariant
 bridge it was intended to be. Finally, conditioning on the GPS prior consistently raises
-Recall@1 (e.g. 34.3 → 39.3 % within 1 km), confirming that the noisy prior is informative
+Recall@1 (e.g. 37.1 → 40.1 % within 1 km), confirming that the noisy prior is informative
 enough to prune distant confusers from the gallery.
+
+Fusion does not improve over image-only retrieval. Sweeping the image weight $\alpha$
+finely from $0.7$ to $1.0$ (Table 5.6, and the v5 fusion-weight figure) shows recall
+rising as the image share increases and then flattening across $\alpha\in[0.8,1.0]$.
+Image-only retrieval ($\alpha=1.0$) sits at the top of this plateau — it gives the best
+Recall@1 ($37.1$ %) and Recall@10 ($76.5$ %) — while the intermediate weights gain at most
+${\approx}0.5$–$1$ pp on Recall@{3,5} (e.g. R@3 $58.3$ % at $\alpha=0.85$ vs $56.6$ % at
+$\alpha=1.0$). Adding the caption therefore yields no net benefit: the curves are flat over
+the plateau and image-only is best on the headline metrics, confirming the caption is at
+most a negligible re-ranking signal rather than a cross-view cue. (An earlier reading that
+fusion helped at $\alpha{\approx}0.8$ was an artefact of evaluating on too small a band; see
+the note below.)
+
+**Table 5.6 — v5 image+text fusion: Recall@{1,3,5,10} (%) vs fusion weight $\alpha$
+(spatial test band, $N=1270$).**
+
+| $\alpha$ | R@1 | R@3 | R@5 | R@10 |
+|---|---|---|---|---|
+| 0.70 | 31.7 | 52.8 | 63.1 | 73.2 |
+| 0.75 | 34.5 | 56.8 | 64.9 | 75.6 |
+| 0.80 | 36.6 | 57.8 | 66.4 | 76.4 |
+| 0.85 | 36.8 | **58.3** | **67.2** | 76.3 |
+| 0.90 | 37.0 | 57.4 | 67.1 | 76.3 |
+| 0.95 | 36.9 | 57.2 | **67.2** | 76.1 |
+| 1.00 | **37.1** | 56.6 | 66.9 | **76.5** |
+
+<!-- Table 5.6 + retrieval_v5_alpha_sweep.{pdf,png} from analyze/plot_v5_alpha_sweep.py over
+     results/v5_sweep_387204_northup/ (job 387204). N=1270 is the full 25% spatial test
+     band: the fusion pipeline already restricts to it (clip_fusion_pipeline.py:268), so the
+     CSVs ARE the test band. The earlier N=318 was a DOUBLE test-band split (the plot code
+     re-applied test_band_mask) ~ 6.25% of data; fixed in plot_v5_alpha_sweep.py by not
+     re-splitting. On the correct band fusion no longer beats image-only (R@1 max at
+     alpha=1.0). REPRODUCIBILITY: v5 is trained north_up=True, so the fusion run MUST pass
+     --north-up. -->
 
 ## 5.4 Limitations
 
-<!-- Limitations of the benchmark; drafted 2026-06-19. Flowing prose to match 5.2/5.3. -->
+<!-- Limitations: rewritten from scratch 2026-06-20. Blunt, structured, most-serious only. -->
 
-The numbers in this chapter are produced under a controlled benchmark, and several
-deliberate simplifications bound what they measure. They are stated here so the results
-are not over-read as a claim about end-to-end field deployment.
+These numbers bound localization quality under a controlled benchmark, not field
+deployment. The most serious limitations:
 
-The task is posed with a *simulated* GPS prior: each query's search patch is centred on
-its true position perturbed by an isotropic Gaussian offset of $\sigma = 80$ m, drawn
-reproducibly per image. This is a stand-in for onboard GPS uncertainty, not a measurement
-of it. Real GPS error is often biased, heavy-tailed, or temporally correlated rather than
-zero-mean Gaussian, and its magnitude varies with receiver, multipath, and flight
-conditions. Because the search factor ($1.75$) is sized so that the true position falls
-inside the patch for 99.7 % of queries *under this prior*, a larger or more skewed
-real-world error would lower that containment rate and, with it, the achievable accuracy —
-independently of any matcher.
+1. **Simulated GPS prior.** The search patch is centred on the true position plus a
+   zero-mean isotropic Gaussian offset ($\sigma = 80$ m); real GPS error is biased,
+   heavy-tailed, and temporally correlated. The search factor ($1.75$) is sized so the true
+   position falls inside the patch for 99.7 % of queries *under this prior* — a larger or
+   skewed real-world error lowers that containment and caps achievable accuracy for every
+   matcher.
 
-All flights are localized against a single satellite image, captured at one time from one
-source. The drone↔satellite domain gap measured here is therefore the gap to that specific
-basemap. A deployed system would face reference imagery of a different season, age,
-resolution, or provider, which would widen the appearance gap; the benchmark does not probe
-robustness to changing the reference map.
+2. **Ground-truth labels set an error floor.** The "true" position is the dataset's onboard
+   GPS, itself uncertain, and several flights carry a matcher-independent label bias: an
+   along-track offset (gimbal pitch / GPS lag) on flights 01/03/04/05/11 and a world-fixed
+   ${\sim}11$ m northward bias on flight 08, with flight 02 as the clean control (two
+   independent matchers agree to within $1$–$2$ m). No method can score below this floor,
+   so part of the per-flight spread and the ${\sim}21$ m median error is label error, not
+   matching.
 
-The evaluation also covers a narrow slice of conditions: nine flights from a single dataset
-(UAV-VisLoc), collected with one class of platform over a limited set of sites, with flights
-07 and 09 excluded. Although $N \approx 5058$ images is large, consecutive frames overlap
-heavily, so the number of independent scenes is much smaller, and the per-flight results
-(Table 5.4) show how strongly accuracy depends on a handful of acquisition geometries.
-Generalization to other regions, altitudes, land-cover types, or camera classes is untested
-and should not be assumed from these numbers.
+3. **Calibration is circular.** The per-flight ground-sampling distance and per-flight-leg
+   yaw offsets are fit from matcher residuals on these same flights and then evaluated on
+   them. Held-out validation bounds the yaw error (median ${\leq}2.6^\circ$ per flight),
+   but the benchmark does not test calibration-free operation and a new dataset would need
+   re-calibration.
 
-All geometric methods share a 4-DOF similarity estimator (translation, rotation, uniform
-scale) fitting the drone image to the satellite patch, which assumes a planar scene and a
-similarity relation between the two views. This recovers a 2D map position only — not a full
-camera pose or height — and treats terrain relief and view tilt as nuisance to be absorbed
-rather than modelled. The assumption holds well for the near-nadir, low-relief flights that
-dominate the dataset, but on strongly oblique or high-relief scenes (e.g. the tilted flights
-05 and 11) it is an approximation, and a full homographic or 3D treatment is left to future
-work.
+4. **One reference basemap.** Every flight is matched against a single satellite image from
+   one source and date. The measured drone↔satellite gap is the gap to *that* basemap;
+   robustness to a different season, age, resolution, or provider is untested.
 
-The per-flight ground-sampling distance and the per-flight-leg yaw offsets are calibrated
-from matcher residuals on these same flights and then applied identically to every method.
-Sharing one calibration across methods keeps the comparison fair, but it is tuned to this
-dataset, so the benchmark does not test calibration-free operation and a new dataset would
-require re-calibration. The yaw calibration was validated on held-out frames (median
-residual $\leq 2.6^\circ$ per flight), which limits but does not fully remove the
-circularity of calibrating and evaluating on the same flights.
+5. **Narrow, correlated sample; no significance testing.** Nine flights from one dataset
+   (UAV-VisLoc; 07/09 excluded), one platform class, few sites. Consecutive frames overlap
+   heavily, so $N \approx 5058$ images cover far fewer independent scenes, and no confidence
+   intervals are reported — the ${<}1$ pp spread among the top matchers is within noise.
+   Generalization to other regions, altitudes, land-cover, or cameras is untested.
 
-Three narrower caveats round this out. First, frames with no localizable content (chiefly
-open water) were removed before benchmarking (§5.1), so every figure is computed over
-localizable queries; the reported accuracies describe localization quality given a usable
-query, not end-to-end coverage of a raw flight. Second, the embedding-retrieval results
-(§5.3) are a coarse, tile-level localiser with no metric pose or geometric verification,
-are scored on a smaller pooled test band ($N = 318$), and the text-conditioned variant
-delivered only a marginal, conditional gain rather than the view-invariant bridge it was
-intended to provide — that line is best read as a largely negative result. Third, match
-times are measured on datacentre-class GPUs; real-time feasibility on embedded UAV hardware
-(power, memory, and latency on onboard accelerators) is not evaluated, so the deployment
-recommendation in §5.2 is a relative-cost statement, not a demonstration of onboard
-real-time operation.
+6. **2D position only.** The shared 4-DOF similarity estimator assumes a planar scene and
+   recovers a map position, not camera pose or height. On the tilted flights (05, 11) and
+   in high relief this is an approximation, not a model.
+
+7. **Partial benchmark; text fusion failed.** MATCHA was not run and four retrieval
+   encoders (MobileCLIP, DINOv2, GeoCLIP, SatCLIP) are still pending, so neither table is
+   the full field. Retrieval is scored on the held-out spatial test band ($N = 1270$), not
+   the matchers' full set, so the ${\sim}37$ % R@1 vs ${\sim}60$ % A@25m comparison is not
+   over identical queries. Fusing VLM captions at query time gave no net benefit over
+   image-only retrieval — the intended view-invariant bridge is a negative result.
+
+8. **Measured, not deployed.** Match times are on datacentre-class GPUs; embedded UAV
+   feasibility (power, memory, latency) is not evaluated, so the §5.2 recommendation is a
+   relative-cost statement only. Every figure is computed over hand-cleaned localizable
+   queries (§5.1) — it describes accuracy *given* a usable query, not end-to-end coverage of
+   a raw flight.

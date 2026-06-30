@@ -270,7 +270,9 @@ def fig_curves(data, out):
 
 
 def fig_perflight(data, out):
-    best = _best(data)
+    # Exclude the weak classical baselines (SIFT/ORB/BRISK) — the per-flight
+    # heatmap/bars compare the learned matchers across acquisition geometries.
+    best = [(s, d) for s, d in _best(data) if d["meta"]["family"] != "baseline"]
     M = np.full((len(best), len(FLIGHTS)), np.nan)
     for i, (s, d) in enumerate(best):
         for j, fl in enumerate(FLIGHTS):
@@ -591,7 +593,7 @@ RETRIEVAL_MODELS = [
 RETRIEVAL_SWEEPS = [
     ("cliphf_base_largep14_a{a}",                 "CLIP-L/14 base",        "#888888", "-"),
     ("cliphf_base_siglip2-basep16-384_a{a}",      "SigLIP2 base",          "#E69F00", "-"),
-    ("cliphf_clip_lora_v5_largep14_a{a}",         "CLIP-L/14+LoRA (v5)",   "#D55E00", "-."),
+    ("cliphf_clip_lora_v5_largep14_a{a}",         "CLIP-L/14 LoRA",        "#D55E00", "-."),
     ("cliphf_siglip2_lora_siglip2-basep16-384_a{a}", "SigLIP2 LoRA",       "#CC79A7", "--"),
 ]
 
@@ -623,7 +625,10 @@ def _load_retrieval(results_dir, stem, quiet=False):
     df = pd.read_csv(path)
     df["flight"] = df["flight"].astype(str).str.zfill(2)
     df = df[df["skipped"] != True]  # noqa: E712
-    return df[test_band_mask(df)]
+    # Retrieval CSVs are ALREADY the 25% spatial test band — the pipelines restrict
+    # to it (clip_fusion_pipeline.py:268; clip_pipeline.py --test-split). Re-applying
+    # test_band_mask here double-split to ~6.25% (the old N=318 bug); use as-is.
+    return df
 
 
 def _recall(df, k=1, col="gt_tile_rank"):
