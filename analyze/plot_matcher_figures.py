@@ -87,6 +87,30 @@ for _m in MATCHERS.values():
     _m.setdefault("best", False)
     _m.setdefault("band", "all")
 
+# "Core" cross-method view: one representative config per method. Drops the
+# extra LightGlue keypoint variant, the fine-tuned ELoFTR variants (LoRA/calib/
+# calib-EN), and RoMa-AEM so the comparison is a single config per matcher.
+CORE_EXCLUDE = {"lightglue_dedodeb", "eloftr_lora", "eloftr_calib_track",
+                "eloftr_calib_en", "roma_extre"}
+
+# Validated palette for the core speed figure (dataviz method; ran through
+# validate_palette). Speed bars are colored by matcher family from the
+# documented categorical hues, ordered along the bar axis
+# (lightglue→loftr→eloftr→xoftr→roma) so no two adjacent families collide:
+# worst adjacent CVD ΔE 78.8 (vs a 12 target) and every hue clears 3:1 on the
+# light surface — all solid, no relief needed. The earlier order paired
+# blue↔aqua (two cool hues) adjacently; dropping aqua for green fixes that.
+# Classical baselines stay muted gray so the learned matchers carry the eye.
+SPEED_FAMILY_COLORS = {
+    "baseline":  "#8f8d87",   # muted — classical reference, de-emphasized
+    "lightglue": "#008300",   # green
+    "loftr":     "#2a78d6",   # blue
+    "eloftr":    "#eb6834",   # orange
+    "xoftr":     "#4a3aa7",   # violet
+    "roma":      "#e34948",   # red
+    "matcha":    "#e87ba4",   # magenta (not in the core set)
+}
+
 
 def _save(fig, out_dir, name):
     os.makedirs(out_dir, exist_ok=True)
@@ -416,6 +440,57 @@ def fig_acc2030(data, out):
     ax.set_ylabel("accuracy (%)"); ax.set_ylim(0, 100)
     ax.legend(loc="upper left", framealpha=0.9)
     _save(fig, out, "acc2030_all")
+
+
+def fig_acc2030_core(data, out):
+    """acc2030 restricted to the core matcher set (one config per method):
+    drops LightGlue-DeDoDe, the fine-tuned ELoFTR variants, and RoMa-AEM.
+    Same grouped A@20/25/30 bars and style as fig_acc2030."""
+    items = [(s, d) for s, d in data.items() if s not in CORE_EXCLUDE]
+    x = np.arange(len(items))
+    ts = (20, 25, 30)
+    shades = [plt.cm.viridis(v) for v in (0.25, 0.55, 0.85)]
+    fig, ax = plt.subplots(figsize=(DOUBLE_W, 3.0))
+    ax.set_axisbelow(True); ax.xaxis.grid(False)
+    w = 0.8 / len(ts)
+    for j, t in enumerate(ts):
+        vals = [_acc_at(d["df"], t) for _, d in items]
+        ax.bar(x + (j - 1) * w, vals, width=w, color=shades[j],
+               edgecolor="white", linewidth=0.4, zorder=3, label=f"A@{t} m")
+    ax.set_xticks(x, [d["meta"]["label"] for _, d in items],
+                  rotation=40, ha="right", fontsize=7)
+    ax.set_ylabel("accuracy (%)"); ax.set_ylim(0, 100)
+    ax.legend(loc="upper left", framealpha=0.9)
+    _save(fig, out, "acc2030_core")
+
+
+def fig_speed_bars(data, out):
+    """Median per-image match time (ms) for the core matcher set — bar-chart
+    companion to acc2030_core, one bar per method colored by family (validated
+    SPEED_FAMILY_COLORS). Linear axis with value labels (match times span
+    ~50-1150 ms)."""
+    items = [(s, d) for s, d in data.items() if s not in CORE_EXCLUDE]
+    labels, vals, cols = [], [], []
+    for s, d in items:
+        tm = pd.to_numeric(d["df"].get("t_match_ms"), errors="coerce").dropna()
+        if tm.empty:
+            print(f"  [warn] speedbars: {d['meta']['label']} has no t_match_ms — omitted")
+            continue
+        labels.append(d["meta"]["label"]); vals.append(float(tm.median()))
+        cols.append(SPEED_FAMILY_COLORS[d["meta"]["family"]])
+    if not vals:
+        print("  [warn] speedbars: no t_match_ms in any core matcher — skipped"); return
+    x = np.arange(len(labels))
+    fig, ax = plt.subplots(figsize=(DOUBLE_W, 3.0))
+    ax.set_axisbelow(True); ax.xaxis.grid(False)
+    ax.bar(x, vals, width=0.7, color=cols, edgecolor="white", linewidth=0.4, zorder=3)
+    for xi, v in zip(x, vals):
+        ax.text(xi, v + max(vals) * 0.012, f"{v:.0f}", ha="center", va="bottom",
+                fontsize=6.5, color="0.25")
+    ax.set_xticks(x, labels, rotation=40, ha="right", fontsize=7)
+    ax.set_ylabel("median match time per image (ms)")
+    ax.set_ylim(0, max(vals) * 1.12)
+    _save(fig, out, "speed_bars_core")
 
 
 def fig_speed(data, out):
@@ -978,7 +1053,7 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--fig", nargs="+", default=[],
                     choices=["all", "curves", "perflight", "dist", "spatial",
-                             "table", "acc2030", "retrieval",
+                             "table", "acc2030", "core", "retrieval",
                              "speed", "inliers", "ceiling", "altitude",
                              "recallk", "rflight", "confidence", "lora"])
     ap.add_argument("--results-dir", default="tar/figures_input")
@@ -1017,6 +1092,8 @@ def main():
     if figs & {"all", "perflight"}: fig_perflight(data, args.out)
     if figs & {"all", "dist"}:      fig_dist(data, args.out)
     if figs & {"all", "acc2030"}:   fig_acc2030(data, args.out)
+    if figs & {"all", "core"}:      fig_acc2030_core(data, args.out)
+    if figs & {"all", "core"}:      fig_speed_bars(data, args.out)
     if figs & {"all", "speed"}:     fig_speed(data, args.out)
     if figs & {"all", "inliers"}:   fig_inliers(data, args.out)
     if figs & {"all", "ceiling"}:   fig_ceiling(data, args.out)

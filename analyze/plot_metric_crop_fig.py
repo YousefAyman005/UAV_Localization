@@ -7,6 +7,10 @@ full satellite map with the rotated crop footprint. Reuses helpers.utils so
 the crop, the seeded GPS-prior offset, and the footprint are exactly the
 pipeline's — must run inside the container (cv2 etc.).
 
+`--crop-zoom` widens the illustrated crop (footprint, slice, and metric crop
+together) beyond the pipeline's 1.75 SEARCH_FACTOR — purely for a clearer,
+more zoomed-out illustration; 1.0 reproduces the true pipeline crop.
+
 Usage (dataset bound at the default DATASET_DIR location):
     python analyze/plot_metric_crop_fig.py --flight 08
 """
@@ -42,6 +46,9 @@ def main():
                          "corrected_yaw (manual experiments only)")
     ap.add_argument("--no-yaw-cal", action="store_true",
                     help="use raw Phi1 (the pre-calibration pipeline)")
+    ap.add_argument("--crop-zoom", type=float, default=1.5,
+                    help="widen the illustrated crop by this factor on top of "
+                         "the pipeline span (1.0 = true pipeline crop)")
     ap.add_argument("--out", default="thesis/figures")
     args = ap.parse_args()
 
@@ -59,7 +66,6 @@ def main():
 
     sat, geo, cx, cy, in_bounds = U.tile_for_gps(tiles, lat, lon)
     assert in_bounds, f"{fname}: prior outside map"
-    gt_sat = (cx, cy)  # true position, before prior noise
 
     # pipeline-identical seeded prior offset (collect_pipeline_rows_multitile)
     seed = zlib.crc32(f"{args.flight}/{fname}".encode())
@@ -70,17 +76,18 @@ def main():
     cx += dx_m * sx_per_m
     cy += dy_m * sy_per_m
 
+    # widen the illustrated crop beyond the pipeline's 1.75 SEARCH_FACTOR
+    # (k_override scales the target GSD, so the patch spans more ground)
+    k_flight = U.K_PER_FLIGHT.get(str(args.flight), U.K_DEFAULT)
     patch, M = U.metric_crop(sat, geo, cx, cy, height, yaw_deg=yaw,
-                             flight=args.flight)
+                             flight=args.flight,
+                             k_override=k_flight * args.crop_zoom)
     assert patch is not None, f"{fname}: crop rejected"
 
     # crop footprint in satellite px: patch corners through M
     corners = np.array([[0, 0], [U.SZ_W, 0], [U.SZ_W, U.SZ_H], [0, U.SZ_H]],
                        dtype=np.float64)
     foot = corners @ M[:, :2].T + M[:, 2]
-
-    # true position in patch px (inverse of M) -> the residual offset
-    gt_patch = np.linalg.solve(M[:, :2], np.array(gt_sat) - M[:, 2])
 
     # raw north-up slice covering the footprint extent, cut to the same
     # aspect as the drone/crop panels so the three panels tile cleanly
@@ -119,8 +126,6 @@ def main():
     ax_r.imshow(rgb(raw))
     ax_r.set_title("(b) raw slice (north-up, native scale)", fontsize=9)
     ax_p.imshow(rgb(patch))
-    ax_p.plot(*gt_patch, "o", ms=9, mfc="none", mec="#ffe100", mew=2)
-    ax_p.plot(U.SZ_W / 2, U.SZ_H / 2, "+", ms=11, c="#ffe100", mew=2)
     ax_p.set_title("(c) metric crop (heading-up, fixed GSD)", fontsize=9)
     ax_d.imshow(rgb(drone))
     ax_d.set_title(f"(d) drone image ({U.SZ_W}×{U.SZ_H})", fontsize=9)
@@ -134,7 +139,8 @@ def main():
         path = os.path.join(args.out, f"metric_crop_{args.flight}{suffix}.{ext}")
         fig.savefig(path, dpi=200, bbox_inches="tight")
         print("wrote", path, f"({fname}, yaw {yaw:.1f}°, alt {height:.0f} m, "
-              f"prior offset {math.hypot(dx_m, dy_m):.0f} m)")
+              f"prior offset {math.hypot(dx_m, dy_m):.0f} m, "
+              f"crop-zoom {args.crop_zoom:g}×)")
 
 
 if __name__ == "__main__":
