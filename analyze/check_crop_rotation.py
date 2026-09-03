@@ -24,7 +24,7 @@ import cv2  # noqa: E402
 
 from helpers import utils as U  # noqa: E402
 
-LOWE, FLANN_TREES, FLANN_CHECKS = 0.75, 5, 50  # Baseline_pipeline.py values
+LOWE, FLANN_TREES, FLANN_CHECKS = 0.75, 5, 50  # baseline_pipeline.py values
 
 
 def circ_dist(a, b):

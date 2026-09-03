@@ -16,9 +16,9 @@ import random
 import numpy as np
 import pandas as pd
 
-from helpers.results import _summarize
+from helpers.results import summarize_rows
 from helpers.utils import (
-    FLIGHTS_AVAILABLE, MIN_INL, TeeLogger,
+    FLIGHTS_AVAILABLE, MIN_INL, RANSAC_THRESH, TeeLogger,
     collect_pipeline_rows_multitile, load_flight,
 )
 from helpers.visualization import save_dense_viz, setup_viz_dir
@@ -139,11 +139,25 @@ def _add_common_args(parser):
                              "Phi1 (on by default; for ablation).")
 
 
-def run_pipeline(*, name, load_model, make_match_factory,
-                 add_args=None, viz_fn=save_dense_viz, banner=None,
-                 parallelism="gpu_flights"):
+def _banner(label, args, flights, parallelism):
+    parts = [f"Method: {label}",
+             f"RANSAC(sim-4dof): {RANSAC_THRESH}px",
+             f"MinInl: {args.min_inliers}",
+             f"Dist: {args.dist}m",
+             f"CLAHE: {'off' if args.no_clahe else 'on'}",
+             f"YawCal: {'off' if args.no_yaw_cal else 'on'}"]
+    if parallelism == "cpu_chunks":
+        parts.append(f"Workers: {args.workers or 'auto'}")
+    parts.append(f"Flights: {' '.join(flights)}")
+    return "  " + " | ".join(parts)
+
+
+def run_pipeline(*, name, load_model, make_match_factory, label=None,
+                 add_args=None, viz_fn=save_dense_viz, parallelism="gpu_flights"):
     """Run a feature-matching benchmark.
 
+    name / label: output-file stem and human-readable method name; either a
+                  string or a callable(args) -> str.
     parallelism:
       'gpu_flights' — one worker per CUDA device, each handling a flight subset.
                       Single-GPU / CPU-only runs in-process.
@@ -161,12 +175,10 @@ def run_pipeline(*, name, load_model, make_match_factory,
 
     flights  = FLIGHTS_AVAILABLE if args.flights == ["all"] else args.flights
     name_str = name(args) if callable(name) else name
+    label    = label(args) if callable(label) else (label or name_str)
     out_csv  = f"visloc_{name_str}_results.csv"
     viz_dir  = f"visloc_{name_str}_visualizations" if args.visualize else None
     setup_viz_dir(viz_dir)
-
-    if banner:
-        print(banner(args))
 
     spec = dict(load_model=load_model, make_match_factory=make_match_factory,
                 viz_fn=viz_fn)
@@ -175,6 +187,7 @@ def run_pipeline(*, name, load_model, make_match_factory,
                 yaw_cal=not args.no_yaw_cal)
 
     with TeeLogger(out_csv.replace(".csv", ".log")):
+        print(_banner(label, args, flights, parallelism))
         if parallelism == "gpu_flights":
             all_rows = _run_gpu_flights(flights, spec, run)
         elif parallelism == "cpu_chunks":
@@ -183,9 +196,9 @@ def run_pipeline(*, name, load_model, make_match_factory,
             raise ValueError(f"unknown parallelism={parallelism!r}")
 
         for flight in flights:
-            _summarize([r for r in all_rows if r.get("flight") == flight],
-                       f"flight {flight}", run["min_inl"])
+            summarize_rows([r for r in all_rows if r.get("flight") == flight],
+                           f"flight {flight}", run["min_inl"])
         pd.DataFrame(all_rows).to_csv(out_csv, index=False)
         if len(flights) > 1:
             print(f"\n=== Overall ({len(flights)} flights) ===")
-            _summarize(all_rows, out_csv, run["min_inl"])
+            summarize_rows(all_rows, out_csv, run["min_inl"])

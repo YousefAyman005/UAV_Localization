@@ -4,7 +4,6 @@ import os
 import sys
 
 import cv2
-import numpy as np
 import torch
 from PIL import Image
 
@@ -14,7 +13,7 @@ from romatch import roma_outdoor, roma_indoor
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, fit_similarity
+from helpers.utils import SZ_W, SZ_H, dense_match_result
 from helpers.workers import run_pipeline
 
 
@@ -22,23 +21,12 @@ def bgr_to_pil(bgr):
     return Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
 
 
-def match_roma(drone_pil, sat_bgr, matcher, device, num_samples, conf_thresh=0.0):
+def match_roma(drone_pil, sat_bgr, matcher, device, num_samples):
     with torch.inference_mode():
         warp, cert = matcher.match(drone_pil, bgr_to_pil(sat_bgr), device=device)
         matches, c = matcher.sample(warp, cert, num=num_samples)
         kp_a, kp_b = matcher.to_pixel_coordinates(matches, SZ_H, SZ_W, SZ_H, SZ_W)
-    kp0  = kp_a.cpu().numpy().astype(np.float32)
-    kp1  = kp_b.cpu().numpy().astype(np.float32)
-    conf = c.cpu().numpy()
-    mask = conf >= conf_thresh
-    r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0),
-             good=int(mask.sum()), inliers=0, H=None,
-             _kp0=kp0, _kp1=kp1, _conf=conf, _mask=mask)
-    if r["good"] >= 4:
-        H, ninl = fit_similarity(kp0[mask], kp1[mask])
-        if H is not None:
-            r["inliers"], r["H"] = ninl, H
-    return r
+    return dense_match_result(kp_a.cpu().numpy(), kp_b.cpu().numpy(), c.cpu().numpy())
 
 
 def load_model(device, args):
@@ -74,14 +62,10 @@ def add_args(p):
 def main():
     run_pipeline(
         name=lambda a: f"roma_{a.pretrained}",
+        label=lambda a: f"RoMa ({a.pretrained}, {a.num_matches} samples)",
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
-        banner=lambda a: (f"  Method: RoMa ({a.pretrained}) | NumMatches: {a.num_matches} | "
-                          f"RANSAC(sim-4dof): {RANSAC_THRESH}px | MinInl: {a.min_inliers} | "
-                          f"Dist: {a.dist}m | "
-                          f"CLAHE: {'off' if a.no_clahe else 'on'} | "
-                          f"Flights: {' '.join(a.flights)}"),
     )
 
 

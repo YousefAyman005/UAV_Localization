@@ -43,7 +43,7 @@ sys.path.insert(0, os.path.join(_PROJECT_ROOT, "pipelines"))
 from helpers.utils import (
     SZ_W, SZ_H, RANSAC_THRESH,
     FLIGHTS_AVAILABLE, load_flight, tile_for_gps,
-    metric_crop, metric_m_per_px, haversine_m,
+    metric_crop, haversine_m,
     TeeLogger, _make_clahe,
 )
 from clip_pipeline import (

@@ -117,5 +117,5 @@ From: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
   #     --bind /path/to/UAV_Localization:/opt/uav_localization \
   #     --bind /path/to/UAV_Visloc:/data/UAV_Visloc \
   #     --bind /path/to/weights:/opt/uav_localization/weights \
-  #     uav_localization.sif /opt/uav_localization/Baseline_pipeline.py --flights 03
+  #     uav_localization.sif /opt/uav_localization/baseline_pipeline.py --flights 03
   exec /opt/conda/bin/python "$@"

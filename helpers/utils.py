@@ -344,6 +344,28 @@ def fit_similarity(kp0, kp1):
     return np.vstack([M, [0.0, 0.0, 1.0]]).astype(np.float64), int(mask.sum())
 
 
+def dense_match_result(kp0, kp1, conf, conf_thresh=0.0):
+    """Match dict for a dense / semi-dense matcher from its raw correspondences.
+
+    kp0 = drone px, kp1 = patch px, conf = per-match confidence. Applies the
+    confidence gate, runs the shared `fit_similarity`, and returns the dict
+    `collect_pipeline_rows_multitile` expects (public metrics + `_`-prefixed
+    keys consumed by `helpers.visualization.save_dense_viz`).
+    """
+    kp0  = np.asarray(kp0, dtype=np.float32).reshape(-1, 2)
+    kp1  = np.asarray(kp1, dtype=np.float32).reshape(-1, 2)
+    conf = np.asarray(conf, dtype=np.float32).reshape(-1)
+    mask = conf >= conf_thresh
+    r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0),
+             good=int(mask.sum()), inliers=0, H=None,
+             _kp0=kp0, _kp1=kp1, _conf=conf, _mask=mask)
+    if r["good"] >= 4:
+        H, ninl = fit_similarity(kp0[mask], kp1[mask])
+        if H is not None:
+            r["inliers"], r["H"] = ninl, H
+    return r
+
+
 # ── CLAHE ───────────────────────────────────────────────────────────────────
 
 def _make_clahe(enabled):
@@ -359,9 +381,48 @@ def _make_clahe(enabled):
 
 # ── Per-flight match collection ─────────────────────────────────────────────
 
-# Imported here (not at top) to break a circular dependency: results.py
-# pulls constants from this module.
-from helpers.results import _build_row, _skip_row  # noqa: E402
+def _round(x, n):
+    return None if x is None else round(x, n)
+
+
+def _build_row(filename, lat, lon, height, flight, match,
+               raw_pred_px, raw_err_px, raw_err_m, plat, plon, off_m, m_per_px,
+               gt_in_patch=None, t_match_ms=None):
+    """One results-CSV row for a scored image. The column set is the contract
+    consumed by analyze/ and helpers.results — keep it stable."""
+    # Intrinsic scale of the estimated similarity (drone→patch); used by the
+    # H-scale K calibration in pipelines/calibrate_k.py.
+    H = match.get("H")
+    h_scale = (math.sqrt(abs(float(np.linalg.det(np.asarray(H, float)[:2, :2]))))
+               if H is not None else None)
+    row = dict(filename=filename, lat=lat, lon=lon, height=height, skipped=False,
+               crop_w=SZ_W, crop_h=SZ_H,
+               sat_kp=match["sat_kp"], drone_kp=match["drone_kp"],
+               raw=match["raw"], good=match["good"], inliers=match["inliers"],
+               inlier_ratio=round(match["inliers"] / match["good"], 4)
+                            if match["good"] else 0,
+               raw_pred_x=_round(raw_pred_px[0], 2) if raw_pred_px else None,
+               raw_pred_y=_round(raw_pred_px[1], 2) if raw_pred_px else None,
+               raw_err_px=_round(raw_err_px, 2),
+               raw_err_m=_round(raw_err_m, 2),
+               m_per_px=_round(m_per_px, 4),
+               pred_lat=_round(plat, 7), pred_lon=_round(plon, 7),
+               offset_m=_round(off_m, 2), h_scale=_round(h_scale, 5),
+               t_match_ms=_round(t_match_ms, 2),
+               gt_in_patch=gt_in_patch)
+    for t in ACC_THRESHOLDS:
+        row[f"success_{t}"] = off_m is not None and off_m <= t
+    if flight:
+        row["flight"] = flight
+    return row
+
+
+def _skip_row(filename, flight):
+    r = {"filename": filename, "skipped": True}
+    if flight:
+        r["flight"] = flight
+    return r
+
 
 # Centre of the (resized) DRONE image — what H projects into the patch. It
 # happens to equal the patch centre because both share SZ_W×SZ_H; if the two

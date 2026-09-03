@@ -1,6 +1,6 @@
 """Classical-feature baselines: SIFT / ORB / BRISK + RANSAC.
 
-Run e.g.: ./.venv/bin/python3 Baseline_pipeline.py --method sift --flights 03 --limit 5
+Run e.g.: python pipelines/baseline_pipeline.py --method sift --flights 03 --limit 5
 """
 
 import multiprocessing as mp
@@ -94,20 +94,14 @@ def baseline_viz(drone, patch, best, filename, viz_dir):
                   m_per_px=best.get("_m_per_px"), gt_px=best.get("_gt_px"))
 
 
-def banner(a):
-    return (f"  Method: {a.method.upper()} | Dist: {a.dist}m | "
-            f"CLAHE: {'off' if a.no_clahe else 'on'} | "
-            f"Workers: {a.workers or 'auto'} | Flights: {' '.join(a.flights)}")
-
-
 def main():
     run_pipeline(
         name=lambda a: a.method,
+        label=lambda a: a.method.upper(),
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
         viz_fn=baseline_viz,
-        banner=banner,
         parallelism="cpu_chunks",
     )
 

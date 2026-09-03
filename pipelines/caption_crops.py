@@ -13,7 +13,7 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from helpers.utils import (
-    FLIGHTS_AVAILABLE, SZ_W, SZ_H, corrected_yaw, crop_gt_patch,
+    FLIGHTS_AVAILABLE, corrected_yaw, crop_gt_patch,
     get_flight_paths, load_flight, north_up_drone, split_flight_rows,
 )
 

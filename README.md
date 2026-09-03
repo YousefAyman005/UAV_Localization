@@ -45,7 +45,7 @@ fusion gives no net gain over image-only queries. See `thesis/` for the full wri
 
 ```
 pipelines/                 one thin script per method
-  Baseline_pipeline.py       SIFT / ORB / BRISK
+  baseline_pipeline.py       SIFT / ORB / BRISK
   lightglue_pipeline.py      LightGlue (disk | dedodeb | sift)
   loftr_pipeline.py          LoFTR (kornia)
   eloftr_pipeline.py         EfficientLoFTR (optional LoRA adapter)
@@ -176,8 +176,9 @@ python analyze/retrieval_recall.py --csvs visloc_clip_results.csv ... --out reca
 
 Copy any `pipelines/*_pipeline.py`. Define `load_model`, `make_match_factory` (returns a dict
 with at least `sat_kp, drone_kp, raw, good, inliers, H`, where `H` comes from
-`helpers.utils.fit_similarity`), optional `add_args`, and a viz function, then call
-`helpers.workers.run_pipeline(...)`. Do not re-implement the loop. Add a matching
+`helpers.utils.fit_similarity`; dense matchers can return
+`helpers.utils.dense_match_result(kp0, kp1, conf)` directly), optional `add_args`, and a viz
+function, then call `helpers.workers.run_pipeline(...)`. Do not re-implement the loop. Add a matching
 `slurm/run_<name>.sh` that binds the pre-staged weights.
 
 ## Dataset notes

@@ -1,5 +1,6 @@
 """MATCHA (DISK keypoints + learned descriptors) + RANSAC."""
 
+import argparse
 import contextlib
 import os
 import sys
@@ -25,7 +26,7 @@ from matcha.utils.device import to_numpy
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, fit_similarity
+from helpers.utils import SZ_W, SZ_H, dense_match_result
 from helpers.workers import run_pipeline
 
 
@@ -44,8 +45,7 @@ def _amp_context(device, enabled):
 
 def _oom_hint(img_w, img_h):
     return (f"MATCHA ran out of CUDA memory at {img_w}x{img_h}. "
-            "Restart the Kaggle session to clear old models, then retry with "
-            "--img-w 512 --img-h 352 --amp. Raise the size only if it fits.")
+            "Retry with --img-w 512 --img-h 352 --amp and raise the size only if it fits.")
 
 
 def extract_features(bgr, matcher, img_w, img_h, device, use_amp):
@@ -76,7 +76,7 @@ def _mutual_nn_match(desc0, desc1):
     return matches, scores
 
 
-def match_features(kpts0, desc0, kpts1, desc1, img_w, img_h, device, conf_thresh=0.0):
+def match_features(kpts0, desc0, kpts1, desc1, img_w, img_h):
     try:
         with torch.inference_mode():
             matches, scores = _mutual_nn_match(desc0, desc1)
@@ -93,18 +93,10 @@ def match_features(kpts0, desc0, kpts1, desc1, img_w, img_h, device, conf_thresh
     mid0, mid1 = np.where(valid)[0], m[valid]
     conf = scr[mid0]
 
+    # Matches are found at the MATCHA input resolution; rescale to the SZ_W x SZ_H frame.
     scale = np.array([SZ_W / img_w, SZ_H / img_h], dtype=np.float32)
-    kp0_f = (kp0[mid0] * scale).astype(np.float32)
-    kp1_f = (kp1[mid1] * scale).astype(np.float32)
-
-    mask = conf >= conf_thresh
-    r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=int(valid.sum()),
-             good=int(mask.sum()), inliers=0, H=None,
-             _kp0=kp0_f, _kp1=kp1_f, _conf=conf, _mask=mask)
-    if r["good"] >= 4:
-        H, ninl = fit_similarity(kp0_f[mask], kp1_f[mask])
-        if H is not None:
-            r["inliers"], r["H"] = ninl, H
+    r = dense_match_result(kp0[mid0] * scale, kp1[mid1] * scale, conf)
+    r.update(sat_kp=len(kp1), drone_kp=len(kp0))   # report detected, not matched, keypoints
     return r
 
 
@@ -131,7 +123,7 @@ def make_match_factory(matcher, device, args):
         kpd, descd = extract_features(drone, matcher, iw, ih, device, amp)
         def match_fn(p):
             kps, descs = extract_features(p, matcher, iw, ih, device, amp)
-            return match_features(kpd, descd, kps, descs, iw, ih, device)
+            return match_features(kpd, descd, kps, descs, iw, ih)
         return match_fn
     return match_factory
 
@@ -146,7 +138,6 @@ def add_args(p):
 
 def main():
     # Sanity-check sizes via a one-shot parser before run_pipeline does its own parse.
-    import argparse, sys
     pre = argparse.ArgumentParser(add_help=False)
     pre.add_argument("--img-w", type=int, default=512)
     pre.add_argument("--img-h", type=int, default=352)
@@ -157,14 +148,10 @@ def main():
 
     run_pipeline(
         name="matcha",
+        label=lambda a: f"MATCHA ({a.img_w}x{a.img_h}, AMP {'on' if a.amp else 'off'})",
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
-        banner=lambda a: (f"  Method: MATCHA | Size: {a.img_w}x{a.img_h} | AMP: {a.amp} | "
-                          f"RANSAC(sim-4dof): {RANSAC_THRESH}px | MinInl: {a.min_inliers} | "
-                          f"Dist: {a.dist}m | "
-                          f"CLAHE: {'off' if a.no_clahe else 'on'} | "
-                          f"Flights: {' '.join(a.flights)}"),
     )
 
 

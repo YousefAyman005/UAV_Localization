@@ -1,19 +1,14 @@
-# ── Dataset & outputs ────────────────────────────────────────────────────────
-berlin_grid_dataset/
-berlin_uav_dataset/
-UAV_VisLoc_example/
+# Dataset & generated outputs
 UAV_VisLoc_dataset/
-debug_compare/
 job_results/
-docs/
-stats/
-logs/
 tar/
-.cache/
+oldTar/
+logs/
+stats/
+debug_compare/
 third_party/
 /Thesis/
 /thesis/
-# ── Generated files ───────────────────────────────────────────────────────────
 *.csv
 *.log
 *.jpg
@@ -21,7 +16,7 @@ third_party/
 *.tar
 *.out
 
-# ── ML weights & checkpoints ──────────────────────────────────────────────────
+# Weights, checkpoints, containers
 weights/
 *.pth
 *.pt
@@ -30,21 +25,14 @@ weights/
 *.sif
 *.sandbox/
 
-# ── Python ────────────────────────────────────────────────────────────────────
+# Python
 .venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-matchanything_pipeline.py
-# ── Jupyter ───────────────────────────────────────────────────────────────────
+*.py[cod]
 .ipynb_checkpoints/
+*.ipynb
 
-# ── OS & environment ──────────────────────────────────────────────────────────
+# OS / tooling
 .DS_Store
 .env
-
-# ── Misc ──────────────────────────────────────────────────────────────────────
 .claude/
-sift_eval.py
-*.ipynb

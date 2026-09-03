@@ -20,7 +20,6 @@ import sys
 from copy import deepcopy
 
 import cv2
-import numpy as np
 import torch
 
 torch.manual_seed(0)
@@ -30,7 +29,7 @@ from src.loftr import LoFTR, full_default_cfg, reparameter  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, fit_similarity  # noqa: E402
+from helpers.utils import SZ_W, SZ_H, dense_match_result  # noqa: E402
 from helpers.workers import run_pipeline  # noqa: E402
 
 
@@ -49,7 +48,7 @@ def img_to_tensor(bgr, device):
             .unsqueeze(0).unsqueeze(0).to(device))
 
 
-def match_eloftr(drone_t, sat_t, matcher, conf_thresh=0.0):
+def match_eloftr(drone_t, sat_t, matcher):
     batch = {"image0": drone_t, "image1": sat_t}
     with torch.no_grad():
         matcher(batch)
@@ -60,16 +59,7 @@ def match_eloftr(drone_t, sat_t, matcher, conf_thresh=0.0):
     # RANSAC lives in the real SZ_W x SZ_H crop.
     inb  = ((kp0[:, 0] < SZ_W) & (kp0[:, 1] < SZ_H)
             & (kp1[:, 0] < SZ_W) & (kp1[:, 1] < SZ_H))
-    kp0, kp1, conf = kp0[inb], kp1[inb], conf[inb]
-    mask = conf >= conf_thresh
-    r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0),
-             good=int(mask.sum()), inliers=0, H=None,
-             _kp0=kp0, _kp1=kp1, _conf=conf, _mask=mask)
-    if r["good"] >= 4:
-        H, ninl = fit_similarity(kp0[mask], kp1[mask])
-        if H is not None:
-            r["inliers"], r["H"] = ninl, H
-    return r
+    return dense_match_result(kp0[inb], kp1[inb], conf[inb])
 
 
 def load_model(device, args):
@@ -113,14 +103,10 @@ def add_args(p):
 def main():
     run_pipeline(
         name=lambda a: "eloftr_lora" if a.lora_ckpt else "eloftr",
+        label=lambda a: f"EfficientLoFTR (full/fp32{'+LoRA' if a.lora_ckpt else ''})",
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
-        banner=lambda a: (f"  Method: EfficientLoFTR (full/fp32"
-                          f"{'+LoRA' if a.lora_ckpt else ''}) | RANSAC(sim-4dof): {RANSAC_THRESH} | "
-                          f"MinInl: {a.min_inliers} | Dist: {a.dist}m | "
-                          f"CLAHE: {'off' if a.no_clahe else 'on'} | "
-                          f"Flights: {' '.join(a.flights)}"),
     )
 
 

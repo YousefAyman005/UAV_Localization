@@ -37,7 +37,7 @@ apptainer run --nv \
     --env HF_HOME=/data/torch_home/huggingface \
     --pwd /data/job_results \
     "${SLURM_SUBMIT_DIR}/uav_localization.sif" \
-    /opt/uav_localization/pipelines/Baseline_pipeline.py \
+    /opt/uav_localization/pipelines/baseline_pipeline.py \
         --method "${METHOD}" \
         --workers 10 \
         --flights all \

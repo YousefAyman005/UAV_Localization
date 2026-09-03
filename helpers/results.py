@@ -1,8 +1,8 @@
-"""Result-row construction and CSV summarization.
+"""Per-flight / overall summary of a results CSV.
 
-`_build_row` / `_skip_row` produce the per-image dicts that get written to
-the results CSV; `print_summary` / `_summarize` compute the per-flight and
-overall accuracy/error stats printed at the end of a run.
+`print_summary` takes the non-skipped rows of one run and prints the gated and
+ungated A@Xm, error statistics, oracle GT-in-patch rate and match latency;
+`summarize_rows` is the row-list wrapper `run_pipeline` calls per flight.
 """
 
 import math
@@ -10,49 +10,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from helpers.utils import ACC_THRESHOLDS, MIN_INL, SZ_H, SZ_W
-
-
-def _round(x, n):
-    return None if x is None else round(x, n)
-
-
-def _build_row(filename, lat, lon, height, flight, match,
-               raw_pred_px, raw_err_px, raw_err_m, plat, plon, off_m, m_per_px,
-               gt_in_patch=None, t_match_ms=None):
-    # Intrinsic scale of the estimated homography (drone→patch). For a similarity
-    # H this is exactly the drone↔patch scale ratio; used by the H-scale K
-    # calibration in pipelines/calibrate_k.py (K = h_scale · SEARCH_FACTOR · K_used).
-    _H = match.get("H")
-    h_scale = (math.sqrt(abs(float(np.linalg.det(np.asarray(_H, float)[:2, :2]))))
-               if _H is not None else None)
-    row = dict(filename=filename, lat=lat, lon=lon, height=height, skipped=False,
-               crop_w=SZ_W, crop_h=SZ_H,
-               sat_kp=match["sat_kp"], drone_kp=match["drone_kp"],
-               raw=match["raw"], good=match["good"], inliers=match["inliers"],
-               inlier_ratio=round(match["inliers"] / match["good"], 4)
-                            if match["good"] else 0,
-               raw_pred_x=_round(raw_pred_px[0], 2) if raw_pred_px else None,
-               raw_pred_y=_round(raw_pred_px[1], 2) if raw_pred_px else None,
-               raw_err_px=_round(raw_err_px, 2),
-               raw_err_m=_round(raw_err_m, 2),
-               m_per_px=_round(m_per_px, 4),
-               pred_lat=_round(plat, 7), pred_lon=_round(plon, 7),
-               offset_m=_round(off_m, 2), h_scale=_round(h_scale, 5),
-               t_match_ms=_round(t_match_ms, 2),
-               gt_in_patch=gt_in_patch)
-    for t in ACC_THRESHOLDS:
-        row[f"success_{t}"] = off_m is not None and off_m <= t
-    if flight:
-        row["flight"] = flight
-    return row
-
-
-def _skip_row(filename, flight):
-    r = {"filename": filename, "skipped": True}
-    if flight:
-        r["flight"] = flight
-    return r
+from helpers.utils import ACC_THRESHOLDS, MIN_INL
 
 
 def print_summary(v, label, min_inl=MIN_INL, n_skipped=0):
@@ -103,7 +61,7 @@ def print_summary(v, label, min_inl=MIN_INL, n_skipped=0):
           f"ratio: {v['inlier_ratio'].median():.3f}")
 
 
-def _summarize(rows, label, min_inl):
+def summarize_rows(rows, label, min_inl):
     if not rows:
         return
     df = pd.DataFrame(rows)

@@ -21,8 +21,6 @@ requests --gpus=1; run_pipeline then runs in-process on cuda:0).
 import os
 import sys
 
-import cv2
-import numpy as np
 import torch
 
 torch.manual_seed(0)
@@ -34,24 +32,14 @@ from src.utils.data_io import DataIOWrapper, lower_config  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import RANSAC_THRESH, fit_similarity  # noqa: E402
+from helpers.utils import dense_match_result  # noqa: E402
 from helpers.workers import run_pipeline  # noqa: E402
 
 
-def match_xoftr(model, drone_bgr, sat_bgr, conf_thresh=0.0):
-    out  = model.from_cv_imgs(drone_bgr, sat_bgr)   # grayscale+resize+rescale handled inside
-    kp0  = np.asarray(out["mkpts0"], dtype=np.float32)   # drone (image0)
-    kp1  = np.asarray(out["mkpts1"], dtype=np.float32)   # satellite (image1)
-    conf = np.asarray(out["mconf"],  dtype=np.float32)
-    mask = conf >= conf_thresh
-    r = dict(sat_kp=len(kp1), drone_kp=len(kp0), raw=len(kp0),
-             good=int(mask.sum()), inliers=0, H=None,
-             _kp0=kp0, _kp1=kp1, _conf=conf, _mask=mask)
-    if r["good"] >= 4:
-        H, ninl = fit_similarity(kp0[mask], kp1[mask])
-        if H is not None:
-            r["inliers"], r["H"] = ninl, H
-    return r
+def match_xoftr(model, drone_bgr, sat_bgr):
+    # from_cv_imgs grayscales, resizes and rescales back to the SZ_W x SZ_H frame.
+    out = model.from_cv_imgs(drone_bgr, sat_bgr)
+    return dense_match_result(out["mkpts0"], out["mkpts1"], out["mconf"])
 
 
 def load_model(device, args):
@@ -87,13 +75,10 @@ def add_args(p):
 def main():
     run_pipeline(
         name="xoftr",
+        label=lambda a: f"XoFTR (resize {a.resize})",
         add_args=add_args,
         load_model=load_model,
         make_match_factory=make_match_factory,
-        banner=lambda a: (f"  Method: XoFTR (resize {a.resize}) | RANSAC(sim-4dof): {RANSAC_THRESH} | "
-                          f"MinInl: {a.min_inliers} | Dist: {a.dist}m | "
-                          f"CLAHE: {'off' if a.no_clahe else 'on'} | "
-                          f"Flights: {' '.join(a.flights)}"),
     )
 
 

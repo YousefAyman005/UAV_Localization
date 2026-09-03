@@ -31,7 +31,7 @@ import cv2  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from helpers.utils import (  # noqa: E402
-    SZ_W, SZ_H, corrected_yaw, crop_gt_patch, get_flight_paths, load_flight,
+    SZ_W, SZ_H, corrected_yaw, crop_gt_patch, load_flight,
     north_up_drone, split_flight_rows,
 )
 

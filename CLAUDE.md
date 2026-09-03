@@ -28,8 +28,8 @@ Real runs happen on a **SLURM cluster** inside an **Apptainer** container, not o
 
 ## Pipeline families
 
-### 1. Feature-matching matchers (`pipelines/*_pipeline.py`, `Baseline_pipeline.py`)
-SIFT/ORB baseline, LightGlue, LoFTR, RoMa, MATCHA. Each script is **thin**: it defines
+### 1. Feature-matching matchers (`pipelines/*_pipeline.py`)
+SIFT/ORB/BRISK baseline, LightGlue, LoFTR, EfficientLoFTR, XoFTR, RoMa, MATCHA. Each script is **thin**: it defines
 `load_model`, `make_match_factory`, `add_args`, and a viz fn, then calls
 `helpers.workers.run_pipeline(...)`. To add a matcher, copy this shape — do not re-implement the
 loop.
@@ -46,7 +46,10 @@ and `visloc_<name>_results.csv` + `.log` output. The per-image work is
 
 A match factory returns a dict with at least `sat_kp, drone_kp, raw, good, inliers, H`. `H` must
 come from the shared robust-fit stage `helpers.utils.fit_similarity` (4-DOF RANSAC similarity,
-drone→patch) so that methods differ only in their matches, never in the estimator. Acceptance
+drone→patch) so that methods differ only in their matches, never in the estimator. Dense /
+semi-dense matchers (LoFTR, RoMa, MATCHA, …) get this dict for free from
+`helpers.utils.dense_match_result(kp0, kp1, conf)`; sparse matchers build it themselves.
+`run_pipeline` prints a common banner (`label=` gives the method name) — pipelines do not. Acceptance
 gate is `inliers >= MIN_INL`. Metrics per image: gated `offset_m` / `success_{5..30}`, ungated
 `raw_err_m` (centre projection vs TRUE GT — the patch centre is the noisy prior, not GT), and
 the oracle `gt_in_patch` flag (GT outside the searched patch ⇒ unsolvable by construction).

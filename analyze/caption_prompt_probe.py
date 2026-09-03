@@ -19,7 +19,7 @@ import cv2  # noqa: E402
 
 import pipelines.caption_crops as CC  # noqa: E402
 from helpers.utils import (  # noqa: E402
-    corrected_yaw, crop_gt_patch, get_flight_paths, load_flight, north_up_drone,
+    corrected_yaw, crop_gt_patch, load_flight, north_up_drone,
 )
 
 # Candidate prompts, both targeting the natural spatial-layout style:

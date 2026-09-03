@@ -13,7 +13,7 @@ from kornia.feature import LightGlue, DISK, DeDoDe
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers.utils import SZ_W, SZ_H, RANSAC_THRESH, TOP_MATCHES, fit_similarity
+from helpers.utils import SZ_W, SZ_H, TOP_MATCHES, fit_similarity
 from helpers.visualization import draw_and_save
 from helpers.workers import run_pipeline
 
@@ -154,17 +154,13 @@ def lg_viz(drone, patch, best, filename, viz_dir):
 def main():
     run_pipeline(
         name=lambda a: f"lightglue_{a.method}",
+        label=lambda a: f"LightGlue/{a.method.upper()}",
         add_args=lambda p: p.add_argument("--method",
                                            choices=["disk", "dedodeb", "sift"],
                                            default="disk"),
         load_model=load_model,
         make_match_factory=make_match_factory,
         viz_fn=lg_viz,
-        banner=lambda a: (f"  Method: LightGlue/{a.method.upper()} | "
-                          f"RANSAC(sim-4dof): {RANSAC_THRESH} | MinInl: {a.min_inliers} | "
-                          f"Dist: {a.dist}m | "
-                          f"CLAHE: {'off' if a.no_clahe else 'on'} | "
-                          f"Flights: {' '.join(a.flights)}"),
     )
 
 
